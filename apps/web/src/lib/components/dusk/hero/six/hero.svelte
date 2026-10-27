@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Button } from '#lib/components/ui/dusk/button/index.js';
   import Header from './header.svelte';
-  import LogoCloud from './logo-cloud.svelte';
+  import FeaturesFive from '#lib/components/dusk/features/five.svelte';
   import logo from '#lib/assets/avenra.svg';
   import preview from '#lib/assets/planning-preview.png';
   let {
@@ -69,7 +69,7 @@
       </p>
     </div>
   </section>
-  <LogoCloud />
+  <FeaturesFive />
   <footer>
     <span class="footer-brand"
       ><img src={logo} alt="" width="30" height="24" />avenra.</span
