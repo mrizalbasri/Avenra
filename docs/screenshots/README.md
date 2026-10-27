@@ -12,3 +12,6 @@ integration, real student adoption, or a production deployment.
 
 - `landing-desktop.png`: Hero Six introduction at 1440 px width.
 - `landing-mobile.png`: introduction at 390 px width.
+
+- `features-desktop.png`: four feature sections with sticky desktop navigation.
+- `features-mobile.png`: feature details and horizontal feature navigation at 390 px.
