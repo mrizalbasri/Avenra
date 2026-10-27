@@ -1,7 +1,7 @@
 {
   "id": "synthetic-computing",
-  "name": "Computing · synthetic curriculum",
-  "version": "demo-1",
+  "name": "Computing | synthetic curriculum",
+  "version": "demo-2",
   "status": "synthetic",
   "disclaimer": "Demonstration assumptions only. Not an official university curriculum or graduation decision.",
   "credit_cap": 20,
@@ -47,6 +47,48 @@
       "credits": 3,
       "recommended_term": 3,
       "prerequisites": ["CS201", "CS202"]
+    },
+    {
+      "code": "CS303",
+      "name": "Operating systems",
+      "credits": 3,
+      "recommended_term": 3,
+      "prerequisites": ["CS201"]
+    },
+    {
+      "code": "CS401",
+      "name": "Computer networks",
+      "credits": 3,
+      "recommended_term": 4,
+      "prerequisites": ["CS303"]
+    },
+    {
+      "code": "CS402",
+      "name": "Web application development",
+      "credits": 4,
+      "recommended_term": 4,
+      "prerequisites": ["CS202", "CS302"]
+    },
+    {
+      "code": "CS403",
+      "name": "Research methods",
+      "credits": 2,
+      "recommended_term": 4,
+      "prerequisites": ["MA101"]
+    },
+    {
+      "code": "CS501",
+      "name": "Capstone project",
+      "credits": 6,
+      "recommended_term": 5,
+      "prerequisites": ["CS301", "CS302", "CS403"]
+    },
+    {
+      "code": "IN501",
+      "name": "Industry project",
+      "credits": 4,
+      "recommended_term": 5,
+      "prerequisites": ["CS302"]
     }
   ]
 }

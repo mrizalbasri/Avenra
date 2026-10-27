@@ -1,0 +1,5 @@
+code,name,credits,recommended_term,prerequisites,offered_terms
+IF101,Programming fundamentals,3,1,,both
+MA101,Discrete mathematics,3,1,,both
+IF201,Data structures,4,2,IF101,both
+IF301,Algorithm design,4,3,IF201;MA101,both

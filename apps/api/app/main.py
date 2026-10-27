@@ -4,12 +4,22 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.curriculum import Curriculum, load_demo_curriculum
 from app.database import check_database
+from app.routes import router
 
 app = FastAPI(
     title="Avenra API",
-    version="0.1.0",
-    description="Local development foundation. Academic simulation is not implemented yet.",
+    version="0.2.0",
+    description="Single-user synthetic academic planning and learning workspace. Local use only.",
 )
+app.include_router(router)
+
+
+@app.exception_handler(SQLAlchemyError)
+async def database_error(request, exc):
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "Database unavailable. Check PostgreSQL and migrations, then retry."},
+    )
 
 
 @app.get("/health/live", tags=["health"])

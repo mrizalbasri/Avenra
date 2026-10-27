@@ -3,12 +3,17 @@
 An explainable academic planning and recovery workspace, created for STACK 2026,
 Case 1: Smarter Campus and Learning.
 
-**Current status: development foundation.** The application loads a synthetic
-curriculum from FastAPI, displays its prerequisite graph in Svelte Flow, and
-saves visual card positions in browser storage. Live API/database status is
-visible. Academic plan persistence, semester reassignment, rule validation,
-recovery generation, comparison, passport export, and study tools are planned.
-Installing OR-Tools does not mean the recovery engine is implemented.
+**Current status: functional local MVP.** Import a program-specific curriculum,
+maintain academic progress, create independent plans, move courses between semesters
+on a canvas or board, validate rules, generate recovery alternatives, compare plans,
+track learning targets, use a focus/break timer, and print a Decision Passport.
+Plans, layouts, tasks, and finished sessions persist in PostgreSQL. A synthetic
+curriculum remains available for demonstrations.
+
+Curricula are not restricted to one university. Imported rules remain
+**user-supplied**, not institutionally verified. This local prototype has no sign-in:
+browser workspace identifiers provide scoping, not authentication. Use aliases and
+non-sensitive examples. Public deployment is not production-ready.
 
 ## Stack
 
@@ -59,10 +64,35 @@ pnpm dev
 ```
 
 Open http://127.0.0.1:5173 and API documentation at
-http://127.0.0.1:18080/docs. No account is needed for the synthetic local demo.
-Drag cards, save their layout, then reload. Moving a card does not yet change
-its semester or run academic validation. Save layout stores positions only in
-this browser; Reset layout restores the default arrangement until saved again.
+http://127.0.0.1:18080/docs. Choose **Open demo workspace** or **bring your own
+curriculum**. No account is needed for local evaluation.
+
+## Product walkthrough
+
+1. Import CSV at `/curriculum`, recording university, program, version, rule
+   source, current semester, and credit cap. Download the included template.
+   Each import creates a new workspace. Switch between remembered workspaces
+   using the header selector; previous curricula and plans remain intact.
+2. In **Academic profile**, mark completed courses. In **Study plans**, create
+   or duplicate a plan. Rename, archive, and restore it in its settings.
+3. Drag cards across semester frames or use board/select controls. Same-semester
+   movement changes only visual coordinates. Undo/redo edits, then **Save & validate**.
+   Invalid exploratory drafts remain clearly labeled.
+4. Select failed/postponed courses under **Simulate a setback**. Save, then generate
+   alternatives for earlier completion and lighter peak workload. Each result is
+   independently checked. Save alternatives as separate plans.
+5. Compare saved plans at `/compare`. Open **Passport** from a saved plan and
+   **Print / Save as PDF** for a fresh advisor consultation snapshot.
+6. In **Study & focus**, add course targets, mark tasks complete, and record focus
+   sessions with reflections. Reload restores the timer paused using timestamps.
+   Study completion never changes academic course completion.
+
+CSV supports 1�100 required courses, prerequisite codes separated with semicolons,
+credits, recommended semesters 1�12, and odd/even/both offerings. Duplicate codes,
+missing references, and cycles are rejected. Elective groups, concurrent prerequisites,
+GPA-dependent caps, credit transfer, and internship conversion require additional
+modeling and advisor review. All imported courses are treated as required.
+Automatic institutional data import is not implemented.
 
 ## Verification
 
@@ -78,9 +108,13 @@ pnpm test:e2e
 ```
 
 Playwright starts the API and web server automatically (ports 18080 and 4173).
-It checks API integration, canvas movement/save/reload, and mobile overflow.
-The backend suite checks sanitized readiness failures, fixture references, and
-a tiny CP-SAT problem. These are foundation checks, not academic engine validation.
+Browser checks cover plan movement/undo/save/reload, recovery, comparison, fresh
+passports, curriculum import, workspace scoping, learning targets, timer recovery,
+and mobile overflow. Backend tests cover rule violations, independent solver-output
+checks, infeasible/timeout outcomes, revision conflicts, invalid curriculum graphs,
+task persistence, and idempotent focus-session saves. Unit tests use isolated
+in-memory databases. Local browser tests create fictional workspaces in Avenra's
+database; CI uses disposable PostgreSQL.
 
 The `/health/live` endpoint checks the process; `/health/ready` returns HTTP 503
 when PostgreSQL is unavailable. `GET /api/v1/curricula/demo` reads versioned
@@ -92,7 +126,7 @@ synthetic fixtures and does not require the database.
 apps/web/          SvelteKit workspace and Playwright tests
 apps/api/app/      FastAPI configuration, database access, curriculum endpoint
 apps/api/tests/    API and solver runtime tests
-apps/api/migrations/  Alembic migration foundation; no domain tables yet
+apps/api/migrations/  Alembic schema for profiles, curricula, plans, tasks, sessions
 data/fixtures/     Synthetic curriculum and explicit provenance
 docs/              Designs, implementation plan, verification evidence
 .github/           CI and contribution templates
@@ -116,8 +150,8 @@ records or exposing a deployment. No public deployment has been configured.
 
 ## Data and limitations
 
-All bundled courses/rules are fictional demonstration assumptions, not verified
-university policies. Canvas placement is illustrative. No official graduation
+Bundled courses/rules are fictional demonstration assumptions. Imported curricula
+are user-supplied and require independent policy verification. No official graduation
 decision or learning improvement is claimed. Never commit `.env` files, student
 records, tokens, or private keys. No external AI provider or paid service is required.
 

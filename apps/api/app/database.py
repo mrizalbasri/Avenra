@@ -1,6 +1,7 @@
 from collections.abc import Iterator
 from functools import lru_cache
 
+from fastapi import Request
 from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.orm import Session
 
@@ -20,6 +21,7 @@ def check_database() -> None:
         connection.execute(text("SELECT 1"))
 
 
-def get_session() -> Iterator[Session]:
+def get_session(request: Request) -> Iterator[Session]:
     with Session(get_engine()) as session:
+        session.info["workspace_id"] = request.headers.get("X-Workspace-ID", "local-demo")
         yield session

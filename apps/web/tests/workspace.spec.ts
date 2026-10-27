@@ -1,61 +1,282 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
-test('loads API data and restores a saved moved card after reload', async ({
+async function openDemo(page: Page) {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Open demo workspace' }).click();
+  await expect(
+    page.getByRole('heading', { name: 'My study plan', exact: true }),
+  ).toBeVisible();
+  await expect(page).toHaveURL(/\/plans\/[a-zA-Z0-9-]+$/);
+  return page.url().split('/').at(-1)!;
+}
+
+test('moves courses, undoes edits, validates and persists the semester plan', async ({
   page,
 }) => {
   const errors: string[] = [];
-  page.on('pageerror', (error) => errors.push(error.message));
-  await page.goto('/');
-  await expect(page.getByText('API connected', { exact: true })).toBeVisible();
-  const node = page.locator('.svelte-flow__node[data-id="CS101"]');
-  await expect(node).toBeVisible();
-  const box = await node.boundingBox();
-  if (!box) throw new Error('Course node is missing');
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-  await page.mouse.down();
-  await page.mouse.move(
-    box.x + box.width / 2 + 65,
-    box.y + box.height / 2 + 35,
-    { steps: 12 },
-  );
-  await page.mouse.up();
-  await page.getByRole('button', { name: 'Save layout' }).click();
+  page.on('pageerror', (e) => errors.push(e.message));
+  await openDemo(page);
+  await page
+    .getByRole('button', { name: 'Semester board', exact: true })
+    .click();
+  const move = page.getByLabel('Move CS301 to semester', { exact: true });
+  await move.selectOption('2');
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
+  await expect(move).toHaveValue('3');
+  await page.getByRole('button', { name: 'Redo', exact: true }).click();
+  await expect(move).toHaveValue('2');
+  await page.getByRole('button', { name: 'Save & validate' }).click();
   await expect(
-    page.getByText('Layout saved in this browser.', { exact: false }),
+    page.getByText('Plan saved and checked', { exact: false }),
   ).toBeVisible();
-  const saved = await page.evaluate(() =>
-    localStorage.getItem('avenra-demo-layout-v1'),
-  );
-  expect(JSON.parse(saved!).CS101.x).not.toBe(0);
+  await expect(
+    page.getByText('Complete CS201 before taking CS301.', { exact: true }),
+  ).toBeVisible();
   await page.reload();
-  await expect(node).toBeVisible();
-  await page.getByRole('button', { name: 'Save layout' }).click();
-  expect(
-    await page.evaluate(() => localStorage.getItem('avenra-demo-layout-v1')),
-  ).toBe(saved);
+  await page
+    .getByRole('button', { name: 'Semester board', exact: true })
+    .click();
+  await expect(move).toHaveValue('2');
   expect(errors).toEqual([]);
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({
-    path: 'test-results/workspace-desktop.png',
+    path: 'test-results/semester-board.png',
     fullPage: true,
   });
 });
 
-test('mobile workspace fits the viewport', async ({ page }) => {
+test('generates recovery options, saves an independent plan, compares and exports a fresh snapshot', async ({
+  page,
+}) => {
+  const id = await openDemo(page);
+  await page.getByLabel('CS101', { exact: false }).check();
+  await page.getByRole('button', { name: 'Save & validate' }).click();
+  await expect(
+    page.getByText('Plan saved and checked', { exact: false }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Generate alternatives' }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Recovery alternatives' }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Earlier completion', exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole('button', { name: 'Save as a separate plan' })
+    .first()
+    .click();
+  await expect(page).not.toHaveURL(new RegExp(`/plans/${id}$`));
+  await expect(
+    page.getByRole('heading', {
+      name: 'My study plan | Earlier completion',
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page.getByRole('link', { name: 'Passport', exact: true }).click();
+  await expect(
+    page.getByRole('heading', {
+      name: 'Academic Decision Passport',
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByText('Plan revision 2 | Profile revision 1'),
+  ).toBeVisible();
+  await expect(page.getByText('Scenario setbacks: CS101.')).toBeVisible();
+  await page.emulateMedia({ media: 'print' });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({
+    path: 'test-results/decision-passport.png',
+    fullPage: true,
+  });
+  await page.emulateMedia({ media: 'screen' });
+  await page.getByRole('link', { name: 'Compare plans', exact: true }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Course-by-course differences' }),
+  ).toBeVisible();
+});
+
+test('persists study targets and restores a focus timer after reload', async ({
+  page,
+}) => {
+  await openDemo(page);
+  await page.getByRole('link', { name: 'Study & focus', exact: true }).click();
+  await page
+    .getByLabel('Specific target')
+    .fill('Solve five linked-list exercises');
+  await page.getByRole('button', { name: 'Add study target' }).click();
+  await expect(
+    page.getByText('Solve five linked-list exercises', { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole('checkbox', {
+      name: 'Solve five linked-list exercises',
+      exact: false,
+    })
+    .check();
+  await page.getByLabel('Focus minutes').fill('1');
+  await page.getByLabel('Focus minutes').blur();
+  await page.getByRole('button', { name: 'Start session' }).click();
+  await page.waitForTimeout(1600);
+  await page.getByRole('button', { name: 'Pause', exact: true }).click();
+  const remaining = await page.getByRole('timer').textContent();
+  await page.reload();
+  await expect(
+    page.getByText('Restored in a paused state.', { exact: false }),
+  ).toBeVisible();
+  await expect(page.getByRole('timer')).toHaveText(remaining!);
+  await page.getByLabel('What did you learn?').fill('Practiced list traversal');
+  await page.getByRole('button', { name: 'Finish & save session' }).click();
+  await expect(
+    page.getByText('Practiced list traversal', { exact: true }),
+  ).toBeVisible();
+  await page.reload();
+  await expect(
+    page.getByText('Practiced list traversal', { exact: true }),
+  ).toBeVisible();
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({
+    path: 'test-results/study-space.png',
+    fullPage: true,
+  });
+});
+
+test('imports a personal curriculum and keeps the original workspace separate', async ({
+  page,
+}) => {
+  const originalId = await openDemo(page);
+  await page.goto('/curriculum');
+  await page.getByLabel('Student alias').fill('Student B');
+  await page
+    .getByLabel('University', { exact: true })
+    .fill('Example Indonesian University');
+  await page.getByLabel('Study program').fill('Informatika');
+  await page
+    .getByLabel('Rule source or curriculum reference')
+    .fill('Example faculty handbook');
+  await page
+    .getByLabel('Or paste CSV content')
+    .fill(
+      'code,name,credits,recommended_term,prerequisites,offered_terms\nIF001,Introduction,3,1,,both\nIF002,Advanced topic,3,2,IF001,both',
+    );
+  await page
+    .getByRole('button', { name: 'Create my academic workspace' })
+    .click();
+  await expect(page).toHaveURL(/\/profile$/);
+  await expect(
+    page.getByText('IF001 | 3 credits', { exact: true }),
+  ).toBeVisible();
+  const denied = await page.request.get(`/api/plans/${originalId}`);
+  expect(denied.status()).toBe(404);
+  const selector = page.getByRole('combobox', { name: 'Switch workspace' });
+  const oldId = await selector
+    .locator('option')
+    .filter({ hasText: 'Alex | Demo student' })
+    .getAttribute('value');
+  await selector.selectOption(oldId!);
+  await expect(page.locator('.identity strong')).toHaveText(
+    'Alex | Demo student',
+  );
+  await page.goto(`/plans/${originalId}`);
+  await expect(
+    page.getByRole('heading', { name: 'My study plan', exact: true }),
+  ).toBeVisible();
+});
+
+test('canvas drag changes the assigned semester and mobile pages fit the viewport', async ({
+  page,
+}) => {
+  const id = await openDemo(page);
+  const node = page.locator('.svelte-flow__node[data-id="CS301"]');
+  await expect(node).toBeVisible();
+  const box = await node.boundingBox();
+  const previous = page.locator('.svelte-flow__node[data-id="CS201"]');
+  const dest = await previous.boundingBox();
+  if (!box || !dest) throw new Error('Canvas cards not rendered');
+  await node.click();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(dest.x + dest.width / 2, box.y + box.height / 2, {
+    steps: 16,
+  });
+  await page.mouse.up();
+  await expect(
+    page.getByRole('combobox', { name: 'Assigned semester', exact: true }),
+  ).toHaveValue('2');
+  await page.getByRole('button', { name: 'Save & validate' }).click();
+  await expect(
+    page.getByText('Plan saved and checked', { exact: false }),
+  ).toBeVisible();
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({
+    path: 'test-results/planning-canvas.png',
+    fullPage: true,
+  });
   await page.setViewportSize({ width: 390, height: 844 });
+  for (const path of [
+    '/',
+    '/plans',
+    `/plans/${id}`,
+    '/compare',
+    '/study',
+    '/profile',
+    '/curriculum',
+    '/methodology',
+  ]) {
+    await page.goto(path);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+      path,
+    ).toBe(true);
+  }
   await page.goto('/');
-  await expect(
-    page.locator('.svelte-flow__node[data-id="CS101"]'),
-  ).toBeVisible();
-  await expect(
-    page.getByRole('heading', { name: 'Your path, in perspective.' }),
-  ).toBeVisible();
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  ).toBe(true);
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({
     path: 'test-results/workspace-mobile.png',
     fullPage: true,
   });
+});
+
+test('keeps a failed save recoverable after reload', async ({ page }) => {
+  await openDemo(page);
+  await page
+    .getByRole('button', { name: 'Semester board', exact: true })
+    .click();
+  await page
+    .getByLabel('Move CS301 to semester', { exact: true })
+    .selectOption('2');
+  await page.route('**/api/plans/*', (route) =>
+    route.request().method() === 'PATCH'
+      ? route.fulfill({
+          status: 503,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            detail: 'Temporary API outage. Retry when connected.',
+          }),
+        })
+      : route.continue(),
+  );
+  await page.getByRole('button', { name: 'Save & validate' }).click();
+  await expect(page.getByRole('alert')).toContainText('Temporary API outage');
+  await expect(
+    page.getByText('Rev 1 | Unsaved changes', { exact: false }),
+  ).toBeVisible();
+  await page.unroute('**/api/plans/*');
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.reload();
+  await page
+    .getByRole('button', { name: 'Restore draft', exact: true })
+    .click();
+  await page.getByRole('button', { name: 'Save & validate' }).click();
+  await expect(
+    page.getByText('Plan saved and checked', { exact: false }),
+  ).toBeVisible();
+  await page
+    .getByRole('button', { name: 'Semester board', exact: true })
+    .click();
+  await expect(
+    page.getByLabel('Move CS301 to semester', { exact: true }),
+  ).toHaveValue('2');
 });
