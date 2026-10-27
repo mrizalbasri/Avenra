@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Button } from '#lib/components/ui/dusk/button/index.js';
   import Header from './header.svelte';
+  import FaqsOne from '#lib/components/dusk/faqs/one.svelte';
   import ContentTwo from '#lib/components/dusk/content/two.svelte';
   import FeaturesFive from '#lib/components/dusk/features/five.svelte';
   import logo from '#lib/assets/avenra.svg';
@@ -72,6 +73,7 @@
   </section>
   <FeaturesFive />
   <ContentTwo />
+  <FaqsOne />
   <footer>
     <span class="footer-brand"
       ><img src={logo} alt="" width="30" height="24" />avenra.</span
