@@ -8,7 +8,9 @@
     ><img src={logo} alt="" width="34" height="28" /><span>avenra.</span></a
   >
   <nav aria-label="Introduction navigation" class:expanded={menuOpen}>
-    <a href="#how-it-works" onclick={() => (menuOpen = false)}>How it works</a>
+    <a href="#getting-started" onclick={() => (menuOpen = false)}
+      >How it works</a
+    >
     <a href="/methodology">Rules & methodology</a>
     <a href="/curriculum" class="nav-action">Bring your curriculum ↗</a>
   </nav>
