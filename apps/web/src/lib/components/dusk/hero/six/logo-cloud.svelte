@@ -35,11 +35,11 @@
     gap: 48px;
   }
   article {
-    border-top: 1px solid #344039;
+    border-top: 1px solid #3f3f46;
     padding-top: 24px;
   }
   span {
-    color: #6ee7b7;
+    color: #f5f5f7;
     font-size: 11px;
     letter-spacing: 1.4px;
   }
@@ -49,7 +49,7 @@
     letter-spacing: -0.5px;
   }
   p {
-    color: #a7b6ae;
+    color: #a1a1aa;
     line-height: 1.8;
     font-size: 14px;
     max-width: 330px;

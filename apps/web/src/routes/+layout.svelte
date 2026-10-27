@@ -35,7 +35,9 @@
       </div>{/if}{@render children()}
   </main>{:else}<div class="app-shell">
     <aside class="app-sidebar no-print">
-      <a href="/" class="logo"><span>a</span>avenra.</a>
+      <a href="/" class="logo"
+        ><img src={favicon} alt="" width="34" height="28" />avenra.</a
+      >
       <nav aria-label="Main navigation">
         {#each navigation as item}<a
             href={item.href}

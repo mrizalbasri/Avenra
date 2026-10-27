@@ -2,6 +2,7 @@
   import { Button } from '#lib/components/ui/dusk/button/index.js';
   import Header from './header.svelte';
   import LogoCloud from './logo-cloud.svelte';
+  import logo from '#lib/assets/avenra.svg';
   import preview from '#lib/assets/planning-preview.png';
   let {
     hasProfile = false,
@@ -70,7 +71,9 @@
   </section>
   <LogoCloud />
   <footer>
-    <span>avenra.</span>
+    <span class="footer-brand"
+      ><img src={logo} alt="" width="30" height="24" />avenra.</span
+    >
     <p>
       Planning support for students across Indonesia.<br />Discuss decisions
       with your academic advisor.
@@ -81,8 +84,8 @@
 
 <style>
   .landing {
-    background: #0b100e;
-    color: #f2f7f4;
+    background: #09090b;
+    color: #f5f5f7;
     min-height: 100vh;
   }
   .hero-copy {
@@ -94,7 +97,7 @@
     display: inline-flex;
     align-items: center;
     gap: 10px;
-    color: #bac8bf;
+    color: #b4b4bd;
     font-size: 10px;
     letter-spacing: 1.6px;
     text-decoration: none;
@@ -103,7 +106,7 @@
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: #6ee7b7;
+    background: #f5f5f7;
   }
   .intro-grid {
     margin-top: 32px;
@@ -120,7 +123,7 @@
     margin: 0;
   }
   h1 span {
-    color: #a6b9ad;
+    color: #a1a1aa;
   }
   .intro-description {
     max-width: 410px;
@@ -128,7 +131,7 @@
   }
   .intro-description p {
     font-size: 17px;
-    color: #bac8bf;
+    color: #b4b4bd;
     line-height: 1.7;
     margin: 0 0 26px;
   }
@@ -144,14 +147,14 @@
   }
   small {
     display: block;
-    color: #93a59a;
+    color: #a1a1aa;
     font-size: 11px;
     margin-top: 16px;
   }
   .preview-stage {
     max-width: 1200px;
     margin: 0 auto;
-    background: #19392b;
+    background: #1c1c20;
     border-radius: 22px;
     padding: 26px 46px 0;
     overflow: hidden;
@@ -161,7 +164,7 @@
     justify-content: space-between;
     gap: 16px;
     font-size: 10px;
-    color: #bfdbcb;
+    color: #d4d4d8;
     letter-spacing: 1.2px;
     padding-bottom: 26px;
   }
@@ -170,28 +173,28 @@
   }
   .preview-window {
     background: #111113;
-    border: 1px solid #49765b;
+    border: 1px solid #51515a;
     padding: 7px;
     border-radius: 12px;
     box-shadow: 0 24px 70px #0006;
     height: 470px;
     overflow: hidden;
   }
-  img {
+  .preview-window img {
     display: block;
     width: 100%;
     height: auto;
     border-radius: 6px;
   }
   .preview-note {
-    color: #bfd5c7;
+    color: #b4b4bd;
     font-size: 11px;
     padding: 17px 0;
     text-align: center;
     margin: 0;
   }
   footer {
-    border-top: 1px solid #28362e;
+    border-top: 1px solid #2c2c30;
     max-width: 1200px;
     margin: auto;
     padding: 32px 0;
@@ -199,11 +202,16 @@
     justify-content: space-between;
     align-items: center;
     gap: 24px;
-    color: #a7b6ae;
+    color: #a1a1aa;
     font-size: 12px;
   }
+  .footer-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
   footer > span {
-    color: #f2f7f4;
+    color: #f5f5f7;
     font-size: 23px;
     font-weight: 600;
   }
@@ -255,7 +263,7 @@
     .preview-window {
       height: 290px;
     }
-    img {
+    .preview-window img {
       width: 740px;
       max-width: none;
     }

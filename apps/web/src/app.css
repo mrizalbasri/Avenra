@@ -14,10 +14,10 @@
   --border-strong: #51515a;
   --edge: #86868f;
   --canvas-dot: #35353b;
-  --accent: #ff9a3d;
-  --accent-strong: #ff6a00;
-  --accent-hover: #ffc966;
-  --accent-soft: #2d2118;
+  --accent: #f5f5f7;
+  --accent-strong: #ffffff;
+  --accent-hover: #d4d4d8;
+  --accent-soft: #252528;
   font-family:
     -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
   color: var(--text-primary);
@@ -261,10 +261,10 @@ p {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #9dbda8;
+  background: #d4d4d8;
 }
 .connection-dot.disconnected {
-  background: #f0ba78;
+  background: #a1a1aa;
 }
 main {
   padding: 35px 32px;
@@ -352,9 +352,9 @@ main {
   color: #c4c4cf;
 }
 .tag.warning {
-  color: #f1c28e;
-  border-color: #735334;
-  background: #2b2119;
+  color: #e4e4e7;
+  border-color: #71717a;
+  background: #252528;
 }
 .muted {
   color: var(--text-secondary);
@@ -562,22 +562,22 @@ progress::-moz-progress-bar {
   border: 1px solid;
 }
 .error-banner {
-  background: #2f1b1e;
-  color: #f4bdc0;
-  border-color: #704147;
+  background: #252528;
+  color: #f5f5f7;
+  border-color: #71717a;
 }
 .warning-banner {
-  background: #2b2319;
-  color: #efd1a8;
-  border-color: #6e5534;
+  background: #252528;
+  color: #e4e4e7;
+  border-color: #71717a;
 }
 .success-banner {
-  background: #17271e;
-  color: #b8dbc5;
-  border-color: #365e46;
+  background: #202023;
+  color: #e4e4e7;
+  border-color: #51515a;
 }
 .success-text {
-  color: #b8dbc5;
+  color: #e4e4e7;
   font-size: 13px;
 }
 .segmented {
@@ -596,7 +596,7 @@ progress::-moz-progress-bar {
   border-radius: 6px;
 }
 .segmented button.chosen {
-  background: #49301d;
+  background: #3f3f46;
   color: var(--accent-hover);
 }
 .form-grid {
@@ -816,10 +816,10 @@ td {
 }
 .course-node.has-finding,
 .course-node.failed {
-  border-color: #c19762;
+  border-color: #a1a1aa;
 }
 .course-node.failed small {
-  color: #edc18b;
+  color: #e4e4e7;
 }
 .svelte-flow__node.selected .course-node {
   border-color: var(--accent);
@@ -873,7 +873,7 @@ td {
   color: var(--text-secondary);
 }
 .term-heading span.load-over {
-  color: #edc18b;
+  color: #e4e4e7;
 }
 .board-course {
   background: var(--surface-raised);
