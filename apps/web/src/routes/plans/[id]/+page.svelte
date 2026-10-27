@@ -367,7 +367,7 @@
     >{dirty
       ? 'Changes need checking'
       : saved.validation.findings.length
-        ? `${saved.validation.findings.length} rule findings`
+        ? `${saved.validation.findings.length} rule ${saved.validation.findings.length === 1 ? 'finding' : 'findings'}`
         : 'Valid under modeled assumptions'}</span
   ><span>{remaining.reduce((s, c) => s + c.credits, 0)} credits remaining</span
   ><span

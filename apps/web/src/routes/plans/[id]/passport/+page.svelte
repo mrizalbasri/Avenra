@@ -59,7 +59,7 @@
     <p>
       {data.plan.validation.findings.length
         ? `${data.plan.validation.findings.length} rule findings require review.`
-        : 'The saved plan satisfies the modeled modeled rules under the listed assumptions.'}
+        : 'The saved plan satisfies the modeled rules under the listed assumptions.'}
     </p>
     <p>
       Remaining credits: {data.plan.validation.remaining_credits} | Peak load: {data
