@@ -1,0 +1,50 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  foundation:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: avenra
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: avenra
+        ports: ['55432:5432']
+        options: >-
+          --health-cmd "pg_isready -U avenra -d avenra"
+          --health-interval 5s --health-timeout 3s --health-retries 15
+    env:
+      DATABASE_URL: postgresql+psycopg://avenra:ci-only-password@127.0.0.1:55432/avenra
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: '3.12'
+      - run: pnpm install --frozen-lockfile
+      - run: uv --directory apps/api sync --frozen
+      - run: uv --directory apps/api run ruff check .
+      - run: uv --directory apps/api run ruff format --check .
+      - run: uv --directory apps/api run pytest
+      - run: uv --directory apps/api run alembic upgrade head
+      - run: pnpm format:check
+      - run: pnpm check
+      - run: pnpm build
+      - run: pnpm --filter @avenra/web exec playwright install --with-deps chromium
+      - run: pnpm test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-results
+          path: apps/web/test-results/
+          retention-days: 7

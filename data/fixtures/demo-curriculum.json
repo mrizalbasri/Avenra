@@ -1,0 +1,52 @@
+{
+  "id": "synthetic-computing",
+  "name": "Computing · synthetic curriculum",
+  "version": "demo-1",
+  "status": "synthetic",
+  "disclaimer": "Demonstration assumptions only. Not an official university curriculum or graduation decision.",
+  "credit_cap": 20,
+  "courses": [
+    {
+      "code": "CS101",
+      "name": "Programming fundamentals",
+      "credits": 3,
+      "recommended_term": 1,
+      "prerequisites": []
+    },
+    {
+      "code": "MA101",
+      "name": "Discrete mathematics",
+      "credits": 3,
+      "recommended_term": 1,
+      "prerequisites": []
+    },
+    {
+      "code": "CS201",
+      "name": "Data structures",
+      "credits": 4,
+      "recommended_term": 2,
+      "prerequisites": ["CS101"]
+    },
+    {
+      "code": "CS202",
+      "name": "Database systems",
+      "credits": 3,
+      "recommended_term": 2,
+      "prerequisites": ["CS101"]
+    },
+    {
+      "code": "CS301",
+      "name": "Algorithm design",
+      "credits": 4,
+      "recommended_term": 3,
+      "prerequisites": ["CS201", "MA101"]
+    },
+    {
+      "code": "CS302",
+      "name": "Software engineering",
+      "credits": 3,
+      "recommended_term": 3,
+      "prerequisites": ["CS201", "CS202"]
+    }
+  ]
+}

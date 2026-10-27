@@ -1,0 +1,10 @@
+pnpm-lock.yaml
+uv.lock
+.venv
+.svelte-kit
+build
+node_modules
+playwright-report
+test-results
+BRD_Avenra_STACK_2026.md
+PRD_Avenra_STACK_2026.md

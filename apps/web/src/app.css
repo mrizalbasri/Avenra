@@ -1,0 +1,23 @@
+@import 'tailwindcss';
+
+:root {
+  font-family: 'Segoe UI Variable', 'Segoe UI', sans-serif;
+  color: #202923;
+  background: #f6f7f3;
+  font-synthesis: none;
+}
+body {
+  margin: 0;
+}
+button {
+  cursor: pointer;
+  font: inherit;
+}
+button:focus-visible,
+a:focus-visible {
+  outline: 3px solid #49745b;
+  outline-offset: 4px;
+}
+.svelte-flow__node {
+  font-family: inherit;
+}
