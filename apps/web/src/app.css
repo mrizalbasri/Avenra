@@ -13,6 +13,10 @@
   --border-strong: #51515a;
   --edge: #86868f;
   --canvas-dot: #35353b;
+  --accent: #ff9a3d;
+  --accent-strong: #ff6a00;
+  --accent-hover: #ffc966;
+  --accent-soft: #2d2118;
   font-family:
     -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
   color: var(--text-primary);
@@ -28,7 +32,7 @@ button {
 }
 button:focus-visible,
 a:focus-visible {
-  outline: 2px solid var(--text-primary);
+  outline: 2px solid var(--accent);
   outline-offset: 4px;
 }
 .svelte-flow__node {
@@ -36,8 +40,8 @@ a:focus-visible {
 }
 
 ::selection {
-  background: #51515a;
-  color: #fff;
+  background: var(--accent);
+  color: #111113;
 }
 
 * {
@@ -53,7 +57,7 @@ a:focus-visible {
   --xy-controls-button-border-color: var(--border-strong);
   --xy-handle-background-color: var(--text-secondary);
   --xy-handle-border-color: var(--surface-panel);
-  --xy-node-boxshadow-selected: 0 0 0 2px var(--text-primary);
+  --xy-node-boxshadow-selected: 0 0 0 2px var(--accent);
   --xy-attribution-background-color: var(--surface-sidebar);
 }
 
@@ -86,13 +90,13 @@ textarea {
 input[type='checkbox'] {
   width: 17px;
   height: 17px;
-  accent-color: #e5e5e9;
+  accent-color: var(--accent);
   flex-shrink: 0;
 }
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 2px solid #d4d4da;
+  outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
 input::placeholder,
@@ -162,7 +166,7 @@ p {
   margin: 0 12px 50px;
 }
 .logo > span {
-  background: var(--text-primary);
+  background: var(--accent);
   color: var(--surface-base);
   width: 32px;
   height: 32px;
@@ -197,8 +201,8 @@ p {
   color: var(--text-primary);
 }
 .app-sidebar nav a.active {
-  background: var(--surface-selected);
-  color: var(--text-primary);
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 .sidebar-bottom {
   margin-top: auto;
@@ -309,12 +313,12 @@ main {
   background: #303035;
 }
 .button.primary {
-  background: #f5f5f7;
+  background: var(--accent);
   color: #111113;
-  border-color: #f5f5f7;
+  border-color: var(--accent);
 }
 .button.primary:hover:not(:disabled) {
-  background: #dcdce2;
+  background: var(--accent-hover);
 }
 .button.subtle {
   background: transparent;
@@ -329,7 +333,7 @@ main {
   align-items: center;
   gap: 8px;
   font-size: 12px;
-  color: #dedee5;
+  color: var(--accent-hover);
   text-underline-offset: 4px;
 }
 .text-link:hover {
@@ -412,11 +416,11 @@ progress::-webkit-progress-bar {
   background: #343439;
 }
 progress::-webkit-progress-value {
-  background: #e0e0e8;
+  background: var(--accent);
   border-radius: 4px;
 }
 progress::-moz-progress-bar {
-  background: #e0e0e8;
+  background: var(--accent);
 }
 .meta-row {
   display: flex;
@@ -591,8 +595,8 @@ progress::-moz-progress-bar {
   border-radius: 6px;
 }
 .segmented button.chosen {
-  background: #414146;
-  color: #fff;
+  background: #49301d;
+  color: var(--accent-hover);
 }
 .form-grid {
   display: grid;
@@ -815,6 +819,12 @@ td {
 }
 .course-node.failed small {
   color: #edc18b;
+}
+.svelte-flow__node.selected .course-node {
+  border-color: var(--accent);
+}
+.svelte-flow__node.selected .svelte-flow__handle {
+  background: var(--accent);
 }
 .semester-node {
   height: 100%;
