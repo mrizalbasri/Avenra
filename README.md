@@ -13,32 +13,38 @@ Installing OR-Tools does not mean the recovery engine is implemented.
 ## Stack
 
 SvelteKit 3 / Svelte 5, TypeScript, Svelte Flow, Tailwind CSS, FastAPI,
-PostgreSQL 17, SQLAlchemy/Alembic, and OR-Tools CP-SAT.
+PostgreSQL 18, SQLAlchemy/Alembic, and OR-Tools CP-SAT.
 Node adapter is configured for a standalone web server.
 
 ## Requirements
 
 - Node.js 24 LTS and pnpm 11.18.0.
 - Python 3.12 and uv (Python 3.14 is not the supported API environment).
-- Docker Desktop with its Linux engine running.
-- Free local ports: 5173 (web), 18080 (API), 55432 (PostgreSQL).
+- An existing PostgreSQL instance; this workspace reuses Docker container
+  `postgres-local` on port 5434 with a dedicated `avenra` database.
+- Free local ports: 5173 (web), 18080 (API).
 
 ## Local setup
 
 Run these PowerShell commands from the repository root. Copy environment
 examples only on first setup; retain your existing local configuration thereafter.
-The example database password is a public local-development placeholder, not a
-production secret. Set matching values in both local environment files if changed.
+Set `DATABASE_URL` in `apps/api/.env` using your existing PostgreSQL credentials.
+The checked-in example contains placeholders only. The local workspace is already
+configured; do not overwrite its `.env` when restarting development.
 
 ```powershell
-Copy-Item .env.example .env
 Copy-Item apps/api/.env.example apps/api/.env
 Copy-Item apps/web/.env.example apps/web/.env
 pnpm install --frozen-lockfile
 uv --directory apps/api sync --frozen
-docker compose up -d --wait db
 uv --directory apps/api run alembic upgrade head
 ```
+
+Before migrations on a fresh machine, create database `avenra` in your existing
+instance using an authorized PostgreSQL role. For the shared local container,
+start it with `docker start postgres-local` if needed. Do not start a second
+PostgreSQL server or modify other projects' databases. The shared administrator
+can create the database using `createdb -h 127.0.0.1 -p 5434 -U YOUR_USER avenra`.
 
 In one terminal:
 
@@ -103,8 +109,8 @@ $env:ORIGIN = 'http://127.0.0.1:3000'
 node --env-file=.env build
 ```
 
-Stop development servers with Ctrl+C. `docker compose stop db` stops PostgreSQL;
-its named volume retains data. Configure real secrets, authenticated access,
+Stop development servers with Ctrl+C. Leave the shared PostgreSQL instance running
+for other projects. Configure real secrets, authenticated access,
 ownership checks, TLS, and deployment-specific settings before collecting personal
 records or exposing a deployment. No public deployment has been configured.
 

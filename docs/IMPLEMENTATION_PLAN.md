@@ -4,6 +4,12 @@ The user authorized SvelteKit/FastAPI setup, local verification, and GitHub
 repository creation on 27 October 2026. This supersedes the proposed Next.js
 choice in the earlier MVP design. Product features remain a staged backlog.
 
+The subsequent setup correction keeps pnpm and reuses the existing shared
+`postgres-local` instance on port 5434. A dedicated `avenra` database replaces
+the original isolated PostgreSQL container. Local credentials stay in the ignored
+API `.env`; no new database server or credentials are provisioned. CI continues
+to use an isolated disposable PostgreSQL service on port 55432.
+
 ## Foundation scope
 
 1. Preserve the supplied BRD/PRD and establish a pnpm web workspace and isolated

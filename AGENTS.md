@@ -16,7 +16,7 @@ Use Node 24, pnpm 11.18.0, Python 3.12, and uv. From the root:
 
 - `pnpm dev`, `pnpm check`, `pnpm build`: web development, type checks, production build.
 - `uv --directory apps/api run uvicorn app.main:app --reload --host 127.0.0.1 --port 18080`: API development.
-- `docker compose up -d --wait db`: local PostgreSQL.
+- Reuse `postgres-local:5434` with database `avenra`; `docker start postgres-local` starts the shared instance if stopped.
 - `uv --directory apps/api run pytest`: backend suite.
 - `pnpm test:e2e`: Playwright suite with automatic server startup.
 

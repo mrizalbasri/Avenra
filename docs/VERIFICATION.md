@@ -1,5 +1,13 @@
 # Foundation verification
 
+## Shared PostgreSQL correction
+
+The local setup now reuses PostgreSQL 18 in `postgres-local` on port 5434 with
+database `avenra`. Alembic revision 0001 was applied there. The original isolated
+container was stopped and its volume retained. Other databases are unchanged.
+The original foundation checks below describe the earlier isolated setup;
+readiness and migrations are rechecked against the shared database after switching.
+
 Verified locally on 27 October 2026, Windows, Node 24.11.1, pnpm 11.18.0,
 Python 3.12.4, and Docker Desktop Linux engine.
 
