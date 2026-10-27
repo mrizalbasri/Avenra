@@ -40,3 +40,13 @@ The section after Features Five adapts [SV Blocks Content Two](https://sv-blocks
 `apps/web/src/lib/components/dusk/content/two.svelte` retains the selected block's two-column heading and supporting content. Four ordered steps explain importing a curriculum, mapping semesters, simulating a change, and studying with focus sessions. The introduction header's **How it works** link now targets `#getting-started`. The section links to curriculum import and the actual methodology page and preserves the monochrome theme without adding another screenshot-heavy section.
 
 Verified locally: four ordered steps, the introduction anchor, curriculum and methodology navigation, no browser exceptions, and no horizontal page overflow at 390 px and 768 px. Visual evidence is saved under `docs/screenshots/content-desktop.png` and `content-mobile.png`.
+
+## FAQs One
+
+The FAQ section after Content Two adapts [SV Blocks FAQs One](https://sv-blocks.vercel.app/d/faqs-one.json), installed with `pnpm dlx shadcn-svelte@latest add https://sv-blocks.vercel.app/d/faqs-one.json` from `apps/web`.
+
+`apps/web/src/lib/components/dusk/faqs/one.svelte` uses the installed Bits UI accordion wrappers in `src/lib/components/ui/accordion/`. Six answers explain curriculum support, user-supplied rules, modeled validity, recovery scenarios, local storage, and the account-free fictional demo. Content follows the implemented boundaries in `docs/MVP_WORKSPACE.md`; the placeholder commerce and support copy has been removed. The methodology link opens the real rules page.
+
+The registry utility alias now uses `#lib/utils`, avoiding duplicate `.js` extensions in generated imports. Accordion imports use explicit `.js` extensions and the shared utility exports the required `WithoutChild` type.
+
+Verified locally: all six questions, single-open behavior, collapse, ArrowDown focus movement, Space activation, methodology navigation, and 390/768 px layouts without horizontal page overflow or browser exceptions. Screenshots are `docs/screenshots/faq-desktop.png` and `faq-mobile.png`.

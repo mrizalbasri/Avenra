@@ -18,3 +18,6 @@ integration, real student adoption, or a production deployment.
 
 - `content-desktop.png`: two-column getting-started section with four ordered steps.
 - `content-mobile.png`: stacked getting-started section at 390 px.
+
+- `faq-desktop.png`: FAQ accordion with the curriculum answer expanded.
+- `faq-mobile.png`: FAQ accordion with the demo answer expanded at 390 px.
