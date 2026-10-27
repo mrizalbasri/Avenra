@@ -15,3 +15,6 @@ integration, real student adoption, or a production deployment.
 
 - `features-desktop.png`: four feature sections with sticky desktop navigation.
 - `features-mobile.png`: feature details and horizontal feature navigation at 390 px.
+
+- `content-desktop.png`: two-column getting-started section with four ordered steps.
+- `content-mobile.png`: stacked getting-started section at 390 px.
