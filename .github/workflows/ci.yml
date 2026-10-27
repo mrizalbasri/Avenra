@@ -32,11 +32,11 @@ jobs:
         with:
           python-version: '3.12'
       - run: pnpm install --frozen-lockfile
-      - run: uv --directory apps/api sync --frozen
-      - run: uv --directory apps/api run ruff check .
-      - run: uv --directory apps/api run ruff format --check .
-      - run: uv --directory apps/api run pytest
-      - run: uv --directory apps/api run alembic upgrade head
+      - run: uv --directory backend sync --frozen
+      - run: uv --directory backend run ruff check .
+      - run: uv --directory backend run ruff format --check .
+      - run: uv --directory backend run pytest
+      - run: uv --directory backend run alembic upgrade head
       - run: pnpm format:check
       - run: pnpm check
       - run: pnpm build
@@ -46,5 +46,5 @@ jobs:
         if: failure()
         with:
           name: playwright-results
-          path: apps/web/test-results/
+          path: frontend/test-results/
           retention-days: 7
