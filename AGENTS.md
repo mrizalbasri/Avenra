@@ -8,16 +8,18 @@ Avenra is a local academic planning and learning MVP with synthetic and user-sup
 - `PRD_Avenra_STACK_2026.md`: product scope, API draft, and acceptance scenarios.
 - `docs/IMPLEMENTATION_PLAN.md`: authorized setup scope and subsequent product milestones.
 
-`apps/web/src/routes` contains Overview, curriculum import, profiles, plans, comparison, study, and passport pages. `src/lib/components` holds canvas nodes and shared UI. Browser tests live in `apps/web/tests`. `apps/api/app` separates persistence, request schemas, rule checking, solver, and routes. Backend tests and Alembic revisions live under `apps/api/tests` and `migrations`. `data/fixtures` holds the synthetic curriculum.
+`frontend/src/routes` contains Overview, curriculum import, profiles, plans, comparison, study, and passport pages. `frontend/src/lib/components` holds canvas nodes and shared UI. Browser tests live in `frontend/tests`. `backend/app` separates persistence, request schemas, rule checking, solver, and routes. Backend tests and Alembic revisions live under `backend/tests` and `backend/migrations`. `backend/app/fixtures` holds the synthetic curriculum.
+
+Frontend and backend communicate only through HTTP at `/api/v1`. Keep database access, academic rules, and solver logic in the backend; frontend workspace IDs are browser scoping state, not authentication. Configure `PUBLIC_API_BASE_URL` in the frontend and `CORS_ORIGINS` in the backend for separate origins.
 
 ## Build, Test, and Development Commands
 
 Use Node 24, pnpm 11.18.0, Python 3.12, and uv. From the root:
 
 - `pnpm dev`, `pnpm check`, `pnpm build`: web development, type checks, production build.
-- `uv --directory apps/api run uvicorn app.main:app --reload --host 127.0.0.1 --port 18080`: API development.
+- `pnpm dev:backend` or `uv --directory backend run uvicorn app.main:app --reload --host 127.0.0.1 --port 18080`: API development.
 - Reuse `postgres-local:5434` with database `avenra`; `docker start postgres-local` starts the shared instance if stopped.
-- `uv --directory apps/api run pytest`: backend suite.
+- `uv --directory backend run pytest`: backend suite.
 - `pnpm test:e2e`: Playwright suite with automatic server startup.
 
 See README for environment setup, dependency installation, migrations, and shutdown.

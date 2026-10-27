@@ -43,7 +43,10 @@ competition outcome follows from these automated tests.
 
 ## Review guide
 
-Backend: `models.py`, `schemas.py`, `validation.py`, `solver.py`, `routes.py`.
-Frontend: `src/routes/plans/[id]`, curriculum import, study timer, and API proxy.
+Backend: `backend/app/models.py`, `schemas.py`, `validation.py`, `solver.py`, `routes.py`.
+Frontend: `frontend/src/routes/plans/[id]`, curriculum import, study timer, and
+`frontend/src/lib/api.ts`. The frontend calls FastAPI directly over HTTP; no web
+API proxy remains. SSR and browser calls use the same workspace ID and public API
+origin, with CORS configured in the backend.
 Check migration application, invalid drafts, timeout handling, cross-workspace
 queries, failed saves, timer restoration, and export freshness.

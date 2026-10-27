@@ -7,6 +7,8 @@
   },
   "scripts": {
     "dev": "pnpm --filter @avenra/web dev --host 127.0.0.1",
+    "dev:frontend": "pnpm dev",
+    "dev:backend": "uv --directory backend run uvicorn app.main:app --reload --host 127.0.0.1 --port 18080",
     "build": "pnpm --filter @avenra/web build",
     "check": "pnpm --filter @avenra/web check",
     "test:e2e": "pnpm --filter @avenra/web test:e2e",

@@ -33,16 +33,16 @@ Node adapter is configured for a standalone web server.
 
 Run these PowerShell commands from the repository root. Copy environment
 examples only on first setup; retain your existing local configuration thereafter.
-Set `DATABASE_URL` in `apps/api/.env` using your existing PostgreSQL credentials.
+Set `DATABASE_URL` in `backend/.env` using your existing PostgreSQL credentials.
 The checked-in example contains placeholders only. The local workspace is already
 configured; do not overwrite its `.env` when restarting development.
 
 ```powershell
-Copy-Item apps/api/.env.example apps/api/.env
-Copy-Item apps/web/.env.example apps/web/.env
+Copy-Item backend/.env.example backend/.env
+Copy-Item frontend/.env.example frontend/.env
 pnpm install --frozen-lockfile
-uv --directory apps/api sync --frozen
-uv --directory apps/api run alembic upgrade head
+uv --directory backend sync --frozen
+uv --directory backend run alembic upgrade head
 ```
 
 Before migrations on a fresh machine, create database `avenra` in your existing
@@ -54,18 +54,34 @@ can create the database using `createdb -h 127.0.0.1 -p 5434 -U YOUR_USER avenra
 In one terminal:
 
 ```powershell
-uv --directory apps/api run uvicorn app.main:app --reload --host 127.0.0.1 --port 18080
+pnpm dev:backend
 ```
 
 In another:
 
 ```powershell
-pnpm dev
+pnpm dev:frontend
 ```
 
 Open http://127.0.0.1:5173 and API documentation at
 http://127.0.0.1:18080/docs. Choose **Open demo workspace** or **bring your own
 curriculum**. No account is needed for local evaluation.
+
+Frontend and backend run as separate services in this one repository. The browser
+and SvelteKit SSR call FastAPI directly at `/api/v1`; there is no frontend API
+proxy. Set `PUBLIC_API_BASE_URL` in `frontend/.env` to the backend origin and
+`CORS_ORIGINS` in `backend/.env` to a JSON array of allowed frontend origins.
+For example, a frontend on port 3000 requires
+`CORS_ORIGINS=["http://127.0.0.1:3000"]`. Both the browser and SSR server must be
+able to reach the configured API URL.
+
+Each service has its own dependencies and setup guide: [frontend](frontend/README.md)
+and [backend](backend/README.md). Building the frontend requires no Python or
+database; running backend unit tests requires no Node or frontend source.
+Existing users should move their ignored `apps/web/.env` to `frontend/.env`
+and `apps/api/.env` to `backend/.env`, rename frontend `API_BASE_URL` to
+`PUBLIC_API_BASE_URL`, and reinstall dependencies rather than moving generated
+`node_modules`, `.svelte-kit`, or `.venv` directories.
 
 ## Product walkthrough
 
@@ -100,14 +116,17 @@ Automatic institutional data import is not implemented.
 pnpm check
 pnpm build
 pnpm format:check
-uv --directory apps/api run ruff check .
-uv --directory apps/api run ruff format --check .
-uv --directory apps/api run pytest
+uv --directory backend run ruff check .
+uv --directory backend run ruff format --check .
+uv --directory backend run pytest
 pnpm --filter @avenra/web exec playwright install chromium
 pnpm test:e2e
 ```
 
-Playwright starts the API and web server automatically (ports 18080 and 4173).
+Playwright starts the API and builds/starts the production frontend automatically
+(ports 18080 and 4173), avoiding development-only HMR and dependency-optimizer races.
+If those ports are occupied, set `E2E_API_PORT` and `E2E_WEB_PORT` to free ports;
+the test servers, API URL, and allowed browser origin follow those values.
 Browser checks cover plan movement/undo/save/reload, recovery, comparison, fresh
 passports, curriculum import, workspace scoping, learning targets, timer recovery,
 and mobile overflow. Backend tests cover rule violations, independent solver-output
@@ -123,25 +142,29 @@ synthetic fixtures and does not require the database.
 ## Structure
 
 ```text
-apps/web/          SvelteKit workspace and Playwright tests
-apps/api/app/      FastAPI configuration, database access, curriculum endpoint
-apps/api/tests/    API and solver runtime tests
-apps/api/migrations/  Alembic schema for profiles, curricula, plans, tasks, sessions
-data/fixtures/     Synthetic curriculum and explicit provenance
-docs/              Designs, implementation plan, verification evidence
-.github/           CI and contribution templates
+frontend/              SvelteKit UI, HTTP client, and Playwright tests
+backend/app/           FastAPI, persistence, academic rules, and solver
+backend/app/fixtures/  Bundled synthetic curriculum and explicit provenance
+backend/tests/         API and solver runtime tests
+backend/migrations/    Alembic database schema
+docs/                  Designs, implementation plan, verification evidence
+.github/               CI and contribution templates
 ```
 
 ## Production build and shutdown
 
 ```powershell
+# Set ORIGIN before building; SvelteKit 3 embeds paths.origin in the server.
+$env:ORIGIN = 'http://127.0.0.1:3000'
 pnpm build
-# Run from apps/web; set ORIGIN to your actual deployment origin.
+# Run the remaining commands from frontend.
 $env:HOST = '127.0.0.1'
 $env:PORT = '3000'
-$env:ORIGIN = 'http://127.0.0.1:3000'
 node --env-file=.env build
 ```
+
+Rebuild when the frontend origin changes. Without an explicit origin, adapter-node
+infers HTTPS, which is incorrect for a direct local HTTP production server.
 
 Stop development servers with Ctrl+C. Leave the shared PostgreSQL instance running
 for other projects. Configure real secrets, authenticated access,
