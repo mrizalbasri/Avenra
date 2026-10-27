@@ -7,7 +7,7 @@ cd apps/web
 pnpm dlx shadcn-svelte@latest add https://sv-blocks.vercel.app/d/hero-six.json
 ```
 
-The split headline, supporting copy, and large product preview follow the selected block. The header, actions, and feature overview are adapted to Avenra. Example company logos, placeholder authentication links, remote background imagery, and the mail screenshot were replaced with product content and a local fictional planning screenshot.
+The interface now uses black, white, and neutral grays throughout the landing page and workspace. The white SVG logo follows the three-part mark selected from the emerald concept and also serves as the favicon. The split headline, supporting copy, and large product preview follow the selected block. The header, actions, and feature overview are adapted to Avenra. Example company logos, placeholder authentication links, remote background imagery, and the mail screenshot were replaced with product content and a local fictional planning screenshot.
 
 - `apps/web/components.json` configures the registry and native `#lib` imports.
 - `apps/web/src/lib/components/dusk/hero/six/` contains the introduction.

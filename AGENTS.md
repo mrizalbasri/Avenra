@@ -24,7 +24,7 @@ See README for environment setup, dependency installation, migrations, and shutd
 
 ## Coding Style & Naming Conventions
 
-Use two-space indentation in TypeScript/Svelte and four spaces in Python. Use PascalCase components and snake_case Python modules/functions. Keep academic assignments separate from canvas coordinates. Preserve the dark theme with orange/amber brand accents and use `|` instead of long dashes in UI text. Use `pnpm format:check` and Ruff for formatting/linting.
+Use two-space indentation in TypeScript/Svelte and four spaces in Python. Use PascalCase components and snake_case Python modules/functions. Keep academic assignments separate from canvas coordinates. Preserve the dark monochrome theme with white accents and the three-part Avenra mark and use `|` instead of long dashes in UI text. Use `pnpm format:check` and Ruff for formatting/linting.
 
 ## Testing Guidelines
 
