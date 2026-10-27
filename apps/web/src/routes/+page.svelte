@@ -1,6 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { page } from '$app/state';
   import { invalidateAll, goto } from '$app/navigation';
+  import Hero from '#lib/components/dusk/hero/six/hero.svelte';
   import Icon from '#lib/components/Icon.svelte';
   import { api } from '#lib/api.js';
   import type { PageProps } from './$types';
@@ -22,6 +24,10 @@
     workspace?.curriculum.courses.reduce((sum, c) => sum + c.credits, 0) ?? 0,
   );
   async function openDemo() {
+    if (workspace?.profile) {
+      await goto('/plans');
+      return;
+    }
     busy = true;
     error = '';
     try {
@@ -41,49 +47,25 @@
 </script>
 
 <svelte:head><title>Avenra | Your academic workspace</title></svelte:head>
-<div class="page-heading">
-  <div>
-    <h1>
-      {workspace?.profile
-        ? `Make your next semester count.`
-        : 'A clearer path through university.'}
-    </h1>
-    <p>
-      Understand your progress, explore your options, and turn a plan into
-      action.
-    </p>
+{#if !workspace?.profile || page.url.searchParams.has('intro')}
+  {#if error}<p class="error-banner" role="alert">{error}</p>{/if}
+  <Hero
+    hasProfile={!!workspace?.profile}
+    {busy}
+    disabled={!workspace || !hydrated}
+    onOpen={openDemo}
+  />{:else}<div class="page-heading">
+    <div>
+      <h1>Make your next semester count.</h1>
+      <p>
+        Understand your progress, explore your options, and turn a plan into
+        action.
+      </p>
+    </div>
+    <a class="button primary" href="/plans"
+      >Open your plans <Icon name="arrow" size={16} /></a
+    >
   </div>
-  <a
-    class="button primary"
-    href={workspace?.profile ? '/plans' : '/methodology'}
-    >{workspace?.profile ? 'Open your plans' : 'How Avenra works'}<Icon
-      name="arrow"
-      size={16}
-    /></a
-  >
-</div>
-{#if error}<p class="error-banner" role="alert">{error}</p>{/if}
-{#if !workspace?.profile}
-  <section class="welcome-panel">
-    <div class="welcome-symbol"><Icon name="plans" size={40} /></div>
-    <h2>Start with a complete example.</h2>
-    <p>
-      Open a synthetic student profile and a 12-course curriculum. Move courses
-      between semesters, simulate a setback, compare recovery options, and build
-      a study routine.
-    </p>
-    <button
-      class="button primary"
-      disabled={busy || !workspace || !hydrated}
-      onclick={openDemo}
-      >{busy ? 'Opening workspace…' : 'Open demo workspace'}<Icon
-        name="arrow"
-        size={16}
-      /></button
-    ><a class="text-link" href="/curriculum">Or bring your own curriculum</a
-    ><small>No account needed. The example uses fictional academic data.</small>
-  </section>
-{:else}
   <section class="overview-grid">
     <div class="progress-panel">
       <div class="section-heading">
@@ -156,7 +138,10 @@
     >
   </section>
 {/if}
-<p class="footnote">
-  {workspace?.curriculum.disclaimer ??
-    'Avenra supports planning and advisor consultation. It does not issue academic approvals.'}
-</p>
+{#if workspace?.profile && !page.url.searchParams.has('intro')}<p
+    class="footnote"
+  >
+    {workspace?.curriculum.disclaimer ??
+      'Avenra supports planning and advisor consultation. It does not issue academic approvals.'}
+  </p>
+{/if}

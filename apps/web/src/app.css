@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import './shadcn.css';
 
 :root {
   color-scheme: dark;
@@ -1277,4 +1278,9 @@ td {
     width: 210px;
     max-width: 60vw;
   }
+}
+
+main.landing-main {
+  padding: 0;
+  max-width: none;
 }
