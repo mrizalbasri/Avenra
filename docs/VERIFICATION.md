@@ -1,5 +1,31 @@
 # Foundation verification
 
+## Academic workspace MVP
+
+Verified on 27 October 2026 against the functional local workspace:
+
+- Backend: 16 tests passed. Includes imported curriculum scoping, invalid graph
+  rejection, plan and visual-coordinate persistence, stale revisions, prerequisite
+  and credit violations, offering constraints, distinct independently checked
+  recovery results, infeasible/timeout separation, and study-session idempotency.
+- Browser: 6 Chromium tests passed. Includes board movement/undo/redo/reload,
+  canvas drag, recovery-to-comparison-to-passport, curriculum import and switching,
+  target completion, timer recovery, failed-save draft restoration, and mobile
+  overflow checks across all main routes.
+- `pnpm check`: zero errors and warnings. Production Node build passed.
+- Ruff lint/format and Prettier passed. Design detector reported no findings.
+- PostgreSQL `avenra` in the existing `postgres-local:5434` instance migrated to
+  revision `0004`; no other project databases were modified.
+- Desktop canvas, learning workspace, mobile overview, and print-layout screenshots
+  were inspected. Review images are stored in `docs/screenshots`.
+
+These are engineering checks using fictional academic data and a test curriculum,
+not validation of actual Indonesian university policy or measured student outcomes.
+Imported curricula remain user-supplied. Workspace identifiers are not authentication.
+GitHub CI must be checked on the current PR head separately.
+
+The earlier sections below retain foundation verification history.
+
 ## Shared PostgreSQL correction
 
 The local setup now reuses PostgreSQL 18 in `postgres-local` on port 5434 with

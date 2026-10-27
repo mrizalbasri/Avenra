@@ -2,13 +2,13 @@
 
 ## Project Structure & Module Organization
 
-Avenra is an academic decision and recovery support project with a runnable development foundation.
+Avenra is a local academic planning and learning MVP with synthetic and user-supplied curricula.
 
 - `BRD_Avenra_STACK_2026.md`: business requirements and research hypotheses.
 - `PRD_Avenra_STACK_2026.md`: product scope, API draft, and acceptance scenarios.
 - `docs/IMPLEMENTATION_PLAN.md`: authorized setup scope and subsequent product milestones.
 
-`apps/web` contains SvelteKit, Svelte Flow, assets under `src/lib/assets`, and browser tests in `tests`. `apps/api/app` contains FastAPI modules; `apps/api/tests` holds backend tests and `migrations` holds Alembic revisions. `data/fixtures` contains synthetic curricula. Read relevant requirements before adding product features; most remain planned.
+`apps/web/src/routes` contains Overview, curriculum import, profiles, plans, comparison, study, and passport pages. `src/lib/components` holds canvas nodes and shared UI. Browser tests live in `apps/web/tests`. `apps/api/app` separates persistence, request schemas, rule checking, solver, and routes. Backend tests and Alembic revisions live under `apps/api/tests` and `migrations`. `data/fixtures` holds the synthetic curriculum.
 
 ## Build, Test, and Development Commands
 
@@ -24,11 +24,11 @@ See README for environment setup, dependency installation, migrations, and shutd
 
 ## Coding Style & Naming Conventions
 
-Use two-space indentation in TypeScript/Svelte and four spaces in Python. Use PascalCase components and snake_case Python modules/functions. Keep academic assignments separate from canvas coordinates. Use `pnpm format:check` for Prettier and `uv --directory apps/api run ruff check .` for Python linting. Format Python with Ruff.
+Use two-space indentation in TypeScript/Svelte and four spaces in Python. Use PascalCase components and snake_case Python modules/functions. Keep academic assignments separate from canvas coordinates. Preserve the monochrome dark theme and use `|` instead of long dashes in UI text. Use `pnpm format:check` and Ruff for formatting/linting.
 
 ## Testing Guidelines
 
-Use pytest (`test_*.py`) and Playwright (`*.spec.ts`). Add meaningful tests alongside features using the PRD test matrix, including prerequisite violations and infeasible plans. Independently validate solver outputs. No numeric coverage threshold is established. Report actual results and blockers; CI runs foundation checks.
+Use pytest (`test_*.py`) and Playwright (`*.spec.ts`). Cover rule violations, solver output rechecking, infeasible/timeout outcomes, revision conflicts, workspace scoping, draft recovery, and timers. Unit tests use isolated in-memory databases; local browser tests create fictional workspaces in Avenra's database. No numeric coverage threshold is established. Report actual results and blockers.
 
 ## Commit & Pull Request Guidelines
 
@@ -38,6 +38,6 @@ Preserve unrelated changes. Create commits only when requested; obtain authoriza
 
 ## Data Safety & Agent Instructions
 
-Use synthetic records by default; label assumptions and curriculum provenance. Keep credentials outside version control. Distinguish proposed capabilities from verified functionality.
+Keep credentials outside version control. Label synthetic and user-supplied rules and source references. Browser workspace IDs provide scoping, not authentication; this local prototype must not be presented as a secure public student-record service. Preserve other projects' databases in shared PostgreSQL.
 
 If `.codegraph/` exists, prioritize CodeGraph for architectural exploration and verify source before editing. Otherwise use standard search; never generate an index without authorization.

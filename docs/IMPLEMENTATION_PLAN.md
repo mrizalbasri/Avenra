@@ -1,5 +1,10 @@
 # Foundation implementation plan
 
+The subsequent request expands this work to the end-to-end local MVP. See
+`MVP_WORKSPACE.md` for current implemented scope, per-student curriculum import,
+verification boundaries, and the release limitations. The milestone list below
+is retained as the original foundation roadmap, not a current feature inventory.
+
 The user authorized SvelteKit/FastAPI setup, local verification, and GitHub
 repository creation on 27 October 2026. This supersedes the proposed Next.js
 choice in the earlier MVP design. Product features remain a staged backlog.
