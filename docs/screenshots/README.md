@@ -9,3 +9,6 @@ All names, courses, progress, tasks, and sessions shown are fictional examples.
 
 These images document the tested local MVP. They are not claims of institutional
 integration, real student adoption, or a production deployment.
+
+- `landing-desktop.png`: Hero Six introduction at 1440 px width.
+- `landing-mobile.png`: introduction at 390 px width.
