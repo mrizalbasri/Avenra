@@ -11,7 +11,10 @@ test('browser calls the independent API directly and SSR preserves the same work
   const bootstrap = page.waitForResponse(
     `${apiOrigin}/api/v1/workspace/bootstrap`,
   );
-  await page.getByRole('button', { name: 'Open demo workspace' }).click();
+  await page
+    .getByRole('button', { name: 'Open demo workspace' })
+    .first()
+    .click();
   const response = await bootstrap;
   expect(response.ok()).toBe(true);
   expect(response.request().headers()['x-workspace-id']).toBe(workspace.value);
@@ -57,14 +60,14 @@ test('existing HttpOnly demo cookies migrate without losing their workspace', as
   expect(cookie.httpOnly).toBe(false);
   // Canvas nodes confirm client hydration before using an SSR-rendered control.
   await expect(
-    page.locator('.svelte-flow__node[data-id="CS301"]'),
+    page.locator('.svelte-flow__node[data-id="IF2201"]'),
   ).toBeVisible();
   await page
     .getByRole('button', { name: 'Semester board', exact: true })
     .click();
   await page
-    .getByLabel('Move CS301 to semester', { exact: true })
-    .selectOption('2');
+    .getByLabel('Move IF2201 to semester', { exact: true })
+    .selectOption('3');
   await page.getByRole('button', { name: 'Save & validate' }).click();
   await expect(
     page.getByText('Plan saved and checked', { exact: false }),
@@ -75,7 +78,10 @@ test('an invalid workspace switch does not replace the selected workspace', asyn
   page,
 }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Open demo workspace' }).click();
+  await page
+    .getByRole('button', { name: 'Open demo workspace' })
+    .first()
+    .click();
   await expect(page).toHaveURL(/\/plans\/[a-zA-Z0-9-]+$/);
   const original = (await page.context().cookies()).find(
     (cookie) => cookie.name === 'avenra-workspace',
