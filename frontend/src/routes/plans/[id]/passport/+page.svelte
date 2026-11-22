@@ -62,18 +62,26 @@
         : 'The saved plan satisfies the modeled rules under the listed assumptions.'}
     </p>
     <p>
-      Remaining credits: {data.plan.validation.remaining_credits} | Peak load: {data
-        .plan.validation.peak_credits} | Modeled completion: {data.plan
-        .validation.completion_term
+      Credits: {data.plan.validation.completed_credits} completed + {data.plan
+        .validation.planned_credits} planned of {data.plan.validation
+        .graduation_credits} | Peak load: {data.plan.validation.peak_credits} | Modeled
+      completion: {data.plan.validation.completion_term
         ? `semester ${data.plan.validation.completion_term}`
         : 'unresolved'}
     </p>
-    <p>Scenario setbacks: {data.plan.failed.join(', ') || 'None'}.</p>
+    <p>
+      Scenario setbacks: {data.plan.failed.join(', ') || 'None'}.{data.plan
+        .validation.planning_gpa !== null
+        ? ` IPS used for semester ${data.profile.current_term}: ${data.plan.validation.planning_gpa.toFixed(2)}.`
+        : ''}
+    </p>
   </section>
   <section>
     <h2>Proposed semester plan</h2>
     <table>
-      <thead><tr><th>Semester</th><th>Courses</th><th>Credits</th></tr></thead
+      <thead
+        ><tr><th>Semester</th><th>Courses</th><th>Credits</th><th>Limit</th></tr
+        ></thead
       ><tbody
         >{#each Object.entries(data.plan.validation.loads) as [term, credits]}<tr
             ><td>{term}</td><td
@@ -86,11 +94,19 @@
                 )
                 .map((c) => `${c.code} ${c.name}`)
                 .join('; ') || 'No courses scheduled'}</td
-            ><td>{credits}</td></tr
+            ><td>{credits}</td><td>{data.plan.validation.caps[term]}</td></tr
           >{/each}</tbody
       >
     </table>
   </section>
+  {#if data.plan.bottlenecks.length}<section>
+      <h2>Courses affected by the setback</h2>
+      <ul>
+        {#each data.plan.bottlenecks as blocker}<li>
+            {blocker.path.join(' → ')}
+          </li>{/each}
+      </ul>
+    </section>{/if}
   <section>
     <h2>Rule findings</h2>
     {#if data.plan.validation.findings.length}<ul>
@@ -103,18 +119,9 @@
   <section>
     <h2>Questions for an academic advisor</h2>
     <ol>
-      <li>
-        Are the prerequisite rules and course offerings accurate for my
-        curriculum year?
-      </li>
-      <li>
-        Are there exceptions, equivalent courses, or credit limits this
-        simulation does not cover?
-      </li>
-      <li>
-        Which option best fits my academic commitments and intended completion
-        date?
-      </li>
+      {#each data.plan.validation.advisor_questions as question}<li>
+          {question}
+        </li>{/each}
     </ol>
   </section>
   <section>
