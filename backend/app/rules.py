@@ -32,6 +32,7 @@ def term_caps(curriculum: Curriculum, profile, plan, terms) -> dict[int, dict]:
 
     The GPA (IPS) rule only applies to the next semester, because later grades are
     unknown. Later semesters use the curriculum maximum as a stated assumption.
+    Each entry also carries a stable `code` and `params` so the reason can be translated.
     """
     gpa = planning_gpa(profile, plan)
     gpa_cap = curriculum.gpa_cap(gpa)
@@ -40,11 +41,11 @@ def term_caps(curriculum: Curriculum, profile, plan, terms) -> dict[int, dict]:
         # On ties the first, most specific rule is reported.
         options = []
         if gpa_cap is not None and term == profile.current_term:
-            options.append((gpa_cap, f"the IPS {gpa:.2f} rule"))
+            options.append((gpa_cap, f"the IPS {gpa:.2f} rule", "IPS_RULE", {"gpa": gpa}))
         options += [
-            (curriculum.credit_cap, "the curriculum maximum"),
-            (plan.credit_cap, "your plan limit"),
+            (curriculum.credit_cap, "the curriculum maximum", "CURRICULUM_MAX", {}),
+            (plan.credit_cap, "your plan limit", "PLAN_LIMIT", {}),
         ]
-        cap, reason = min(options, key=lambda item: item[0])
-        caps[term] = {"cap": cap, "reason": reason}
+        cap, reason, code, params = min(options, key=lambda item: item[0])
+        caps[term] = {"cap": cap, "reason": reason, "code": code, "params": params}
     return caps
