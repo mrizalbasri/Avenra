@@ -48,10 +48,13 @@ Windows or `~/Library/Application Support/Avenra/avenra.db` on macOS
 
 ## Graduation outlook and reminders
 
-- `GET /api/v1/plans/{id}/outlook` compares the earliest modeled finish with the
-  curriculum's `target_terms` (default 8). It re-solves once per course planned this
-  semester to flag courses whose failure would delay graduation. It searches the
-  full study period, so a delay is reported as a number of semesters.
+- `GET /api/v1/plans/{id}/outlook` compares the saved plan's completion semester with
+  the curriculum's `target_terms` (default 8). When the plan still has rule findings
+  it falls back to the earliest modeled finish and says so. It re-solves once per
+  course planned this semester to flag courses whose failure would push the earliest
+  modeled finish later, searching the full study period so a delay is a number of
+  semesters. Only optimal solves count; a time-limited answer is reported as unknown
+  and never flags a course. The Overview renders first and fills the outlook in.
 - The Overview shows that outlook, the credits toward graduation, and a "Needs your
   attention" list: targets due within two days or overdue, critical courses without
   a study target, and rule findings in the first active plan.
