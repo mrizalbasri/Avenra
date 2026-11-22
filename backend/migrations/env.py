@@ -5,7 +5,7 @@ from app.config import get_settings
 from app.models import Base
 
 target_metadata = Base.metadata
-url = get_settings().database_url
+url = get_settings().effective_database_url
 if not url:
     raise RuntimeError("Set DATABASE_URL before running migrations")
 
