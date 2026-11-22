@@ -10,17 +10,24 @@ This extends the foundation plan with operational local workflows.
   and focus-session history. Users can remember and switch workspaces in the header.
 - CSV import creates a new workspace without overwriting earlier records. Course
   references and cycles are checked, and imported rules remain user-supplied.
-- All imported courses are required in the current model. Only simple prerequisite
-  chains, credit caps, and odd/even offerings are supported. This cannot encode every
-  institutional rule in Indonesia; unsupported policy cases need advisor review.
+- Modeled rules: prerequisites (all-of and "A or B"), corequisites, earned-credit
+  thresholds, required versus elective courses toward a graduation credit total,
+  odd/even offerings, a maximum study period, and an IPS-based credit limit for the
+  next semester. Exceptions, equivalent courses, and transfer credit need advisor review.
+- The bundled S1 Informatika fixture (demo-3, 144 credits) is synthetic. Demo
+  workspaces created before demo-3 keep the original 12-course fixture.
 - Plans persist assignments and presentation coordinates separately. Cross-semester
   drag changes scheduling; same-semester drag changes presentation. Accessible select
   controls provide the same scheduling operation. Invalid exploratory drafts can be saved.
 - Optimistic revisions reject stale plan/profile/task updates. Browser draft recovery
   retains failed saves, and undo/redo handles unsaved changes.
-- A failed/postponed course overrides completion only inside a scenario. Dependency
-  traversal explains downstream blockers. OR-Tools generates distinct options for
-  earlier completion and lighter peak load. A separate checker validates each output.
+- A failed/postponed course overrides completion only inside a scenario. A course
+  failed this semester is retaken from the next offered semester, and a scenario IPS
+  can lower next semester's limit. Dependency traversal explains downstream blockers.
+  OR-Tools generates distinct options for earlier completion and lighter peak load,
+  each with a summary of how it differs. A separate checker validates each output.
+  When no plan exists, the response names the blocking chain or credit shortfall and
+  the smallest longer horizon or higher personal limit that works.
 - Comparison and the printable Decision Passport use saved snapshots. Export identifies
   profile/plan revisions, curriculum version, source, assumptions, findings, and advisor questions.
 - Learning targets, dates, completion flags, and finished focus sessions persist in
@@ -29,8 +36,8 @@ This extends the foundation plan with operational local workflows.
 ## Storage and migration
 
 The existing `postgres-local` instance on port 5434 hosts database `avenra`.
-Revisions 0002–0004 add profiles/plans/tasks/sessions, personal curriculum JSON,
-and independent canvas coordinates. Existing tables in other databases are untouched.
+Revisions 0002–0005 add profiles/plans/tasks/sessions, personal curriculum JSON,
+independent canvas coordinates, and profile/scenario IPS values. Existing tables in other databases are untouched.
 Apply migrations before opening the app; no schema is auto-created at API startup.
 
 ## Privacy and release boundary
