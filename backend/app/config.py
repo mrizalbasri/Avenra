@@ -28,7 +28,7 @@ class Settings(BaseSettings):
         "http://localhost:5173",
         "http://127.0.0.1:4173",
     ]
-    model_config = SettingsConfigDict(env_file=".env", env_prefix="", extra="ignore")
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     @property
     def effective_database_url(self) -> str:

@@ -17,7 +17,7 @@ MIGRATIONS = Path(__file__).resolve().parent.parent / "migrations"
 def get_engine() -> Engine:
     url = get_settings().effective_database_url
     if not url:
-        raise RuntimeError("DATABASE_URL is not configured")
+        raise RuntimeError("Set DATABASE_URL, or AVENRA_LOCAL=1 for the local SQLite file")
     if url.startswith("sqlite"):
         engine = create_engine(url, connect_args={"check_same_thread": False, "timeout": 5})
 

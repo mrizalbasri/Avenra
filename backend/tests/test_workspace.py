@@ -110,6 +110,20 @@ def test_outlook_counts_an_existing_setback_and_reports_lateness(client, workspa
     assert late["delay"] == late["completion_term"] - 8
 
 
+def test_outlook_follows_the_saved_plan_not_just_the_earliest_finish(client, workspace):
+    plan = workspace["plans"][0]
+    later = save(client, plan, horizon=9, assignments=plan["assignments"] | {"IF4201": 9})
+    assert not later["validation"]["findings"]
+    result = client.get(f"/api/v1/plans/{later['id']}/outlook").json()
+    assert (result["basis"], result["plan_term"], result["earliest_term"]) == ("plan", 9, 8)
+    assert (result["status"], result["completion_term"], result["delay"]) == ("late", 9, 1)
+    broken = save(client, later, assignments=later["assignments"] | {"IF2201": 3})
+    fallback = client.get(f"/api/v1/plans/{broken['id']}/outlook").json()
+    assert fallback["basis"] == "earliest"
+    assert fallback["plan_findings"] > 0
+    assert fallback["completion_term"] == 8
+
+
 def test_outlook_is_scoped_to_the_workspace(client, workspace):
     plan = workspace["plans"][0]
     other = {"X-Workspace-ID": "someone-else"}

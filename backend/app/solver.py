@@ -326,37 +326,57 @@ def _explain(curriculum, plan, alternatives):
         alternative["changes"] = changes
 
 
-def _finish_term(curriculum, profile, plan, time_limit=1.0):
-    """Earliest semester every requirement can be finished, or None if it cannot."""
+def _finish_term(curriculum, profile, plan, time_limit=2.0):
+    """Earliest semester every requirement can be finished.
+
+    Returns (term, proven). Only an OPTIMAL solve proves the earliest term; a
+    time-limited FEASIBLE answer or a timeout is reported as unproven so the caller
+    never shows a guess as fact. (None, True) means no plan fits at all.
+    """
     status, assignments = _solve(curriculum, profile, plan, OBJECTIVES[0], time_limit=time_limit)
     if assignments is None:
-        return None, status == cp_model.UNKNOWN
+        return None, status == cp_model.INFEASIBLE
     placed = [term for term in assignments.values() if term is not None]
-    return (max(placed) if placed else profile.current_term - 1), False
+    term = max(placed) if placed else profile.current_term - 1
+    return term, status == cp_model.OPTIMAL
 
 
 def outlook(curriculum: Curriculum, profile, plan) -> dict:
-    """Will this plan graduate on time, and which courses would delay it if failed?
+    """When this student graduates under the saved plan, and what could delay it.
 
-    A course is critical when failing it this semester pushes the earliest
-    possible graduation later (or beyond the plan). Each course is tested with the
-    same solver and rules, so the answer is not a guess.
+    completion_term follows the saved plan when it passes every rule, otherwise the
+    earliest modeled finish. A course planned this semester is critical when failing
+    it pushes the earliest modeled finish later. Every number comes from the same
+    solver and checker; unproven answers are left out rather than guessed.
     """
     target = curriculum.target_terms
     # Simulate over the full study period, so a delay is a number, not "does not fit".
     longest = curriculum.max_terms
-    finish, timed_out = _finish_term(curriculum, profile, variant(plan, horizon=longest))
+    earliest, proven = _finish_term(curriculum, profile, variant(plan, horizon=longest))
+    checked = validate_plan(curriculum, profile, plan)
+    plan_term = checked["completion_term"]
+    completion = plan_term if plan_term is not None else earliest
     result = {
         "target_term": target,
-        "completion_term": finish,
-        "delay": None if finish is None else max(0, finish - target),
+        "completion_term": completion,
+        "plan_term": plan_term,
+        "earliest_term": earliest if proven else None,
+        "basis": "plan" if plan_term is not None else "earliest",
+        "plan_findings": len(checked["findings"]),
+        "delay": None if completion is None else max(0, completion - target),
         "critical": [],
-        "timed_out": timed_out,
+        "timed_out": not proven,
     }
-    if finish is None:
-        result["status"] = "unknown" if timed_out else "unresolved"
+    if completion is None:
+        result["status"] = "unresolved" if proven else "unknown"
         return result
-    result["status"] = "late" if finish > target else "on_track"
+    if plan_term is None and not proven:
+        # Neither a valid saved plan nor a proven earliest finish: say nothing definite.
+        result["status"] = "unknown"
+        return result
+    result["status"] = "late" if completion > target else "on_track"
+    if not proven:
+        return result
     names = {c.code: c for c in curriculum.courses}
     completed = completed_codes(profile, plan)
     this_term = [
@@ -367,10 +387,14 @@ def outlook(curriculum: Curriculum, profile, plan) -> dict:
     for code in this_term:
         if code in plan.failed:
             continue
-        failed_finish, _ = _finish_term(
+        failed_finish, failed_proven = _finish_term(
             curriculum, profile, variant(plan, failed=[*plan.failed, code], horizon=longest)
         )
-        extra = None if failed_finish is None else failed_finish - finish
+        if not failed_proven:
+            # A timeout says nothing about the course; do not flag it.
+            result["timed_out"] = True
+            continue
+        extra = None if failed_finish is None else failed_finish - earliest
         if extra is None or extra > 0:
             result["critical"].append(
                 {
