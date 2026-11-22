@@ -4,6 +4,7 @@
   import { invalidateAll } from '$app/navigation';
   import { api } from '#lib/api.js';
   import Icon from '#lib/components/Icon.svelte';
+  import { downloadIcs, tasksToIcs } from '#lib/calendar.js';
   import type { Task } from '#lib/types.js';
   import type { PageProps } from './$types';
   let { data }: PageProps = $props();
@@ -321,6 +322,29 @@
             >
           </div>
         </div>
+        {#if data.study.tasks.some((t) => t.due_date && !t.done)}<div
+            class="calendar-export"
+          >
+            <button
+              class="button"
+              onclick={() =>
+                downloadIcs(
+                  tasksToIcs(
+                    data.study.tasks,
+                    Object.fromEntries(
+                      (data.workspace?.curriculum.courses ?? []).map((c) => [
+                        c.code,
+                        c.name,
+                      ]),
+                    ),
+                  ),
+                )}>Add open targets to my calendar (.ics)</button
+            >
+            <p class="muted small">
+              Opens in Google Calendar, Apple Calendar, or Outlook with a
+              reminder the evening before each due date.
+            </p>
+          </div>{/if}
         {#each tasks as task}<div class="study-task">
             <label
               ><input
