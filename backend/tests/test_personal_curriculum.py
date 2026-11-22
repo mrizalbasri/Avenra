@@ -9,6 +9,7 @@ def test_personal_curricula_are_kept_in_separate_workspaces(client):
     curriculum = load_demo_curriculum().model_dump()
     curriculum["name"] = "Example university | Informatika"
     curriculum["source"] = "Faculty curriculum handbook"
+    curriculum["graduation_credits"] = None
     curriculum["courses"] = [
         {
             "code": "IF1",
@@ -35,7 +36,7 @@ def test_personal_curricula_are_kept_in_separate_workspaces(client):
     assert personal["curriculum"]["status"] == "user_supplied"
     assert personal["curriculum"]["source"] == "Faculty curriculum handbook"
     assert set(personal["plans"][0]["assignments"]) == {"IF1", "IF2"}
-    assert len(client.get("/api/v1/workspace", headers=first).json()["curriculum"]["courses"]) == 12
+    assert len(client.get("/api/v1/workspace", headers=first).json()["curriculum"]["courses"]) == 52
     plan_id = demo["plans"][0]["id"]
     assert client.get(f"/api/v1/plans/{plan_id}", headers=second).status_code == 404
     assert (
@@ -53,7 +54,7 @@ def test_personal_curricula_are_kept_in_separate_workspaces(client):
     task = client.post(
         "/api/v1/study/tasks",
         headers=first,
-        json={"course_code": "CS201", "title": "A private target"},
+        json={"course_code": "IF2101", "title": "A private target"},
     ).json()
     assert client.get("/api/v1/study", headers=second).json()["tasks"] == []
     assert (
