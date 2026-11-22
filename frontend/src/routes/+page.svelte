@@ -5,6 +5,7 @@
   import Hero from '#lib/components/dusk/hero/six/hero.svelte';
   import Icon from '#lib/components/Icon.svelte';
   import { api } from '#lib/api.js';
+  import type { Outlook } from '#lib/types.js';
   import type { PageProps } from './$types';
   let { data }: PageProps = $props();
   let busy = $state(false);
@@ -27,27 +28,59 @@
       workspace?.curriculum.courses.reduce((sum, c) => sum + c.credits, 0) ??
       0,
   );
-  let outlook = $derived(data.outlook);
+  // The outlook arrives after the page renders; ignore a promise that was replaced.
+  let outlook = $state<Outlook | null>(null);
+  let outlookLoading = $state(true);
+  $effect(() => {
+    const pending = data.outlook;
+    let current = true;
+    outlookLoading = true;
+    pending.then((value) => {
+      if (!current) return;
+      outlook = value;
+      outlookLoading = false;
+    });
+    return () => {
+      current = false;
+    };
+  });
 
   const semesters = (n: number) => (n === 1 ? '1 semester' : `${n} semesters`);
   let headline = $derived(
-    !outlook
-      ? 'Make your next semester count.'
-      : outlook.status === 'on_track'
-        ? `You're on track to graduate in semester ${outlook.completion_term}.`
-        : outlook.status === 'late'
-          ? `At this pace you graduate in semester ${outlook.completion_term}.`
-          : 'No plan finishes within the study period yet.',
+    outlookLoading
+      ? 'Checking your graduation outlook…'
+      : !outlook || outlook.status === 'unknown'
+        ? 'Make your next semester count.'
+        : outlook.status === 'on_track'
+          ? `On track for semester ${outlook.completion_term}.`
+          : outlook.status === 'late'
+            ? `Heading for semester ${outlook.completion_term}.`
+            : 'No plan fits within the study period yet.',
   );
-  let subline = $derived(
-    !outlook
-      ? 'Understand your progress, explore your options, and turn a plan into action.'
-      : outlook.status === 'on_track'
-        ? `Target is semester ${outlook.target_term}. Based on your saved plan, not an official decision.`
-        : outlook.status === 'late'
-          ? `That is ${semesters(outlook.delay ?? 0)} after the semester ${outlook.target_term} target. A recovery plan can show what to change.`
-          : 'Open your plan to see which rule blocks it and the smallest change that helps.',
-  );
+  let subline = $derived.by(() => {
+    if (outlookLoading)
+      return 'Comparing your saved plan with the curriculum rules.';
+    if (!outlook || outlook.status === 'unknown')
+      return 'The outlook could not be confirmed in time. Your plans are saved; open one to check it.';
+    if (outlook.status === 'unresolved')
+      return 'Open your plan to see which rule blocks it and the smallest change that helps.';
+    const base =
+      outlook.basis === 'plan'
+        ? 'Your saved plan'
+        : `Your saved plan has ${outlook.plan_findings} rule ${outlook.plan_findings === 1 ? 'check' : 'checks'} to fix, so this is the earliest modeled finish`;
+    const target = `the semester ${outlook.target_term} target set in your curriculum`;
+    const earlier =
+      outlook.basis === 'plan' &&
+      outlook.earliest_term !== null &&
+      outlook.earliest_term < (outlook.plan_term ?? 0)
+        ? ` A rearranged plan could finish in semester ${outlook.earliest_term}.`
+        : '';
+    const timing =
+      outlook.status === 'late'
+        ? `${base} finishes ${semesters(outlook.delay ?? 0)} after ${target}.`
+        : `${base} meets ${target}.`;
+    return `${timing}${earlier} A modeled estimate, not an official decision.`;
+  });
 
   const isoDay = (offset = 0) => {
     const day = new Date();
@@ -84,8 +117,8 @@
         title: `Protect ${c.name}`,
         detail:
           c.extra_semesters === null
-            ? 'If you fail it this semester, you cannot finish within the study period.'
-            : `If you fail it this semester, graduation moves to semester ${c.finish_if_failed}.`,
+            ? 'If you fail it this semester, no modeled plan finishes within the study period.'
+            : `If you fail it this semester, the earliest modeled finish moves to semester ${c.finish_if_failed}.`,
         href: `/study?course=${c.code}`,
         action: 'Set a target',
       });
@@ -134,11 +167,17 @@
     disabled={!workspace || !hydrated}
     onOpen={openDemo}
   />{:else}
-  <section class="today-card" data-status={outlook?.status ?? 'none'}>
+  <section
+    class="today-card"
+    data-status={outlookLoading ? 'loading' : (outlook?.status ?? 'none')}
+    aria-busy={outlookLoading}
+  >
     <p class="eyebrow">Graduation outlook</p>
     <h1>{headline}</h1>
     <p class="today-sub">{subline}</p>
-    {#if outlook?.completion_term}<div class="today-meta">
+    {#if !outlookLoading && outlook?.completion_term && outlook.status !== 'unknown'}<div
+        class="today-meta"
+      >
         <div>
           <small>Finish</small><strong
             >Semester {outlook.completion_term}</strong
@@ -185,8 +224,10 @@
           </li>{/each}
       </ul>{:else}<p class="muted attention-empty">
         {outlook
-          ? 'Nothing needs attention right now. Check back after your next grades or deadlines.'
-          : 'The outlook is unavailable right now. Your plans are still saved.'}
+          ? 'Nothing flagged right now. Check again after new grades or deadlines.'
+          : outlookLoading
+            ? 'Checking for deadlines and critical courses…'
+            : 'The outlook is unavailable right now. Your plans are still saved.'}
       </p>{/if}
   </section>
   <section class="progress-panel">

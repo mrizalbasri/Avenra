@@ -31,7 +31,7 @@ function nextDay(iso: string) {
   return date.toISOString().slice(0, 10);
 }
 
-/** Builds an all-day calendar event, with a reminder the evening before, per open target. */
+/** Builds an all-day calendar event per open target, with a reminder at 19:00 the day before. */
 export function tasksToIcs(
   tasks: Task[],
   courseNames: Record<string, string>,
@@ -61,7 +61,8 @@ export function tasksToIcs(
       'BEGIN:VALARM',
       'ACTION:DISPLAY',
       `DESCRIPTION:${escapeText(task.title)}`,
-      'TRIGGER:-PT15H',
+      // Relative to local midnight of the all-day due date.
+      'TRIGGER:-PT5H',
       'END:VALARM',
       'END:VEVENT',
     );

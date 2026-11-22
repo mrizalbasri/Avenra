@@ -12,7 +12,7 @@
       (!data.workspace?.profile || page.url.searchParams.has('intro')),
   );
   const navigation = [
-    { href: '/', label: 'Overview', short: 'Today', icon: 'home' },
+    { href: '/', label: 'Overview', short: 'Overview', icon: 'home' },
     { href: '/plans', label: 'Study plans', short: 'Plans', icon: 'plans' },
     {
       href: '/compare',

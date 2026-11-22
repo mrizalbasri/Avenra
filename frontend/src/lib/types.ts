@@ -135,6 +135,10 @@ export type Outlook = {
   status: 'on_track' | 'late' | 'unresolved' | 'unknown';
   target_term: number;
   completion_term: number | null;
+  plan_term: number | null;
+  earliest_term: number | null;
+  basis: 'plan' | 'earliest';
+  plan_findings: number;
   delay: number | null;
   critical: CriticalCourse[];
   timed_out: boolean;

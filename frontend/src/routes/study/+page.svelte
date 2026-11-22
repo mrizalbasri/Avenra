@@ -342,7 +342,7 @@
             >
             <p class="muted small">
               Opens in Google Calendar, Apple Calendar, or Outlook with a
-              reminder the evening before each due date.
+              reminder at 19:00 the day before each due date.
             </p>
           </div>{/if}
         {#each tasks as task}<div class="study-task">

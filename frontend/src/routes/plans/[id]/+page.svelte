@@ -574,7 +574,7 @@
           >{/each}
       </div>{/if}
   </section>
-  <aside class="inspector">
+  <aside class="inspector" aria-label="Plan tools">
     <section class="ins-settings">
       <h2>Plan settings</h2>
       <label

@@ -47,14 +47,16 @@ test('overview answers whether graduation is on time and what to protect', async
   await page.goto('/');
   await expect(
     page.getByRole('heading', {
-      name: "You're on track to graduate in semester 8.",
+      name: 'On track for semester 8.',
     }),
   ).toBeVisible();
   await expect(page.getByText('/ 144 credits')).toBeVisible();
   const protect = page.getByText('Protect Probability and Statistics');
   await expect(protect).toBeVisible();
   await expect(
-    page.getByText('graduation moves to semester 9', { exact: false }),
+    page.getByText('earliest modeled finish moves to semester 9', {
+      exact: false,
+    }),
   ).toBeVisible();
   expect(await noSideScroll(page)).toBe(true);
   await page.evaluate(() => scrollTo(0, 0));
@@ -97,4 +99,5 @@ test('study targets export to a calendar file with a reminder', async ({
   expect(text).toContain('DTEND;VALUE=DATE:20261202');
   expect(text).toContain('Finish chapter 3 exercises');
   expect(text).toContain('BEGIN:VALARM');
+  expect(text).toContain('TRIGGER:-PT5H');
 });
