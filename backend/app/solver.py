@@ -13,6 +13,16 @@ from app.rules import (
 from app.validation import validate_plan
 
 OBJECTIVES = ("Earlier completion", "Lighter peak workload")
+OBJECTIVE_CODES = {OBJECTIVES[0]: "EARLIER_COMPLETION", OBJECTIVES[1]: "LIGHTER_PEAK"}
+
+
+def _reason(rule: str, message: str, **params) -> dict:
+    """A diagnosis reason: `rule` is its stable code, `params` fill the translation."""
+    return {"rule": rule, "code": rule, "message": message, "params": params}
+
+
+def _suggestion(kind: str, code: str, value: int, message: str, **params) -> dict:
+    return {"kind": kind, "code": code, "value": value, "message": message, "params": params}
 
 
 def variant(plan, **changes):
@@ -195,11 +205,14 @@ def diagnose(curriculum: Curriculum, profile, plan) -> dict:
     for course in required:
         if course.credits > largest_cap:
             reasons.append(
-                {
-                    "rule": "CREDIT_CAP",
-                    "message": f"{course.code} has {course.credits} credits, more than any "
+                _reason(
+                    "CREDIT_CAP",
+                    f"{course.code} has {course.credits} credits, more than any "
                     f"semester allows ({largest_cap}).",
-                }
+                    course=course.code,
+                    credits=course.credits,
+                    cap=largest_cap,
+                )
             )
 
     earliest = _earliest_terms(curriculum, profile, plan)
@@ -213,13 +226,17 @@ def diagnose(curriculum: Curriculum, profile, plan) -> dict:
             chain.append(code)
             code = earliest[code][1]
         reasons.append(
-            {
-                "rule": "PREREQUISITE_CHAIN",
-                "message": f"{course.code} cannot start before semester "
+            _reason(
+                "PREREQUISITE_CHAIN",
+                f"{course.code} cannot start before semester "
                 f"{earliest[course.code][0]} because of the chain "
                 f"{' | '.join(reversed(chain))} and the odd/even calendar. "
                 f"The plan ends at semester {end}.",
-            }
+                course=course.code,
+                start=earliest[course.code][0],
+                chain=list(reversed(chain)),
+                end=end,
+            )
         )
 
     completed_credits = sum(c.credits for c in curriculum.courses if c.code in completed)
@@ -230,11 +247,14 @@ def diagnose(curriculum: Curriculum, profile, plan) -> dict:
     capacity = sum(value["cap"] for value in caps.values())
     if needed > capacity:
         reasons.append(
-            {
-                "rule": "CAPACITY",
-                "message": f"You still need {needed} credits, but semesters "
+            _reason(
+                "CAPACITY",
+                f"You still need {needed} credits, but semesters "
                 f"{profile.current_term} to {end} allow at most {capacity}.",
-            }
+                needed=needed,
+                capacity=capacity,
+                **{"from": profile.current_term, "to": end},
+            )
         )
 
     gpa = planning_gpa(profile, plan)
@@ -245,11 +265,14 @@ def diagnose(curriculum: Curriculum, profile, plan) -> dict:
         and _feasible(curriculum, profile, variant(plan, expected_gpa=4.0))
     ):
         reasons.append(
-            {
-                "rule": "GPA_CREDIT_LIMIT",
-                "message": f"The IPS {gpa:.2f} limit of {gpa_cap} credits in semester "
+            _reason(
+                "GPA_CREDIT_LIMIT",
+                f"The IPS {gpa:.2f} limit of {gpa_cap} credits in semester "
                 f"{profile.current_term} is part of the conflict.",
-            }
+                gpa=gpa,
+                cap=gpa_cap,
+                term=profile.current_term,
+            )
         )
 
     suggestions = []
@@ -260,11 +283,13 @@ def diagnose(curriculum: Curriculum, profile, plan) -> dict:
     )
     if horizon:
         suggestions.append(
-            {
-                "kind": "horizon",
-                "value": horizon,
-                "message": f"Extend the plan to semester {horizon}.",
-            }
+            _suggestion(
+                "horizon",
+                "HORIZON",
+                horizon,
+                f"Extend the plan to semester {horizon}.",
+                term=horizon,
+            )
         )
     cap = _smallest(
         plan.credit_cap + 1,
@@ -273,19 +298,21 @@ def diagnose(curriculum: Curriculum, profile, plan) -> dict:
     )
     if cap:
         suggestions.append(
-            {
-                "kind": "credit_cap",
-                "value": cap,
-                "message": f"Raise your own credit limit to {cap} credits.",
-            }
+            _suggestion(
+                "credit_cap",
+                "CREDIT_CAP",
+                cap,
+                f"Raise your own credit limit to {cap} credits.",
+                cap=cap,
+            )
         )
     if not reasons:
         reasons.append(
-            {
-                "rule": "COMBINED",
-                "message": "The modeled rules conflict only in combination, for example "
+            _reason(
+                "COMBINED",
+                "The modeled rules conflict only in combination, for example "
                 "corequisites, earned-credit thresholds, and credit limits together.",
-            }
+            )
         )
     return {"reasons": reasons, "suggestions": suggestions}
 
@@ -304,9 +331,28 @@ def _explain(curriculum, plan, alternatives):
             f"Finishes in semester {validation['completion_term']} with at most "
             f"{validation['peak_credits']} credits in one semester."
         )
+        items = [
+            {
+                "code": "ALT_SUMMARY",
+                "params": {
+                    "finish": validation["completion_term"],
+                    "peak": validation["peak_credits"],
+                },
+            }
+        ]
         if validation is not first:
             later = validation["completion_term"] - first["completion_term"]
             lighter = first["peak_credits"] - validation["peak_credits"]
+            items.append(
+                {
+                    "code": "ALT_COMPARE",
+                    "params": {
+                        "against": OBJECTIVE_CODES[alternatives[0]["name"]],
+                        "later": later,
+                        "lighter": lighter,
+                    },
+                }
+            )
             timing = (
                 f"{later} semester{'s' if later != 1 else ''} later"
                 if later > 0
@@ -323,6 +369,7 @@ def _explain(curriculum, plan, alternatives):
             )
             summary += f" Compared with {alternatives[0]['name']}: finishes {timing}, {load}."
         alternative["summary"] = summary
+        alternative["summary_items"] = items
         alternative["changes"] = changes
 
 
@@ -423,12 +470,16 @@ def solve_plans(curriculum: Curriculum, profile, plan, time_limit=3.0) -> dict:
     if not required_left and completed_credits >= target:
         return base | {
             "status": "complete",
+            "code": "COMPLETE",
+            "params": {},
             "alternatives": [],
             "message": "All modeled requirements are already complete.",
         }
     if last_term(curriculum, plan) < profile.current_term:
         return base | {
             "status": "infeasible",
+            "code": "PLAN_ENDS_EARLY",
+            "params": {},
             "alternatives": [],
             "message": "The plan ends before the current semester or beyond the maximum "
             "study period.",
@@ -461,6 +512,7 @@ def solve_plans(curriculum: Curriculum, profile, plan, time_limit=3.0) -> dict:
         alternatives.append(
             {
                 "name": objective,
+                "name_code": OBJECTIVE_CODES[objective],
                 "assignments": assignments,
                 "validation": validation,
                 "optimal": status == cp_model.OPTIMAL,
@@ -470,26 +522,41 @@ def solve_plans(curriculum: Curriculum, profile, plan, time_limit=3.0) -> dict:
     if alternatives:
         count = len(alternatives)
         message = f"Found {count} distinct, independently checked plan{'s' if count > 1 else ''}."
+        note = None
         if count == 1 and timed_out:
+            note = "timeout"
             message += " The second option hit the time limit, so another arrangement may exist."
         elif count == 1:
+            note = "single"
             message += " No second valid arrangement differs from this one."
-        return base | {"status": "feasible", "alternatives": alternatives, "message": message}
+        return base | {
+            "status": "feasible",
+            "code": "FOUND",
+            "params": {"count": count, "note": note},
+            "alternatives": alternatives,
+            "message": message,
+        }
     if timed_out:
         return base | {
             "status": "timeout",
+            "code": "TIMEOUT",
+            "params": {},
             "alternatives": [],
             "message": "Time limit reached without a plan. This does not prove infeasibility.",
         }
     if rejected:
         return base | {
             "status": "unverified",
+            "code": "UNVERIFIED",
+            "params": {},
             "alternatives": [],
             "message": "A generated plan failed the independent rule check, so it is not "
             "shown. Please report this case.",
         }
     return base | {
         "status": "infeasible",
+        "code": "INFEASIBLE",
+        "params": {},
         "alternatives": [],
         "message": "No plan satisfies every modeled rule. The reasons and the smallest "
         "changes that would help are listed below.",

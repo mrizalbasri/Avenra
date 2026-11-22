@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, NoReturn
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select, update
@@ -26,6 +26,14 @@ DB = Annotated[Session, Depends(get_session)]
 DEMO_ID = "local-demo"
 
 
+def fail(status: int, code: str, message: str, **params) -> NoReturn:
+    """Raise an error whose body is {code, message, params}.
+
+    `message` is the English default. Clients translate from `code` and `params`.
+    """
+    raise HTTPException(status, {"code": code, "message": message, "params": params})
+
+
 def row(item) -> dict:
     return {column.name: getattr(item, column.name) for column in item.__table__.columns}
 
@@ -43,21 +51,21 @@ def curriculum_for(profile):
 def profile_or_404(db):
     profile = db.get(Profile, workspace_key(db))
     if not profile:
-        raise HTTPException(404, "Open the synthetic demo workspace first.")
+        fail(404, "PROFILE_NOT_FOUND", "Open the synthetic demo workspace first.")
     return profile
 
 
 def plan_or_404(db, plan_id):
     plan = db.get(Plan, plan_id)
     if not plan or plan.profile_id != workspace_key(db):
-        raise HTTPException(404, "Plan not found.")
+        fail(404, "PLAN_NOT_FOUND", "Plan not found.")
     return plan
 
 
 def known_codes(db, codes):
     supported = {c.code for c in curriculum_for(profile_or_404(db)).courses}
     if len(codes) != len(set(codes)) or set(codes) - supported:
-        raise HTTPException(422, "Use unique course codes from the selected curriculum.")
+        fail(422, "UNKNOWN_COURSES", "Use unique course codes from the selected curriculum.")
 
 
 def plan_response(plan, profile):
@@ -94,21 +102,34 @@ def default_assignments(curriculum: Curriculum, completed: list[str], current_te
 
 def check_assignment_terms(assignments):
     if any(term is not None and not 1 <= term <= MAX_TERM for term in assignments.values()):
-        raise HTTPException(422, f"Semester assignments must be between 1 and {MAX_TERM}.")
+        fail(
+            422,
+            "TERM_OUT_OF_RANGE",
+            f"Semester assignments must be between 1 and {MAX_TERM}.",
+            max=MAX_TERM,
+        )
 
 
-def progress_issues(curriculum: Curriculum, completed: list[str]) -> list[str]:
-    """Completed courses whose own prerequisites are not marked completed."""
+def progress_issues(curriculum: Curriculum, completed: list[str]) -> list[dict]:
+    """Completed courses whose own prerequisites are not marked completed.
+
+    A missing either-or group is listed as a list of its options.
+    """
     done = set(completed)
     issues = []
     for course in curriculum.courses:
         if course.code not in done:
             continue
         missing = [p for p in [*course.prerequisites, *course.corequisites] if p not in done]
-        missing += [" or ".join(g) for g in course.any_prerequisites if not set(g) & done]
+        missing += [list(g) for g in course.any_prerequisites if not set(g) & done]
         if missing:
-            issues.append(f"{course.code} needs {', '.join(missing)}")
+            issues.append({"course": course.code, "missing": missing})
     return issues
+
+
+def issue_text(issue: dict) -> str:
+    missing = ", ".join(m if isinstance(m, str) else " or ".join(m) for m in issue["missing"])
+    return f"{issue['course']} needs {missing}"
 
 
 @router.get("/workspace")
@@ -172,11 +193,13 @@ def edit_profile(payload: ProfileEdit, db: DB):
     known_codes(db, payload.completed)
     issues = progress_issues(curriculum_for(profile_or_404(db)), payload.completed)
     if issues:
-        raise HTTPException(
+        fail(
             422,
+            "PROGRESS_ISSUES",
             "Some completed courses are missing their prerequisites: "
-            + "; ".join(issues[:4])
+            + "; ".join(issue_text(i) for i in issues[:4])
             + ". Mark the prerequisites as completed, or ask your advisor about an exemption.",
+            issues=issues[:4],
         )
     result = db.execute(
         update(Profile)
@@ -185,7 +208,7 @@ def edit_profile(payload: ProfileEdit, db: DB):
     )
     if not result.rowcount:
         db.rollback()
-        raise HTTPException(409, "The profile changed in another tab. Reload before saving.")
+        fail(409, "PROFILE_CONFLICT", "The profile changed in another tab. Reload before saving.")
     db.commit()
     return row(profile_or_404(db))
 
@@ -233,13 +256,19 @@ def edit_plan(plan_id: str, payload: PlanEdit, db: DB):
     plan_or_404(db, plan_id)
     profile = profile_or_404(db)
     if profile.revision != payload.profile_revision:
-        raise HTTPException(409, "The academic profile changed. Reload before saving this plan.")
+        fail(
+            409, "PROFILE_CHANGED", "The academic profile changed. Reload before saving this plan."
+        )
     known_codes(db, list(payload.assignments))
     known_codes(db, list(payload.layout))
     known_codes(db, payload.failed)
     check_assignment_terms(payload.assignments)
     if payload.horizon < profile.current_term:
-        raise HTTPException(422, "The planning horizon cannot end before the current semester.")
+        fail(
+            422,
+            "HORIZON_BEFORE_CURRENT",
+            "The planning horizon cannot end before the current semester.",
+        )
     result = db.execute(
         update(Plan)
         .where(
@@ -254,8 +283,10 @@ def edit_plan(plan_id: str, payload: PlanEdit, db: DB):
     )
     if not result.rowcount:
         db.rollback()
-        raise HTTPException(
-            409, "This plan changed in another tab. Reload before saving your draft."
+        fail(
+            409,
+            "PLAN_CONFLICT",
+            "This plan changed in another tab. Reload before saving your draft.",
         )
     db.commit()
     return plan_response(plan_or_404(db, plan_id), profile)
@@ -274,8 +305,10 @@ def solve(plan_id: str, payload: SolveRequest, db: DB):
     plan = plan_or_404(db, plan_id)
     profile = profile_or_404(db)
     if plan.revision != payload.revision or profile.revision != payload.profile_revision:
-        raise HTTPException(
-            409, "The source plan or profile changed. Reload before generating alternatives."
+        fail(
+            409,
+            "SOLVE_CONFLICT",
+            "The source plan or profile changed. Reload before generating alternatives.",
         )
     return solve_plans(curriculum_for(profile), profile, plan)
 
@@ -326,7 +359,7 @@ def edit_task(task_id: str, payload: TaskEdit, db: DB):
     )
     if not result.rowcount:
         db.rollback()
-        raise HTTPException(409, "Task changed. Reload before trying again.")
+        fail(409, "TASK_CONFLICT", "Task changed. Reload before trying again.")
     db.commit()
     return row(db.get(StudyTask, task_id))
 
@@ -338,7 +371,7 @@ def add_focus(payload: FocusCreate, db: DB):
     existing = db.get(FocusSession, payload.id)
     if existing:
         if existing.profile_id != workspace_key(db):
-            raise HTTPException(404, "Session not found")
+            fail(404, "SESSION_NOT_FOUND", "Session not found")
         return row(existing)
     session = FocusSession(profile_id=workspace_key(db), **payload.model_dump())
     db.add(session)
@@ -350,7 +383,7 @@ def add_focus(payload: FocusCreate, db: DB):
 @router.post("/workspace/import", status_code=201)
 def import_workspace(payload: WorkspaceImport, db: DB):
     if db.get(Profile, workspace_key(db)):
-        raise HTTPException(409, "Choose a new workspace for a different curriculum.")
+        fail(409, "WORKSPACE_EXISTS", "Choose a new workspace for a different curriculum.")
     curriculum = payload.curriculum.model_copy(
         update={
             "status": "user_supplied",
@@ -371,7 +404,7 @@ def import_workspace(payload: WorkspaceImport, db: DB):
         db.flush()
     except IntegrityError:
         db.rollback()
-        raise HTTPException(409, "Choose a new workspace for a different curriculum.") from None
+        fail(409, "WORKSPACE_EXISTS", "Choose a new workspace for a different curriculum.")
     plan = Plan(
         profile_id=profile.id,
         name="My study plan",

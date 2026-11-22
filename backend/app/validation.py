@@ -12,8 +12,18 @@ def validate_plan(curriculum: Curriculum, profile, plan) -> dict:
     findings = []
     scheduled: dict[str, int] = {}
 
-    def finding(code, rule, message, related=None):
-        findings.append({"course": code, "rule": rule, "message": message, "related": related})
+    def finding(course, rule, message, related=None, **params):
+        # `rule` doubles as the stable translation code; params fill its placeholders.
+        findings.append(
+            {
+                "course": course,
+                "rule": rule,
+                "code": rule,
+                "message": message,
+                "related": related,
+                "params": {"course": course, **params} if course else params,
+            }
+        )
 
     for code, course in courses.items():
         if code in completed:
@@ -21,7 +31,12 @@ def validate_plan(curriculum: Curriculum, profile, plan) -> dict:
         term = plan.assignments.get(code)
         if term is None:
             if course.category == "required":
-                finding(code, "UNSCHEDULED", f"{code} {course.name} has not been scheduled.")
+                finding(
+                    code,
+                    "UNSCHEDULED",
+                    f"{code} {course.name} has not been scheduled.",
+                    name=course.name,
+                )
             continue
         if term not in loads:
             if term > curriculum.max_terms:
@@ -30,12 +45,16 @@ def validate_plan(curriculum: Curriculum, profile, plan) -> dict:
                     "STUDY_PERIOD",
                     f"{code} is placed in semester {term}, beyond the maximum study period "
                     f"of {curriculum.max_terms} semesters.",
+                    term=term,
+                    max_terms=curriculum.max_terms,
                 )
             else:
                 finding(
                     code,
                     "TERM_RANGE",
                     f"{code} must be between semesters {profile.current_term} and {end}.",
+                    start=profile.current_term,
+                    end=end,
                 )
             continue
         scheduled[code] = term
@@ -46,6 +65,8 @@ def validate_plan(curriculum: Curriculum, profile, plan) -> dict:
                 "RETAKE",
                 f"{code} fails in semester {profile.current_term} in this scenario, so it "
                 f"can be retaken from semester {profile.current_term + 1}.",
+                current=profile.current_term,
+                next=profile.current_term + 1,
             )
 
     completed_credits = sum(courses[c].credits for c in completed if c in courses)
@@ -64,6 +85,8 @@ def validate_plan(curriculum: Curriculum, profile, plan) -> dict:
                 code,
                 "OFFERING",
                 f"{code} is offered only in {parity} semesters, not semester {term}.",
+                parity=parity,
+                term=term,
             )
         for prerequisite in course.prerequisites:
             if not done_before(prerequisite, term):
@@ -72,6 +95,7 @@ def validate_plan(curriculum: Curriculum, profile, plan) -> dict:
                     "PREREQUISITE",
                     f"Complete {prerequisite} before taking {code}.",
                     prerequisite,
+                    prerequisite=prerequisite,
                 )
         for group in course.any_prerequisites:
             if not any(done_before(option, term) for option in group):
@@ -80,6 +104,7 @@ def validate_plan(curriculum: Curriculum, profile, plan) -> dict:
                     "ANY_PREREQUISITE",
                     f"Complete one of {' or '.join(group)} before taking {code}.",
                     group[0],
+                    options=list(group),
                 )
         for corequisite in course.corequisites:
             if not done_before(corequisite, term, same_term=True):
@@ -88,6 +113,7 @@ def validate_plan(curriculum: Curriculum, profile, plan) -> dict:
                     "COREQUISITE",
                     f"Take {corequisite} in the same semester as {code} or earlier.",
                     corequisite,
+                    corequisite=corequisite,
                 )
         if course.min_credits_earned:
             earned = completed_credits + sum(
@@ -99,6 +125,9 @@ def validate_plan(curriculum: Curriculum, profile, plan) -> dict:
                     "CREDITS_EARNED",
                     f"{code} needs {course.min_credits_earned} earned credits before semester "
                     f"{term}; this plan reaches {earned}.",
+                    required=course.min_credits_earned,
+                    term=term,
+                    earned=earned,
                 )
 
     for term, credits in loads.items():
@@ -109,6 +138,11 @@ def validate_plan(curriculum: Curriculum, profile, plan) -> dict:
                 "CREDIT_CAP",
                 f"Semester {term} has {credits} credits; the limit is {limit['cap']} "
                 f"under {limit['reason']}.",
+                term=term,
+                credits=credits,
+                cap=limit["cap"],
+                reason=limit["code"],
+                **limit["params"],
             )
 
     planned_credits = sum(loads.values())
@@ -120,6 +154,9 @@ def validate_plan(curriculum: Curriculum, profile, plan) -> dict:
             "GRADUATION_CREDITS",
             f"This plan reaches {completed_credits + planned_credits} of {target} graduation "
             f"credits. Add {missing} more credits, for example from electives.",
+            reached=completed_credits + planned_credits,
+            target=target,
+            missing=missing,
         )
 
     gpa = planning_gpa(profile, plan)
@@ -129,6 +166,9 @@ def validate_plan(curriculum: Curriculum, profile, plan) -> dict:
         "loads": loads,
         "caps": {term: value["cap"] for term, value in caps.items()},
         "cap_reasons": {term: value["reason"] for term, value in caps.items()},
+        "cap_details": {
+            term: {"code": value["code"], "params": value["params"]} for term, value in caps.items()
+        },
         "completed_credits": completed_credits,
         "planned_credits": planned_credits,
         "graduation_credits": target,
@@ -141,67 +181,117 @@ def validate_plan(curriculum: Curriculum, profile, plan) -> dict:
         "curriculum_version": curriculum.version,
         "plan_revision": plan.revision,
         "profile_revision": profile.revision,
-        "assumptions": assumptions(curriculum, profile, gpa),
+        "assumption_items": assumption_items(curriculum, profile, gpa),
     }
-    result["advisor_questions"] = advisor_questions(curriculum, profile, plan, result)
+    result["assumptions"] = [item["message"] for item in result["assumption_items"]]
+    result["advisor_items"] = advisor_items(curriculum, profile, plan, result)
+    result["advisor_questions"] = [item["message"] for item in result["advisor_items"]]
     return result
 
 
-def assumptions(curriculum: Curriculum, profile, gpa) -> list[str]:
-    notes = [curriculum.disclaimer, f"Rule source: {curriculum.source}"]
+def _item(code: str, message: str, **params) -> dict:
+    """A message with a stable code and params; `message` is the English default."""
+    return {"code": code, "params": params, "message": message}
+
+
+def assumption_items(curriculum: Curriculum, profile, gpa) -> list[dict]:
+    items = [
+        _item("DISCLAIMER", curriculum.disclaimer, text=curriculum.disclaimer),
+        _item("RULE_SOURCE", f"Rule source: {curriculum.source}", source=curriculum.source),
+    ]
     if curriculum.gpa_credit_rules:
         if gpa is None:
-            notes.append("No IPS was entered, so the IPS credit rule is not applied.")
-        else:
-            notes.append(
-                f"The IPS credit rule uses {gpa:.2f} for semester {profile.current_term} only. "
-                f"Later semesters assume up to {curriculum.credit_cap} credits."
+            items.append(
+                _item("IPS_MISSING", "No IPS was entered, so the IPS credit rule is not applied.")
             )
-    notes.append(
-        "Offerings follow the stated odd/even calendar. Exceptions, transfer credit, and "
-        "internship conversion are not modeled."
+        else:
+            items.append(
+                _item(
+                    "IPS_RULE",
+                    f"The IPS credit rule uses {gpa:.2f} for semester {profile.current_term} "
+                    f"only. Later semesters assume up to {curriculum.credit_cap} credits.",
+                    gpa=gpa,
+                    term=profile.current_term,
+                    cap=curriculum.credit_cap,
+                )
+            )
+    items.append(
+        _item(
+            "OFFERINGS",
+            "Offerings follow the stated odd/even calendar. Exceptions, transfer credit, and "
+            "internship conversion are not modeled.",
+        )
     )
-    return notes
+    return items
 
 
-def advisor_questions(curriculum: Curriculum, profile, plan, result) -> list[str]:
+def advisor_items(curriculum: Curriculum, profile, plan, result) -> list[dict]:
     """Questions drawn from this plan, so the consultation starts from real issues."""
     courses = {course.code: course for course in curriculum.courses}
-    questions = []
+    items = []
     for code in plan.failed:
         course = courses.get(code)
         term = plan.assignments.get(code)
         if course and term:
-            questions.append(
-                f"Can I retake {code} {course.name} in semester {term}, and is it still "
-                "offered on that calendar?"
+            items.append(
+                _item(
+                    "RETAKE",
+                    f"Can I retake {code} {course.name} in semester {term}, and is it still "
+                    "offered on that calendar?",
+                    course=code,
+                    name=course.name,
+                    term=term,
+                )
             )
     gpa = result["planning_gpa"]
     if curriculum.gpa_credit_rules and gpa is not None:
         cap = result["caps"].get(profile.current_term)
-        questions.append(
-            f"With an IPS of {gpa:.2f}, is my limit for semester {profile.current_term} "
-            f"really {cap} credits?"
+        items.append(
+            _item(
+                "IPS_LIMIT",
+                f"With an IPS of {gpa:.2f}, is my limit for semester {profile.current_term} "
+                f"really {cap} credits?",
+                gpa=gpa,
+                term=profile.current_term,
+                cap=cap,
+            )
         )
-    rules = sorted({f["rule"].replace("_", " ").lower() for f in result["findings"]})
+    rules = sorted({f["rule"] for f in result["findings"]})
     if rules:
-        questions.append(
-            f"This plan still has {', '.join(rules)} issues. Is there an exception or a "
-            "better arrangement?"
+        names = ", ".join(sorted(rule.replace("_", " ").lower() for rule in rules))
+        items.append(
+            _item(
+                "OPEN_ISSUES",
+                f"This plan still has {names} issues. Is there an exception or a "
+                "better arrangement?",
+                rules=rules,
+            )
         )
     if any(c.category == "elective" for c in curriculum.courses):
-        questions.append(
-            "Do the electives in this plan count toward my graduation requirement and "
-            "concentration?"
+        items.append(
+            _item(
+                "ELECTIVES",
+                "Do the electives in this plan count toward my graduation requirement and "
+                "concentration?",
+            )
         )
     completion = result["completion_term"]
     if completion and completion > 8:
-        questions.append(
-            f"Finishing in semester {completion} is later than 8 semesters. Does this "
-            "affect my tuition (UKT), scholarship, or study period limit?"
+        items.append(
+            _item(
+                "LATE_FINISH",
+                f"Finishing in semester {completion} is later than 8 semesters. Does this "
+                "affect my tuition (UKT), scholarship, or study period limit?",
+                term=completion,
+            )
         )
-    questions.append("Are the prerequisites and offerings used here accurate for my intake year?")
-    return questions[:6]
+    items.append(
+        _item(
+            "ACCURACY",
+            "Are the prerequisites and offerings used here accurate for my intake year?",
+        )
+    )
+    return items[:6]
 
 
 def bottlenecks(curriculum: Curriculum, failed: list[str], completed=()) -> list[dict]:
