@@ -175,6 +175,11 @@ def test_downstream_impact_skips_courses_already_passed(client, workspace):
     assert "MA1202" not in downstream
 
 
+def test_downstream_impact_follows_either_or_prerequisites(client, workspace):
+    plan = save(client, workspace["plans"][0], failed=["IF2105"])
+    assert "IF3104" in {b["course"] for b in plan["bottlenecks"]}
+
+
 def test_profile_rejects_completed_courses_without_prerequisites(client, workspace):
     profile = workspace["profile"]
     payload = {

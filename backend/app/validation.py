@@ -214,7 +214,11 @@ def bottlenecks(curriculum: Curriculum, failed: list[str], completed=()) -> list
         while queue:
             parent, path = queue.pop(0)
             for course in curriculum.courses:
-                depends = parent in course.prerequisites or parent in course.corequisites
+                depends = (
+                    parent in course.prerequisites
+                    or parent in course.corequisites
+                    or any(parent in group for group in course.any_prerequisites)
+                )
                 if depends and course.code not in seen and course.code not in passed:
                     seen.add(course.code)
                     child_path = [*path, course.code]

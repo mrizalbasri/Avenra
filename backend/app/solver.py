@@ -384,7 +384,9 @@ def solve_plans(curriculum: Curriculum, profile, plan, time_limit=3.0) -> dict:
     if alternatives:
         count = len(alternatives)
         message = f"Found {count} distinct, independently checked plan{'s' if count > 1 else ''}."
-        if count == 1:
+        if count == 1 and timed_out:
+            message += " The second option hit the time limit, so another arrangement may exist."
+        elif count == 1:
             message += " No second valid arrangement differs from this one."
         return base | {"status": "feasible", "alternatives": alternatives, "message": message}
     if timed_out:

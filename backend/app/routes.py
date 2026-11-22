@@ -157,7 +157,7 @@ def bootstrap(db: DB):
                 ),
                 failed=[],
                 credit_cap=curriculum.credit_cap,
-                horizon=max(8, profile.current_term),
+                horizon=min(curriculum.max_terms, max(8, profile.current_term)),
             )
         )
         try:
@@ -203,7 +203,7 @@ def create_plan(payload: PlanCreate, db: DB):
     else:
         values = {
             "credit_cap": curriculum.credit_cap,
-            "horizon": max(8, profile.current_term),
+            "horizon": min(curriculum.max_terms, max(8, profile.current_term)),
             "assignments": default_assignments(curriculum, profile.completed, profile.current_term),
         }
     if payload.assignments is not None:
