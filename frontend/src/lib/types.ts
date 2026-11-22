@@ -3,9 +3,14 @@ export type Course = {
   name: string;
   credits: number;
   recommended_term: number;
+  category: 'required' | 'elective';
   prerequisites: string[];
+  any_prerequisites: string[][];
+  corequisites: string[];
+  min_credits_earned: number;
   offered_terms: number[];
 };
+export type GpaCreditRule = { min_gpa: number; max_credits: number };
 export type Curriculum = {
   id: string;
   name: string;
@@ -14,6 +19,9 @@ export type Curriculum = {
   disclaimer: string;
   source: string;
   credit_cap: number;
+  graduation_credits: number | null;
+  max_terms: number;
+  gpa_credit_rules: GpaCreditRule[];
   courses: Course[];
 };
 export type Profile = {
@@ -21,6 +29,7 @@ export type Profile = {
   alias: string;
   current_term: number;
   completed: string[];
+  last_gpa: number | null;
   revision: number;
 };
 export type Finding = {
@@ -33,14 +42,20 @@ export type Validation = {
   status: string;
   findings: Finding[];
   loads: Record<string, number>;
+  caps: Record<string, number>;
+  cap_reasons: Record<string, string>;
   completed_credits: number;
+  planned_credits: number;
+  graduation_credits: number;
   remaining_credits: number;
   completion_term: number | null;
   peak_credits: number;
+  planning_gpa: number | null;
   curriculum_version: string;
   plan_revision: number;
   profile_revision: number;
   assumptions: string[];
+  advisor_questions: string[];
 };
 export type Plan = {
   id: string;
@@ -51,6 +66,7 @@ export type Plan = {
   failed: string[];
   credit_cap: number;
   horizon: number;
+  expected_gpa: number | null;
   revision: number;
   archived: boolean;
   created_at: string;
@@ -80,14 +96,30 @@ export type FocusSession = {
 export type Study = { tasks: Task[]; sessions: FocusSession[] };
 export type Alternative = {
   name: string;
-  assignments: Record<string, number>;
+  assignments: Record<string, number | null>;
   validation: Validation;
   optimal: boolean;
+  summary: string;
+  changes: {
+    code: string;
+    name: string;
+    from: number | null;
+    to: number | null;
+  }[];
+};
+export type Diagnosis = {
+  reasons: { rule: string; message: string }[];
+  suggestions: {
+    kind: 'horizon' | 'credit_cap';
+    value: number;
+    message: string;
+  }[];
 };
 export type SolveResult = {
   status: string;
   message: string;
   alternatives: Alternative[];
+  diagnosis?: Diagnosis;
   source_revision: number;
   profile_revision: number;
 };

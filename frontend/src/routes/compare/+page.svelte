@@ -61,8 +61,24 @@
               <dd>{plan.validation.peak_credits} credits</dd>
             </div>
             <div>
-              <dt>Credit limit</dt>
+              <dt>Credits planned</dt>
+              <dd>
+                {plan.validation.completed_credits +
+                  plan.validation.planned_credits} / {plan.validation
+                  .graduation_credits}
+              </dd>
+            </div>
+            <div>
+              <dt>Your credit limit</dt>
               <dd>{plan.credit_cap} credits</dd>
+            </div>
+            <div>
+              <dt>Scenario IPS</dt>
+              <dd>
+                {plan.validation.planning_gpa !== null
+                  ? plan.validation.planning_gpa.toFixed(2)
+                  : 'Not set'}
+              </dd>
             </div>
             <div>
               <dt>Scenario setbacks</dt>
@@ -98,7 +114,9 @@
                     ? 'Completed'
                     : plan.assignments[course.code]
                       ? `Semester ${plan.assignments[course.code]}`
-                      : 'Unscheduled'}</td
+                      : course.category === 'elective'
+                        ? 'Not chosen'
+                        : 'Unscheduled'}</td
                 >{/each}</tr
             >{/each}</tbody
         >

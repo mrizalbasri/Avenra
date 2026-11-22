@@ -1,15 +1,19 @@
 <script lang="ts">
   import { goto, invalidateAll } from '$app/navigation';
   import { api } from '#lib/api.js';
-  import { parseCoursesCSV } from '#lib/curriculum-import.js';
-  import type { Workspace } from '#lib/types.js';
+  import { parseCoursesCSV, parseGpaRules } from '#lib/curriculum-import.js';
   let alias = $state('');
   let university = $state('');
   let program = $state('');
   let year = $state('2026');
   let source = $state('');
-  let cap = $state(20);
+  let cap = $state(24);
   let currentTerm = $state(1);
+  // Number inputs bind to null when empty.
+  let lastGpa = $state<number | null>(null);
+  let graduationCredits = $state<number | null>(null);
+  let maxTerms = $state(14);
+  let gpaRules = $state('3.00 = 24\n2.50 = 21\n2.00 = 18\n0.00 = 15');
   let csv = $state('');
   let busy = $state(false);
   let error = $state('');
@@ -36,9 +40,11 @@
     error = '';
     try {
       const courses = parseCoursesCSV(csv);
-      const result = await api<Workspace>('workspace/import', 'POST', {
+      const rules = parseGpaRules(gpaRules);
+      await api('workspace/import', 'POST', {
         alias,
         current_term: currentTerm,
+        last_gpa: typeof lastGpa === 'number' ? lastGpa : null,
         curriculum: {
           id: crypto.randomUUID(),
           name: `${university} | ${program}`,
@@ -48,6 +54,10 @@
             'User-supplied curriculum. Verify rules with your university.',
           source,
           credit_cap: cap,
+          graduation_credits:
+            typeof graduationCredits === 'number' ? graduationCredits : null,
+          max_terms: maxTerms,
+          gpa_credit_rules: rules,
           courses,
         },
       });
@@ -112,9 +122,18 @@
         >Current semester<input
           type="number"
           min="1"
-          max="12"
+          max="14"
           bind:value={currentTerm}
           required
+        /></label
+      ><label
+        >Last semester IPS (optional)<input
+          type="number"
+          min="0"
+          max="4"
+          step="0.01"
+          bind:value={lastGpa}
+          placeholder="e.g. 3.25"
         /></label
       ><label
         >Maximum credits per semester<input
@@ -124,8 +143,35 @@
           bind:value={cap}
           required
         /></label
+      ><label
+        >Credits needed to graduate (optional)<input
+          type="number"
+          min="1"
+          max="300"
+          bind:value={graduationCredits}
+          placeholder="e.g. 144"
+        /></label
+      ><label
+        >Maximum study period (semesters)<input
+          type="number"
+          min="1"
+          max="14"
+          bind:value={maxTerms}
+          required
+        /></label
       >
     </div>
+    <label
+      >Credit limit by IPS<textarea
+        bind:value={gpaRules}
+        rows="4"
+        placeholder="3.00 = 24"
+      ></textarea></label
+    >
+    <p class="muted small">
+      One rule per line: minimum IPS = maximum credits. Copy the table from your
+      academic handbook. Leave empty if your campus has no IPS rule.
+    </p>
     <label
       >Rule source or curriculum reference<input
         bind:value={source}
@@ -144,8 +190,11 @@
     </div>
     <p class="muted small">
       Export a course list from your curriculum handbook into the template. Use
-      course codes for prerequisites, separated by semicolons. Offering options:
-      odd, even, or both. Leave no required rule implied.
+      course codes for prerequisites, separated by semicolons; write
+      <code>A|B</code> when either course is enough. Offering: odd, even, or both.
+      Category: required or elective. Corequisites may be taken in the same semester.
+      min_credits is the credits needed before taking the course, for example an internship
+      or thesis.
     </p>
     <label
       >Choose a CSV file<input
@@ -157,7 +206,7 @@
       >Or paste CSV content<textarea
         bind:value={csv}
         rows="9"
-        placeholder="code,name,credits,recommended_term,prerequisites,offered_terms"
+        placeholder="code,name,credits,recommended_term,prerequisites,offered_terms,category,corequisites,min_credits"
       ></textarea></label
     >{#if preview.length}<p class="success-text">
         {preview.length} courses ready to validate{filename
@@ -182,10 +231,11 @@
       </div>{/if}
   </section>
   <div class="warning-banner">
-    Rules are user-supplied until independently verified. This importer supports
-    ordinary prerequisite chains, credit caps, and odd/even offerings.
-    Concurrent prerequisites, electives with alternative requirements, credit
-    transfer, and GPA-dependent caps need advisor review.
+    Rules are user-supplied until independently verified. Avenra checks
+    prerequisites (including "either A or B"), corequisites, earned-credit
+    thresholds, electives toward a graduation total, odd/even offerings, and an
+    IPS-based credit limit for next semester. Exceptions, equivalent courses,
+    and credit transfer still need advisor review.
   </div>
   {#if error}<p class="error-banner" role="alert">{error}</p>{/if}<button
     class="button primary"

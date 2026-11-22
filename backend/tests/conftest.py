@@ -25,6 +25,7 @@ def client():
     app.dependency_overrides[get_session] = session
     try:
         with TestClient(app) as client:
+            client.engine = engine
             yield client
     finally:
         app.dependency_overrides.clear()
@@ -47,6 +48,7 @@ def editable(plan, profile_revision=1):
             "failed",
             "credit_cap",
             "horizon",
+            "expected_gpa",
             "revision",
             "archived",
         )

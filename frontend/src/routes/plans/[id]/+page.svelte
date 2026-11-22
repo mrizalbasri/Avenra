@@ -13,6 +13,12 @@
   import SemesterNode from '#lib/components/SemesterNode.svelte';
   import Icon from '#lib/components/Icon.svelte';
   import { api } from '#lib/api.js';
+  import {
+    nextOffered,
+    offeringText,
+    requirementText,
+    termCap,
+  } from '#lib/rules.js';
   import type { Plan, SolveResult, Alternative } from '#lib/types.js';
   import type { PageProps } from './$types';
   let { data }: PageProps = $props();
@@ -23,6 +29,7 @@
     failed: string[];
     credit_cap: number;
     horizon: number;
+    expected_gpa: number | null;
     archived: boolean;
   };
   const snapshot = (p: Plan): Draft => ({
@@ -32,6 +39,7 @@
     failed: [...p.failed],
     credit_cap: p.credit_cap,
     horizon: p.horizon,
+    expected_gpa: p.expected_gpa ?? null,
     archived: p.archived,
   });
   let saved = $state<Plan>(untrack(() => data.plan));
@@ -59,8 +67,59 @@
   );
   let terms = $derived(
     Array.from(
-      { length: Math.max(1, draft.horizon - data.profile.current_term + 1) },
+      {
+        length: Math.max(
+          1,
+          Math.min(draft.horizon, data.curriculum.max_terms) -
+            data.profile.current_term +
+            1,
+        ),
+      },
       (_, i) => i + data.profile.current_term,
+    ),
+  );
+  let gpa = $derived(draft.expected_gpa ?? data.profile.last_gpa ?? null);
+  let capFor = $derived((term: number) =>
+    termCap(
+      data.curriculum,
+      term,
+      data.profile.current_term,
+      draft.credit_cap,
+      gpa,
+    ),
+  );
+  let completedCredits = $derived(
+    data.curriculum.courses
+      .filter(
+        (c) =>
+          data.profile.completed.includes(c.code) &&
+          !draft.failed.includes(c.code),
+      )
+      .reduce((s, c) => s + c.credits, 0),
+  );
+  let plannedCredits = $derived(
+    remaining
+      .filter((c) => terms.includes(draft.assignments[c.code] ?? -1))
+      .reduce((s, c) => s + c.credits, 0),
+  );
+  let graduationCredits = $derived(
+    data.curriculum.graduation_credits ??
+      data.curriculum.courses.reduce((s, c) => s + c.credits, 0),
+  );
+  let offPlan = $derived(
+    remaining.filter((c) => !terms.includes(draft.assignments[c.code] ?? -1)),
+  );
+  let thisSemester = $derived(
+    data.curriculum.courses.filter(
+      (c) =>
+        !data.profile.completed.includes(c.code) &&
+        (draft.failed.includes(c.code) ||
+          draft.assignments[c.code] === data.profile.current_term),
+    ),
+  );
+  let passed = $derived(
+    data.curriculum.courses.filter((c) =>
+      data.profile.completed.includes(c.code),
     ),
   );
   let course = $derived(
@@ -149,18 +208,32 @@
     draft.failed = draft.failed.includes(code)
       ? draft.failed.filter((c) => c !== code)
       : [...draft.failed, code];
-    if (draft.failed.includes(code) && !draft.assignments[code])
+    const failedCourse = data.curriculum.courses.find((c) => c.code === code);
+    // A retake goes to the next semester that offers the course. A course failed
+    // this semester cannot return before next semester.
+    if (draft.failed.includes(code) && failedCourse)
       draft.assignments = {
         ...draft.assignments,
-        [code]: data.profile.current_term,
+        [code]: nextOffered(
+          failedCourse,
+          data.profile.current_term +
+            (data.profile.completed.includes(code) ? 0 : 1),
+        ),
       };
+  }
+  function applySuggestion(kind: 'horizon' | 'credit_cap', value: number) {
+    remember();
+    if (kind === 'horizon') draft.horizon = value;
+    else draft.credit_cap = value;
+    notice =
+      'Suggestion applied. Save & validate, then generate alternatives again.';
   }
   $effect(() => {
     const columns: Node[] = terms.map((t, i) => ({
       id: `term-${t}`,
       type: 'semester',
       position: { x: i * 290, y: 0 },
-      data: { term: t, credits: loads[t], cap: draft.credit_cap },
+      data: { term: t, credits: loads[t], cap: capFor(t) },
       selectable: false,
       draggable: false,
       style: `width: 266px; height: ${Math.max(470, ...terms.map((term) => remaining.filter((c) => draft.assignments[c.code] === term).length * 126 + 85))}px; z-index: -1;`,
@@ -239,11 +312,14 @@
         typeof parsed.draft.assignments !== 'object' ||
         !Number.isInteger(parsed.draft.horizon) ||
         parsed.draft.horizon < data.profile.current_term ||
-        parsed.draft.horizon > 12
+        parsed.draft.horizon > data.curriculum.max_terms
       )
         throw new Error('This browser draft is not valid.');
       remember();
-      draft = parsed.draft;
+      draft = {
+        ...parsed.draft,
+        expected_gpa: parsed.draft.expected_gpa ?? null,
+      };
       recovered = null;
     } catch (e) {
       error = (e as Error).message;
@@ -296,15 +372,11 @@
     busy = true;
     error = '';
     try {
+      // One request, so a failure never leaves a half-made copy behind.
       const created = await api<Plan>('plans', 'POST', {
         name: `${saved.name} | ${alternative.name}`.slice(0, 100),
         copy_from: saved.id,
-      });
-      await api(`plans/${created.id}`, 'PATCH', {
-        ...snapshot(created),
         assignments: alternative.assignments,
-        revision: created.revision,
-        profile_revision: data.profile.revision,
       });
       await invalidateAll();
       await goto(`/plans/${created.id}`);
@@ -369,7 +441,8 @@
       : saved.validation.findings.length
         ? `${saved.validation.findings.length} rule ${saved.validation.findings.length === 1 ? 'finding' : 'findings'}`
         : 'Valid under modeled assumptions'}</span
-  ><span>{remaining.reduce((s, c) => s + c.credits, 0)} credits remaining</span
+  ><span
+    >{completedCredits + plannedCredits} / {graduationCredits} credits planned</span
   ><span
     >{saved.validation.completion_term && !dirty
       ? `Modeled completion: semester ${saved.validation.completion_term}`
@@ -437,8 +510,8 @@
           >
             <div class="term-heading">
               <h3>Semester {term}</h3>
-              <span class:load-over={loads[term] > draft.credit_cap}
-                >{loads[term]} / {draft.credit_cap} cr</span
+              <span class:load-over={loads[term] > capFor(term)}
+                >{loads[term]} / {capFor(term)} cr</span
               >
             </div>
             {#each remaining.filter((c) => draft.assignments[c.code] === term) as c}<div
@@ -476,13 +549,26 @@
       Move a course across semester frames to reschedule it. Select a course for
       details or keyboard-friendly movement.
     </div>
-    {#if remaining.some((c) => !terms.includes(draft.assignments[c.code] ?? -1))}<div
+    {#if offPlan.some((c) => c.category === 'required')}<div
         class="unscheduled"
       >
-        <h3>Unscheduled or outside horizon</h3>
-        {#each remaining.filter((c) => !terms.includes(draft.assignments[c.code] ?? -1)) as c}<button
+        <h3>Required courses unscheduled or outside the plan</h3>
+        {#each offPlan.filter((c) => c.category === 'required') as c}<button
             class="button"
             onclick={() => (selected = c.code)}>{c.code} | {c.name}</button
+          >{/each}
+      </div>{/if}
+    {#if offPlan.some((c) => c.category === 'elective')}<div
+        class="unscheduled elective-pool"
+      >
+        <h3>Elective pool</h3>
+        <p class="muted small">
+          Optional. Select one to schedule it when you need more credits.
+        </p>
+        {#each offPlan.filter((c) => c.category === 'elective') as c}<button
+            class="button subtle"
+            onclick={() => (selected = c.code)}
+            >{c.code} | {c.name} | {c.credits} cr</button
           >{/each}
       </div>{/if}
   </section>
@@ -515,27 +601,37 @@
           >Last semester<input
             type="number"
             min={data.profile.current_term}
-            max="12"
+            max={data.curriculum.max_terms}
             value={draft.horizon}
             onchange={(e) => {
               remember();
               draft.horizon = Math.max(
                 data.profile.current_term,
-                Math.min(12, +e.currentTarget.value),
+                Math.min(data.curriculum.max_terms, +e.currentTarget.value),
               );
             }}
           /></label
         >
       </div>
+      <p class="muted small">
+        Semester {data.profile.current_term} limit: {capFor(
+          data.profile.current_term,
+        )} credits{gpa !== null && data.curriculum.gpa_credit_rules.length
+          ? ` (IPS ${gpa.toFixed(2)})`
+          : ''}. Maximum study period: {data.curriculum.max_terms} semesters.
+      </p>
     </section>
     <section>
       <h2>{course ? course.name : 'Course details'}</h2>
       {#if course}<p class="muted small">
-          {course.code} | {course.credits} credits
+          {course.code} | {course.credits} credits | {course.category ===
+          'elective'
+            ? 'Elective'
+            : 'Required'} | {offeringText(course)}
         </p>
-        <p class="small">
-          Prerequisites: {course.prerequisites.join(', ') || 'None'}
-        </p>
+        <ul class="small requirement-list">
+          {#each requirementText(course) as line}<li>{line}</li>{/each}
+        </ul>
         <label
           >Assigned semester<select
             bind:value={
@@ -556,18 +652,53 @@
     <section>
       <h2>Simulate a setback</h2>
       <p class="muted small">
-        Choose failed or postponed courses in this scenario. Your profile stays
-        unchanged.
+        Mark a course you might fail this semester, or a passed course you must
+        retake. Your profile stays unchanged.
       </p>
       <div class="setback-list">
-        {#each data.curriculum.courses as c}<label
+        <p class="small"><strong>This semester</strong></p>
+        {#each thisSemester as c}<label
             ><input
               type="checkbox"
               checked={draft.failed.includes(c.code)}
               onchange={() => toggleFailure(c.code)}
             /><span>{c.code}<small>{c.name}</small></span></label
-          >{/each}
+          >{:else}<p class="muted small">
+            No courses planned for this semester.
+          </p>{/each}
       </div>
+      {#if passed.length}<details class="setback-list">
+          <summary class="small">Passed courses to retake</summary>
+          {#each passed as c}<label
+              ><input
+                type="checkbox"
+                checked={draft.failed.includes(c.code)}
+                onchange={() => toggleFailure(c.code)}
+              /><span>{c.code}<small>{c.name}</small></span></label
+            >{/each}
+        </details>{/if}
+      {#if data.curriculum.gpa_credit_rules.length}<label
+          >Expected IPS after this setback<input
+            type="number"
+            min="0"
+            max="4"
+            step="0.01"
+            placeholder={data.profile.last_gpa?.toFixed(2) ?? 'e.g. 2.40'}
+            value={draft.expected_gpa ?? ''}
+            onchange={(e) => {
+              remember();
+              const value = e.currentTarget.value;
+              draft.expected_gpa =
+                value === ''
+                  ? null
+                  : Math.max(0, Math.min(4, Math.round(+value * 100) / 100));
+            }}
+          /></label
+        >
+        <p class="muted small">
+          A lower IPS can reduce next semester's credit limit. Leave empty to
+          use your profile IPS.
+        </p>{/if}
     </section>
     <section>
       <h2>Find a recovery route</h2>
@@ -605,18 +736,56 @@
       <span class="tag">{results.status}</span>
     </div>
     <p class="muted" role="status">{results.message}</p>
+    {#if results.diagnosis}<div class="diagnosis">
+        <h3>Why no plan fits</h3>
+        <ul class="finding-list">
+          {#each results.diagnosis.reasons as reason}<li>
+              <span class="tag warning">{reason.rule.replaceAll('_', ' ')}</span
+              >
+              <p>{reason.message}</p>
+            </li>{/each}
+        </ul>
+        {#if results.diagnosis.suggestions.length}<h3>
+            Smallest changes that work
+          </h3>
+          <div class="toolbar-actions">
+            {#each results.diagnosis.suggestions as suggestion}<button
+                class="button"
+                onclick={() =>
+                  applySuggestion(suggestion.kind, suggestion.value)}
+                >{suggestion.message}</button
+              >{/each}
+          </div>{:else}<p class="muted small">
+            No change to the plan length or your own credit limit is enough.
+            Discuss the conflicting rules with your academic advisor.
+          </p>{/if}
+      </div>{/if}
     <div class="comparison-summary">
       {#each results.alternatives as alternative}<article class="alternative">
           <h3>{alternative.name}</h3>
-          <p>
-            Finish in semester {alternative.validation.completion_term} | Peak {alternative
-              .validation.peak_credits} credits
-          </p>
+          <p>{alternative.summary}</p>
           <p class="muted small">
             {alternative.optimal
               ? 'Optimal for this modeled objective.'
               : 'Feasible result found within the time limit.'} Independently checked.
           </p>
+          {#if alternative.changes.length}<details>
+              <summary class="small"
+                >{alternative.changes.length} changes from your plan</summary
+              >
+              <ul class="small">
+                {#each alternative.changes as change}<li>
+                    {change.code}
+                    {change.name}: {change.from
+                      ? `semester ${change.from}`
+                      : 'not planned'} | {change.to
+                      ? `semester ${change.to}`
+                      : 'left out'}
+                  </li>{/each}
+              </ul>
+            </details>{:else}<p class="muted small">
+              Same arrangement as your saved plan.
+            </p>{/if}
           <button
             class="button"
             disabled={busy}

@@ -12,6 +12,9 @@
     untrack(() => [...(data.workspace?.profile?.completed ?? [])]),
   );
   let revision = $state(untrack(() => data.workspace?.profile?.revision ?? 1));
+  let lastGpa = $state<number | null>(
+    untrack(() => data.workspace?.profile?.last_gpa ?? null),
+  );
   let notice = $state('');
   let busy = $state(false);
   let error = $state('');
@@ -24,6 +27,7 @@
         alias,
         current_term: currentTerm,
         completed,
+        last_gpa: lastGpa,
         revision,
       });
       revision = profile.revision;
@@ -69,12 +73,38 @@
           >Current semester<input
             type="number"
             min="1"
-            max="12"
+            max={data.workspace.curriculum.max_terms}
             bind:value={currentTerm}
             required
           /></label
+        ><label
+          >Last semester IPS<input
+            type="number"
+            min="0"
+            max="4"
+            step="0.01"
+            placeholder="e.g. 3.25"
+            value={lastGpa ?? ''}
+            onchange={(e) => {
+              const value = e.currentTarget.value;
+              lastGpa =
+                value === ''
+                  ? null
+                  : Math.max(0, Math.min(4, Math.round(+value * 100) / 100));
+            }}
+          /></label
         >
       </div>
+      {#if data.workspace.curriculum.gpa_credit_rules.length}<p
+          class="muted small"
+        >
+          Credit limits by IPS: {[...data.workspace.curriculum.gpa_credit_rules]
+            .sort((a, b) => b.min_gpa - a.min_gpa)
+            .map(
+              (r) => `IPS ${r.min_gpa.toFixed(2)}+ | ${r.max_credits} credits`,
+            )
+            .join('; ')}.
+        </p>{/if}
     </section>
     <section class="panel">
       <div class="section-heading">
@@ -94,7 +124,10 @@
             />
             <div>
               <strong>{course.name}</strong><small
-                >{course.code} | {course.credits} credits</small
+                >{course.code} | {course.credits} credits | Semester {course.recommended_term}{course.category ===
+                'elective'
+                  ? ' | Elective'
+                  : ''}</small
               >
             </div></label
           >{/each}

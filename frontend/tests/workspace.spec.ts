@@ -3,7 +3,10 @@ import { apiOrigin } from './services';
 
 async function openDemo(page: Page) {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Open demo workspace' }).click();
+  await page
+    .getByRole('button', { name: 'Open demo workspace' })
+    .first()
+    .click();
   await expect(
     page.getByRole('heading', { name: 'My study plan', exact: true }),
   ).toBeVisible();
@@ -20,24 +23,24 @@ test('moves courses, undoes edits, validates and persists the semester plan', as
   await page
     .getByRole('button', { name: 'Semester board', exact: true })
     .click();
-  const move = page.getByLabel('Move CS301 to semester', { exact: true });
-  await move.selectOption('2');
+  const move = page.getByLabel('Move IF2201 to semester', { exact: true });
+  await move.selectOption('3');
   await page.getByRole('button', { name: 'Undo', exact: true }).click();
-  await expect(move).toHaveValue('3');
+  await expect(move).toHaveValue('4');
   await page.getByRole('button', { name: 'Redo', exact: true }).click();
-  await expect(move).toHaveValue('2');
+  await expect(move).toHaveValue('3');
   await page.getByRole('button', { name: 'Save & validate' }).click();
   await expect(
     page.getByText('Plan saved and checked', { exact: false }),
   ).toBeVisible();
   await expect(
-    page.getByText('Complete CS201 before taking CS301.', { exact: true }),
+    page.getByText('Complete IF2101 before taking IF2201.', { exact: true }),
   ).toBeVisible();
   await page.reload();
   await page
     .getByRole('button', { name: 'Semester board', exact: true })
     .click();
-  await expect(move).toHaveValue('2');
+  await expect(move).toHaveValue('3');
   expect(errors).toEqual([]);
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({
@@ -50,7 +53,7 @@ test('generates recovery options, saves an independent plan, compares and export
   page,
 }) => {
   const id = await openDemo(page);
-  await page.getByLabel('CS101', { exact: false }).check();
+  await page.getByRole('checkbox', { name: /^IF2101/ }).check();
   await page.getByRole('button', { name: 'Save & validate' }).click();
   await expect(
     page.getByText('Plan saved and checked', { exact: false }),
@@ -81,9 +84,9 @@ test('generates recovery options, saves an independent plan, compares and export
     }),
   ).toBeVisible();
   await expect(
-    page.getByText('Plan revision 2 | Profile revision 1'),
+    page.getByText('Plan revision 1 | Profile revision 1'),
   ).toBeVisible();
-  await expect(page.getByText('Scenario setbacks: CS101.')).toBeVisible();
+  await expect(page.getByText('Scenario setbacks: IF2101.')).toBeVisible();
   await page.emulateMedia({ media: 'print' });
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({
@@ -165,7 +168,7 @@ test('imports a personal curriculum and keeps the original workspace separate', 
     .click();
   await expect(page).toHaveURL(/\/profile$/);
   await expect(
-    page.getByText('IF001 | 3 credits', { exact: true }),
+    page.getByText('IF001 | 3 credits | Semester 1', { exact: true }),
   ).toBeVisible();
   const workspaceId = (await page.context().cookies()).find(
     (cookie) => cookie.name === 'avenra-workspace',
@@ -194,10 +197,10 @@ test('canvas drag changes the assigned semester and mobile pages fit the viewpor
   page,
 }) => {
   const id = await openDemo(page);
-  const node = page.locator('.svelte-flow__node[data-id="CS301"]');
+  const node = page.locator('.svelte-flow__node[data-id="IF2201"]');
   await expect(node).toBeVisible();
   const box = await node.boundingBox();
-  const previous = page.locator('.svelte-flow__node[data-id="CS201"]');
+  const previous = page.locator('.svelte-flow__node[data-id="IF2101"]');
   const dest = await previous.boundingBox();
   if (!box || !dest) throw new Error('Canvas cards not rendered');
   await node.click();
@@ -209,7 +212,7 @@ test('canvas drag changes the assigned semester and mobile pages fit the viewpor
   await page.mouse.up();
   await expect(
     page.getByRole('combobox', { name: 'Assigned semester', exact: true }),
-  ).toHaveValue('2');
+  ).toHaveValue('3');
   await page.getByRole('button', { name: 'Save & validate' }).click();
   await expect(
     page.getByText('Plan saved and checked', { exact: false }),
@@ -252,8 +255,8 @@ test('keeps a failed save recoverable after reload', async ({ page }) => {
     .getByRole('button', { name: 'Semester board', exact: true })
     .click();
   await page
-    .getByLabel('Move CS301 to semester', { exact: true })
-    .selectOption('2');
+    .getByLabel('Move IF2201 to semester', { exact: true })
+    .selectOption('3');
   await page.route('**/api/v1/plans/*', (route) =>
     route.request().method() === 'PATCH'
       ? route.fulfill({
@@ -284,6 +287,42 @@ test('keeps a failed save recoverable after reload', async ({ page }) => {
     .getByRole('button', { name: 'Semester board', exact: true })
     .click();
   await expect(
-    page.getByLabel('Move CS301 to semester', { exact: true }),
-  ).toHaveValue('2');
+    page.getByLabel('Move IF2201 to semester', { exact: true }),
+  ).toHaveValue('3');
+});
+
+test('explains an impossible plan and applies the smallest fix', async ({
+  page,
+}) => {
+  await openDemo(page);
+  await page.getByLabel('Credit limit').fill('12');
+  await page.getByLabel('Credit limit').blur();
+  await page.getByRole('button', { name: 'Save & validate' }).click();
+  await expect(
+    page.getByText('Plan saved and checked', { exact: false }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Generate alternatives' }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Why no plan fits' }),
+  ).toBeVisible();
+  await expect(
+    page.getByText('You still need 105 credits', { exact: false }),
+  ).toBeVisible();
+  await page
+    .getByRole('button', { name: 'Raise your own credit limit to 18 credits.' })
+    .click();
+  await expect(page.getByLabel('Credit limit')).toHaveValue('18');
+  await page.getByRole('button', { name: 'Save & validate' }).click();
+  await expect(
+    page.getByText('Plan saved and checked', { exact: false }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Generate alternatives' }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Earlier completion', exact: true }),
+  ).toBeVisible();
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await page.screenshot({
+    path: 'test-results/recovery-alternatives.png',
+    fullPage: true,
+  });
 });

@@ -1,5 +1,9 @@
-code,name,credits,recommended_term,prerequisites,offered_terms
-IF101,Programming fundamentals,3,1,,both
-MA101,Discrete mathematics,3,1,,both
-IF201,Data structures,4,2,IF101,both
-IF301,Algorithm design,4,3,IF201;MA101,both
+code,name,credits,recommended_term,prerequisites,offered_terms,category,corequisites,min_credits
+IF101,Programming fundamentals,3,1,,odd,required,,
+MA101,Discrete mathematics,3,1,,odd,required,,
+IF102,Programming laboratory,1,1,,odd,required,IF101,
+IF201,Data structures,4,2,IF101,even,required,,
+IF202,Web programming,3,2,IF101,both,required,,
+IF301,Algorithm design,4,3,IF201;MA101,odd,required,,
+IF302,Mobile development,3,3,IF202|IF201,both,elective,,
+IF401,Internship,2,4,,both,required,,15

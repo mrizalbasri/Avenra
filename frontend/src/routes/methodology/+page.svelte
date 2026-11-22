@@ -17,17 +17,19 @@
     <p>
       Imported rules are labeled user-supplied, not independently verified. A
       structurally valid CSV does not establish that it accurately represents
-      institutional policy. All imported courses are treated as required;
-      elective groups need manual review.
+      institutional policy. Courses are required unless the CSV marks them as
+      electives; electives count toward the graduation credit total.
     </p>
     <a href="/curriculum" class="button">Import a curriculum</a>
   </section>
   <section class="panel">
     <h2>Synthetic curriculum</h2>
     <p>
-      The bundled Computing curriculum is fictional. Its course names, credit
-      values, prerequisites, and offering calendar are demonstration
-      assumptions. No university policy has been verified.
+      The bundled S1 Informatika curriculum is fictional. It follows a common
+      Indonesian structure: 144 credits, 8 recommended semesters, a 14-semester
+      study limit, courses offered only in odd or even semesters, and an IPS
+      table for next semester's credit limit. No specific university's policy
+      has been used or verified.
     </p>
     <p>
       Source: <code>backend/app/fixtures/demo-curriculum.json</code>. Every
@@ -38,13 +40,25 @@
     <h2>What gets checked</h2>
     <ul>
       <li>
-        All remaining required courses must be scheduled within the chosen
-        horizon.
+        Every remaining required course is scheduled, and the planned total
+        reaches the graduation credits.
       </li>
-      <li>Prerequisites must be completed or placed in an earlier semester.</li>
-      <li>Each semester must stay within your selected credit limit.</li>
       <li>
-        Course placement must follow the modeled odd/even offering calendar.
+        Prerequisites are finished in an earlier semester. "Either A or B" rules
+        need one of them. Corequisites can share the semester.
+      </li>
+      <li>
+        Courses such as an internship or thesis wait until enough credits are
+        earned.
+      </li>
+      <li>
+        Each semester stays within your limit, the curriculum maximum, and, for
+        next semester, the IPS-based limit.
+      </li>
+      <li>
+        Courses follow the odd/even offering calendar and stay within the
+        maximum study period. A course failed this semester is retaken from next
+        semester.
       </li>
     </ul>
     <p>
@@ -57,12 +71,18 @@
     <p>
       OR-Tools CP-SAT searches for an earlier-completion option and a
       lighter-peak-workload option. A separate rule checker validates each
-      result. If only one distinct option is found, Avenra shows one. A timeout
-      is reported separately from infeasibility.
+      result, and each option explains how it differs. If only one distinct
+      option is found, Avenra shows one. A timeout is reported separately from
+      infeasibility.
     </p>
     <p>
-      Scenario setbacks override progress only inside that plan. They do not
-      overwrite the shared academic profile.
+      When no plan fits, Avenra names the blocking prerequisite chain or credit
+      shortfall and tests the smallest longer plan or higher personal credit
+      limit that would work.
+    </p>
+    <p>
+      Scenario setbacks and scenario IPS values apply only inside that plan.
+      They do not overwrite the shared academic profile.
     </p>
   </section>
   <section class="panel">
@@ -84,9 +104,10 @@
       delete database records.
     </p>
     <p>
-      Exceptions, transfer credit, concurrent prerequisites, GPA-dependent
-      credit caps, and internship conversion are not modeled. Discuss a Decision
-      Passport with an authorized academic advisor.
+      Exceptions, transfer credit, equivalent courses, and internship conversion
+      are not modeled. The IPS rule applies only to next semester because later
+      grades are unknown. Discuss a Decision Passport with an authorized
+      academic advisor.
     </p>
   </section>
   <section class="panel">

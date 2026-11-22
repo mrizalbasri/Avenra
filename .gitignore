@@ -17,3 +17,5 @@ coverage/
 .codex/
 .impeccable/
 .codegraph/
+tmp/
+output/

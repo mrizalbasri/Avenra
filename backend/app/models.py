@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String
+from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -25,6 +25,7 @@ class Profile(Base):
     completed: Mapped[list] = mapped_column(JSON, default=list)
     revision: Mapped[int] = mapped_column(Integer, default=1)
     curriculum: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    last_gpa: Mapped[float | None] = mapped_column(Float, nullable=True)
 
 
 class Plan(Base):
@@ -37,6 +38,7 @@ class Plan(Base):
     failed: Mapped[list] = mapped_column(JSON, default=list)
     credit_cap: Mapped[int] = mapped_column(Integer, default=12)
     horizon: Mapped[int] = mapped_column(Integer, default=8)
+    expected_gpa: Mapped[float | None] = mapped_column(Float, nullable=True)
     revision: Mapped[int] = mapped_column(Integer, default=1)
     archived: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
