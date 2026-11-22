@@ -1,4 +1,5 @@
 import { PUBLIC_API_BASE_URL } from '$app/env/public';
+import { ApiError } from '#lib/errors.js';
 import { currentWorkspaceId, selectWorkspace } from '#lib/workspace.js';
 
 export async function requestApi<T>(
@@ -20,25 +21,38 @@ export async function requestApi<T>(
       signal: AbortSignal.timeout(15000),
     });
   } catch {
-    throw new Error(
+    throw new ApiError(
       'Cannot reach the API. Your changes have not been saved. Retry when the service is available.',
+      'NETWORK',
     );
   }
   const data = await response.json();
-  if (!response.ok)
-    throw new Error(
-      typeof data.detail === 'string'
-        ? data.detail
-        : Array.isArray(data.detail)
-          ? data.detail
-              .map(
-                (issue: { loc?: (string | number)[]; msg?: string }) =>
-                  `${issue.loc?.slice(1).join('.') || 'Input'}: ${issue.msg || 'Invalid value'}`,
-              )
-              .join(' ')
-          : 'Check the input fields and try again.',
-    );
+  if (!response.ok) throw apiError(data.detail);
   return data as T;
+}
+
+// The API sends {code, message, params}. Older and framework errors send a string or a
+// list of validation issues; both still produce a readable English message.
+function apiError(detail: unknown): ApiError {
+  if (typeof detail === 'string') return new ApiError(detail);
+  if (Array.isArray(detail))
+    return new ApiError(
+      detail
+        .map(
+          (issue: { loc?: (string | number)[]; msg?: string }) =>
+            `${issue.loc?.slice(1).join('.') || 'Input'}: ${issue.msg || 'Invalid value'}`,
+        )
+        .join(' '),
+    );
+  if (detail && typeof detail === 'object' && 'code' in detail) {
+    const { code, message, params } = detail as {
+      code: string;
+      message?: string;
+      params?: Record<string, unknown>;
+    };
+    return new ApiError(message ?? code, code, params ?? {});
+  }
+  return new ApiError('Check the input fields and try again.', 'INVALID_INPUT');
 }
 
 export async function api<T>(

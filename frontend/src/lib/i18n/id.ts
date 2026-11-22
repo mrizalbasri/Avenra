@@ -1,7 +1,9 @@
 import type { MessageKey } from './en.js';
+import { idPlan } from './id-plan.js';
 
 // Typed against English keys: a missing or extra key fails `pnpm check`.
 export const id: Record<MessageKey, string> = {
+  ...idPlan,
   'lang.label': 'Bahasa',
 
   'nav.main': 'Navigasi utama',

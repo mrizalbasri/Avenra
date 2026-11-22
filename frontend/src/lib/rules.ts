@@ -1,3 +1,4 @@
+import type { Translate } from '#lib/i18n/index.js';
 import type { Course, Curriculum } from '#lib/types.js';
 
 // Display helpers for unsaved drafts. The backend checker stays authoritative;
@@ -30,23 +31,26 @@ export function nextOffered(course: Course, term: number) {
   return next;
 }
 
-export function requirementText(course: Course) {
+export function requirementText(course: Course, t: Translate) {
+  const or = t('list.or');
   const parts = [];
   if (course.prerequisites.length)
-    parts.push(`Prerequisites: ${course.prerequisites.join(', ')}`);
+    parts.push(
+      t('req.prerequisites', { list: course.prerequisites.join(', ') }),
+    );
   for (const group of course.any_prerequisites ?? [])
-    parts.push(`One of: ${group.join(' or ')}`);
+    parts.push(t('req.any_of', { list: group.join(or) }));
   if (course.corequisites?.length)
-    parts.push(`Same semester or earlier: ${course.corequisites.join(', ')}`);
+    parts.push(t('req.corequisites', { list: course.corequisites.join(', ') }));
   if (course.min_credits_earned)
-    parts.push(`Needs ${course.min_credits_earned} earned credits first`);
-  return parts.length ? parts : ['No prerequisites'];
+    parts.push(t('req.min_credits', { count: course.min_credits_earned }));
+  return parts.length ? parts : [t('req.none')];
 }
 
-export function offeringText(course: Course) {
+export function offeringText(course: Course, t: Translate) {
   return course.offered_terms.length === 2
-    ? 'Every semester'
+    ? t('offer.every')
     : course.offered_terms[0] === 1
-      ? 'Odd semesters only'
-      : 'Even semesters only';
+      ? t('offer.odd')
+      : t('offer.even');
 }

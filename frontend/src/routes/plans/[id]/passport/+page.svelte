@@ -1,89 +1,107 @@
 <script lang="ts">
   import Icon from '#lib/components/Icon.svelte';
+  import { useI18n } from '#lib/i18n/context.js';
   import type { PageProps } from './$types';
   let { data }: PageProps = $props();
+  const { t, locale, msg } = useI18n();
+  let validation = $derived(data.plan.validation);
+  let ipsNote = $derived(
+    validation.planning_gpa !== null
+      ? t('passport.ips_used', {
+          term: data.profile.current_term,
+          gpa: validation.planning_gpa.toFixed(2),
+        })
+      : '',
+  );
 </script>
 
 <svelte:head
-  ><title>Avenra | Decision Passport | {data.plan.name}</title></svelte:head
+  ><title>{t('passport.title', { name: data.plan.name })}</title></svelte:head
 >
 <div class="page-heading no-print">
   <div>
-    <h1>Take the conversation forward.</h1>
-    <p>
-      A saved plan snapshot for an informed discussion with your academic
-      advisor.
-    </p>
+    <h1>{t('passport.heading')}</h1>
+    <p>{t('passport.lead')}</p>
   </div>
   <button class="button primary" onclick={() => window.print()}
-    ><Icon name="print" size={17} />Print / Save as PDF</button
+    ><Icon name="print" size={17} />{t('passport.print')}</button
   >
 </div>
 <article class="passport">
   <div class="passport-header">
     <span>AVENRA</span><span
       >{data.curriculum.status === 'synthetic'
-        ? 'SYNTHETIC DEMO'
-        : 'USER-SUPPLIED CURRICULUM'} | ADVISOR CONSULTATION</span
+        ? t('passport.brand_synthetic')
+        : t('passport.brand_own')}</span
     >
   </div>
-  <h1>Academic Decision Passport</h1>
+  <h1>{t('passport.name')}</h1>
   <h2>{data.plan.name}</h2>
   <dl class="passport-meta">
     <div>
-      <dt>Student alias</dt>
+      <dt>{t('passport.alias')}</dt>
       <dd>{data.profile.alias}</dd>
     </div>
     <div>
-      <dt>Snapshot</dt>
+      <dt>{t('passport.snapshot')}</dt>
       <dd>
-        Plan revision {data.plan.revision} | Profile revision {data.profile
-          .revision}
+        {t('passport.snapshot_value', {
+          plan: data.plan.revision,
+          profile: data.profile.revision,
+        })}
       </dd>
     </div>
     <div>
-      <dt>Curriculum</dt>
+      <dt>{t('passport.curriculum')}</dt>
       <dd>{data.curriculum.name} | {data.curriculum.version}</dd>
     </div>
     <div>
-      <dt>Generated</dt>
+      <dt>{t('passport.generated')}</dt>
       <dd>
-        {new Date(data.generatedAt).toLocaleString('en-GB', {
-          timeZone: 'Asia/Jakarta',
-        })} WIB
+        {new Date(data.generatedAt).toLocaleString(
+          locale() === 'id' ? 'id-ID' : 'en-GB',
+          { timeZone: 'Asia/Jakarta' },
+        )} WIB
       </dd>
     </div>
   </dl>
   <section>
-    <h2>Decision summary</h2>
+    <h2>{t('passport.summary')}</h2>
     <p>
-      {data.plan.validation.findings.length
-        ? `${data.plan.validation.findings.length} rule findings require review.`
-        : 'The saved plan satisfies the modeled rules under the listed assumptions.'}
+      {validation.findings.length
+        ? t('passport.findings_need', { count: validation.findings.length })
+        : t('passport.all_satisfied')}
     </p>
     <p>
-      Credits: {data.plan.validation.completed_credits} completed + {data.plan
-        .validation.planned_credits} planned of {data.plan.validation
-        .graduation_credits} | Peak load: {data.plan.validation.peak_credits} | Modeled
-      completion: {data.plan.validation.completion_term
-        ? `semester ${data.plan.validation.completion_term}`
-        : 'unresolved'}
+      {t('passport.credits', {
+        completed: validation.completed_credits,
+        planned: validation.planned_credits,
+        total: validation.graduation_credits,
+        peak: validation.peak_credits,
+        completion: validation.completion_term
+          ? t('plan.change_semester', { term: validation.completion_term })
+          : t('passport.unresolved'),
+      })}
     </p>
     <p>
-      Scenario setbacks: {data.plan.failed.join(', ') || 'None'}.{data.plan
-        .validation.planning_gpa !== null
-        ? ` IPS used for semester ${data.profile.current_term}: ${data.plan.validation.planning_gpa.toFixed(2)}.`
-        : ''}
+      {t('passport.setbacks', {
+        list: data.plan.failed.join(', ') || t('passport.none'),
+        ips: ipsNote,
+      })}
     </p>
   </section>
   <section>
-    <h2>Proposed semester plan</h2>
+    <h2>{t('passport.plan')}</h2>
     <table>
       <thead
-        ><tr><th>Semester</th><th>Courses</th><th>Credits</th><th>Limit</th></tr
+        ><tr
+          ><th>{t('passport.col.semester')}</th><th
+            >{t('passport.col.courses')}</th
+          ><th>{t('passport.col.credits')}</th><th>{t('passport.col.limit')}</th
+          ></tr
         ></thead
       ><tbody
-        >{#each Object.entries(data.plan.validation.loads) as [term, credits]}<tr
+        >{#each Object.entries(validation.loads) as [term, credits]}<tr
             ><td>{term}</td><td
               >{data.curriculum.courses
                 .filter(
@@ -93,14 +111,14 @@
                       data.plan.failed.includes(c.code)),
                 )
                 .map((c) => `${c.code} ${c.name}`)
-                .join('; ') || 'No courses scheduled'}</td
-            ><td>{credits}</td><td>{data.plan.validation.caps[term]}</td></tr
+                .join('; ') || t('passport.no_courses')}</td
+            ><td>{credits}</td><td>{validation.caps[term]}</td></tr
           >{/each}</tbody
       >
     </table>
   </section>
   {#if data.plan.bottlenecks.length}<section>
-      <h2>Courses affected by the setback</h2>
+      <h2>{t('passport.affected')}</h2>
       <ul>
         {#each data.plan.bottlenecks as blocker}<li>
             {blocker.path.join(' → ')}
@@ -108,31 +126,35 @@
       </ul>
     </section>{/if}
   <section>
-    <h2>Rule findings</h2>
-    {#if data.plan.validation.findings.length}<ul>
-        {#each data.plan.validation.findings as finding}<li>
-            <strong>{finding.rule.replaceAll('_', ' ')}:</strong>
-            {finding.message}
+    <h2>{t('passport.rules')}</h2>
+    {#if validation.findings.length}<ul>
+        {#each validation.findings as finding}<li>
+            <strong>{msg.ruleLabel(finding.rule)}:</strong>
+            {msg.describe('finding', finding)}
           </li>{/each}
-      </ul>{:else}<p>No modeled violations in this saved snapshot.</p>{/if}
+      </ul>{:else}<p>{t('passport.no_violations')}</p>{/if}
   </section>
   <section>
-    <h2>Questions for an academic advisor</h2>
+    <h2>{t('passport.questions')}</h2>
     <ol>
-      {#each data.plan.validation.advisor_questions as question}<li>
-          {question}
+      {#each validation.advisor_items as question}<li>
+          {msg.describe('advisor', question)}
         </li>{/each}
     </ol>
   </section>
   <section>
-    <h2>Sources, assumptions, and limits</h2>
-    {#each data.plan.validation.assumptions as assumption}<p>
-        {assumption}
+    <h2>{t('passport.sources')}</h2>
+    {#each validation.assumption_items as assumption}<p>
+        {assumption.code === 'DISCLAIMER'
+          ? msg.disclaimer(data.curriculum)
+          : msg.describe('assume', assumption)}
       </p>{/each}
     <p>
-      Source: {data.curriculum.source} | {data.curriculum.version}. Completed
-      courses: {data.profile.completed.join(', ') || 'None'}. This is a planning
-      aid, not enrollment authorization or a graduation determination.
+      {t('passport.source_line', {
+        source: data.curriculum.source,
+        version: data.curriculum.version,
+        completed: data.profile.completed.join(', ') || t('passport.none'),
+      })}
     </p>
   </section>
 </article>

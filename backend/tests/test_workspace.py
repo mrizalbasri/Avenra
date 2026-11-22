@@ -235,7 +235,7 @@ def test_profile_rejects_completed_courses_without_prerequisites(client, workspa
     }
     response = client.patch("/api/v1/profile", json=payload)
     assert response.status_code == 422
-    assert "IF2101 needs IF1201, MA1102" in response.json()["detail"]
+    assert "IF2101 needs IF1201, MA1102" in response.json()["detail"]["message"]
     payload["completed"] = profile["completed"]
     payload["last_gpa"] = 4.5
     assert client.patch("/api/v1/profile", json=payload).status_code == 422
