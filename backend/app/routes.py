@@ -2,9 +2,10 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.curriculum import Curriculum, load_demo_curriculum
+from app.curriculum import MAX_TERM, Course, Curriculum, load_demo_curriculum
 from app.database import get_session
 from app.models import FocusSession, Plan, Profile, StudyTask
 from app.schemas import (
@@ -34,11 +35,9 @@ def workspace_key(db):
 
 
 def curriculum_for(profile):
-    return (
-        Curriculum.model_validate(profile.curriculum)
-        if profile and profile.curriculum
-        else load_demo_curriculum()
-    )
+    if profile and profile.curriculum:
+        return Curriculum.model_validate(profile.curriculum)
+    return load_demo_curriculum(legacy=profile is not None)
 
 
 def profile_or_404(db):
@@ -66,8 +65,50 @@ def plan_response(plan, profile):
     return {
         **row(plan),
         "validation": validate_plan(curriculum, profile, plan),
-        "bottlenecks": bottlenecks(curriculum, plan.failed),
+        "bottlenecks": bottlenecks(curriculum, plan.failed, profile.completed),
     }
+
+
+def next_offered(course: Course, term: int) -> int:
+    while term % 2 not in course.offered_terms:
+        term += 1
+    return term
+
+
+def default_assignments(curriculum: Curriculum, completed: list[str], current_term: int) -> dict:
+    """Recommended semesters for required courses, plus electives until graduation credits."""
+    done = set(completed)
+    open_courses = [c for c in curriculum.courses if c.code not in done]
+    credits = sum(c.credits for c in curriculum.courses if c.code in done)
+    credits += sum(c.credits for c in open_courses if c.category == "required")
+    target = curriculum.graduation_credits or 0
+    assignments = {}
+    for course in open_courses:
+        if course.category == "elective" and credits >= target:
+            continue
+        if course.category == "elective":
+            credits += course.credits
+        assignments[course.code] = next_offered(course, max(current_term, course.recommended_term))
+    return assignments
+
+
+def check_assignment_terms(assignments):
+    if any(term is not None and not 1 <= term <= MAX_TERM for term in assignments.values()):
+        raise HTTPException(422, f"Semester assignments must be between 1 and {MAX_TERM}.")
+
+
+def progress_issues(curriculum: Curriculum, completed: list[str]) -> list[str]:
+    """Completed courses whose own prerequisites are not marked completed."""
+    done = set(completed)
+    issues = []
+    for course in curriculum.courses:
+        if course.code not in done:
+            continue
+        missing = [p for p in [*course.prerequisites, *course.corequisites] if p not in done]
+        missing += [" or ".join(g) for g in course.any_prerequisites if not set(g) & done]
+        if missing:
+            issues.append(f"{course.code} needs {', '.join(missing)}")
+    return issues
 
 
 @router.get("/workspace")
@@ -86,15 +127,17 @@ def workspace(db: DB):
 @router.post("/workspace/bootstrap")
 def bootstrap(db: DB):
     # The fixed ID makes opening the local synthetic workspace repeatable.
-    from sqlalchemy.exc import IntegrityError
-
+    curriculum = load_demo_curriculum()
     if not db.get(Profile, workspace_key(db)):
+        # A fictional student starting semester 3 with semesters 1 and 2 passed.
         db.add(
             Profile(
                 id=workspace_key(db),
                 alias="Alex | Demo student",
-                current_term=2,
-                completed=["CS101", "MA101"],
+                current_term=3,
+                completed=[c.code for c in curriculum.courses if c.recommended_term < 3],
+                last_gpa=3.1,
+                curriculum=curriculum.model_dump(),
             )
         )
         try:
@@ -109,14 +152,12 @@ def bootstrap(db: DB):
                 id="demo-main" if workspace_key(db) == DEMO_ID else workspace_key(db),
                 profile_id=workspace_key(db),
                 name="My study plan",
-                assignments={
-                    c.code: max(profile.current_term, c.recommended_term)
-                    for c in curriculum.courses
-                    if c.code not in profile.completed
-                },
+                assignments=default_assignments(
+                    curriculum, profile.completed, profile.current_term
+                ),
                 failed=[],
-                credit_cap=12,
-                horizon=8,
+                credit_cap=curriculum.credit_cap,
+                horizon=max(8, profile.current_term),
             )
         )
         try:
@@ -129,6 +170,14 @@ def bootstrap(db: DB):
 @router.patch("/profile")
 def edit_profile(payload: ProfileEdit, db: DB):
     known_codes(db, payload.completed)
+    issues = progress_issues(curriculum_for(profile_or_404(db)), payload.completed)
+    if issues:
+        raise HTTPException(
+            422,
+            "Some completed courses are missing their prerequisites: "
+            + "; ".join(issues[:4])
+            + ". Mark the prerequisites as completed, or ask your advisor about an exemption.",
+        )
     result = db.execute(
         update(Profile)
         .where(Profile.id == workspace_key(db), Profile.revision == payload.revision)
@@ -144,22 +193,25 @@ def edit_profile(payload: ProfileEdit, db: DB):
 @router.post("/plans", status_code=201)
 def create_plan(payload: PlanCreate, db: DB):
     profile = profile_or_404(db)
+    curriculum = curriculum_for(profile)
     if payload.copy_from:
         source = plan_or_404(db, payload.copy_from)
         values = {
             key: getattr(source, key)
-            for key in ("assignments", "layout", "failed", "credit_cap", "horizon")
+            for key in ("assignments", "layout", "failed", "credit_cap", "horizon", "expected_gpa")
         }
     else:
         values = {
-            "credit_cap": min(12, curriculum_for(profile).credit_cap),
+            "credit_cap": curriculum.credit_cap,
             "horizon": max(8, profile.current_term),
-            "assignments": {
-                c.code: max(c.recommended_term, profile.current_term)
-                for c in curriculum_for(profile).courses
-                if c.code not in profile.completed
-            },
+            "assignments": default_assignments(curriculum, profile.completed, profile.current_term),
         }
+    if payload.assignments is not None:
+        known_codes(db, list(payload.assignments))
+        check_assignment_terms(payload.assignments)
+        values["assignments"] = payload.assignments
+        # Saved positions belong to the old arrangement.
+        values["layout"] = {}
     plan = Plan(profile_id=profile.id, name=payload.name, **values)
     db.add(plan)
     db.commit()
@@ -185,8 +237,7 @@ def edit_plan(plan_id: str, payload: PlanEdit, db: DB):
     known_codes(db, list(payload.assignments))
     known_codes(db, list(payload.layout))
     known_codes(db, payload.failed)
-    if any(term is not None and (term < 1 or term > 12) for term in payload.assignments.values()):
-        raise HTTPException(422, "Semester assignments must be between 1 and 12.")
+    check_assignment_terms(payload.assignments)
     if payload.horizon < profile.current_term:
         raise HTTPException(422, "The planning horizon cannot end before the current semester.")
     result = db.execute(
@@ -303,18 +354,22 @@ def import_workspace(payload: WorkspaceImport, db: DB):
         alias=payload.alias,
         current_term=payload.current_term,
         completed=[],
+        last_gpa=payload.last_gpa,
         curriculum=curriculum.model_dump(),
     )
     db.add(profile)
-    db.flush()
+    try:
+        # The plan's foreign key needs the profile row first; no ORM relationship orders it.
+        db.flush()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, "Choose a new workspace for a different curriculum.") from None
     plan = Plan(
         profile_id=profile.id,
         name="My study plan",
-        credit_cap=min(12, curriculum.credit_cap),
-        horizon=max(8, payload.current_term),
-        assignments={
-            c.code: max(payload.current_term, c.recommended_term) for c in curriculum.courses
-        },
+        credit_cap=curriculum.credit_cap,
+        horizon=min(curriculum.max_terms, max(8, payload.current_term)),
+        assignments=default_assignments(curriculum, [], payload.current_term),
     )
     db.add(plan)
     db.commit()

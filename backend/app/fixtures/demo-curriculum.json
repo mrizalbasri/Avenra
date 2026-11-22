@@ -1,95 +1,504 @@
 {
-  "id": "synthetic-computing",
-  "name": "Computing | synthetic curriculum",
-  "version": "demo-2",
+  "id": "synthetic-informatika",
+  "name": "S1 Informatika | synthetic curriculum",
+  "version": "demo-3",
   "status": "synthetic",
-  "source": "Synthetic demonstration fixture",
+  "source": "Synthetic fixture modeled on a typical Indonesian 144-credit S1 Informatika structure. Not taken from any specific university.",
   "disclaimer": "Demonstration assumptions only. Not an official university curriculum or graduation decision.",
-  "credit_cap": 20,
+  "credit_cap": 24,
+  "graduation_credits": 144,
+  "max_terms": 14,
+  "gpa_credit_rules": [
+    {
+      "min_gpa": 3.0,
+      "max_credits": 24
+    },
+    {
+      "min_gpa": 2.5,
+      "max_credits": 21
+    },
+    {
+      "min_gpa": 2.0,
+      "max_credits": 18
+    },
+    {
+      "min_gpa": 0,
+      "max_credits": 15
+    }
+  ],
   "courses": [
     {
-      "code": "CS101",
-      "name": "Programming fundamentals",
+      "code": "IF1101",
+      "name": "Programming Fundamentals",
+      "credits": 4,
+      "recommended_term": 1,
+      "category": "required",
+      "prerequisites": [],
+      "offered_terms": [1]
+    },
+    {
+      "code": "MA1101",
+      "name": "Calculus I",
       "credits": 3,
       "recommended_term": 1,
-      "prerequisites": []
+      "category": "required",
+      "prerequisites": [],
+      "offered_terms": [1]
     },
     {
-      "code": "MA101",
-      "name": "Discrete mathematics",
+      "code": "MA1102",
+      "name": "Discrete Mathematics I",
       "credits": 3,
       "recommended_term": 1,
-      "prerequisites": []
+      "category": "required",
+      "prerequisites": [],
+      "offered_terms": [1]
     },
     {
-      "code": "CS201",
-      "name": "Data structures",
-      "credits": 4,
-      "recommended_term": 2,
-      "prerequisites": ["CS101"]
-    },
-    {
-      "code": "CS202",
-      "name": "Database systems",
+      "code": "FI1101",
+      "name": "Basic Physics",
       "credits": 3,
-      "recommended_term": 2,
-      "prerequisites": ["CS101"]
+      "recommended_term": 1,
+      "category": "required",
+      "prerequisites": [],
+      "offered_terms": [1]
     },
     {
-      "code": "CS301",
-      "name": "Algorithm design",
-      "credits": 4,
-      "recommended_term": 3,
-      "prerequisites": ["CS201", "MA101"]
-    },
-    {
-      "code": "CS302",
-      "name": "Software engineering",
-      "credits": 3,
-      "recommended_term": 3,
-      "prerequisites": ["CS201", "CS202"]
-    },
-    {
-      "code": "CS303",
-      "name": "Operating systems",
-      "credits": 3,
-      "recommended_term": 3,
-      "prerequisites": ["CS201"]
-    },
-    {
-      "code": "CS401",
-      "name": "Computer networks",
-      "credits": 3,
-      "recommended_term": 4,
-      "prerequisites": ["CS303"]
-    },
-    {
-      "code": "CS402",
-      "name": "Web application development",
-      "credits": 4,
-      "recommended_term": 4,
-      "prerequisites": ["CS202", "CS302"]
-    },
-    {
-      "code": "CS403",
-      "name": "Research methods",
+      "code": "UM1101",
+      "name": "Indonesian Language",
       "credits": 2,
-      "recommended_term": 4,
-      "prerequisites": ["MA101"]
+      "recommended_term": 1,
+      "category": "required",
+      "prerequisites": [],
+      "offered_terms": [1]
     },
     {
-      "code": "CS501",
-      "name": "Capstone project",
-      "credits": 6,
-      "recommended_term": 5,
-      "prerequisites": ["CS301", "CS302", "CS403"]
+      "code": "UM1102",
+      "name": "Pancasila Education",
+      "credits": 2,
+      "recommended_term": 1,
+      "category": "required",
+      "prerequisites": [],
+      "offered_terms": [1]
     },
     {
-      "code": "IN501",
-      "name": "Industry project",
+      "code": "UM1103",
+      "name": "Academic English",
+      "credits": 2,
+      "recommended_term": 1,
+      "category": "required",
+      "prerequisites": [],
+      "offered_terms": [1]
+    },
+    {
+      "code": "IF1201",
+      "name": "Object-Oriented Programming",
       "credits": 4,
+      "recommended_term": 2,
+      "category": "required",
+      "prerequisites": ["IF1101"],
+      "offered_terms": [0]
+    },
+    {
+      "code": "MA1201",
+      "name": "Calculus II",
+      "credits": 3,
+      "recommended_term": 2,
+      "category": "required",
+      "prerequisites": ["MA1101"],
+      "offered_terms": [0]
+    },
+    {
+      "code": "MA1202",
+      "name": "Discrete Mathematics II",
+      "credits": 3,
+      "recommended_term": 2,
+      "category": "required",
+      "prerequisites": ["MA1102"],
+      "offered_terms": [0]
+    },
+    {
+      "code": "IF1202",
+      "name": "Computer Organization",
+      "credits": 3,
+      "recommended_term": 2,
+      "category": "required",
+      "prerequisites": [],
+      "offered_terms": [0]
+    },
+    {
+      "code": "MA1203",
+      "name": "Linear Algebra",
+      "credits": 3,
+      "recommended_term": 2,
+      "category": "required",
+      "prerequisites": [],
+      "offered_terms": [0]
+    },
+    {
+      "code": "UM1201",
+      "name": "Civic Education",
+      "credits": 2,
+      "recommended_term": 2,
+      "category": "required",
+      "prerequisites": [],
+      "offered_terms": [0]
+    },
+    {
+      "code": "UM1202",
+      "name": "Religion and Ethics",
+      "credits": 2,
+      "recommended_term": 2,
+      "category": "required",
+      "prerequisites": [],
+      "offered_terms": [0]
+    },
+    {
+      "code": "IF2101",
+      "name": "Data Structures",
+      "credits": 4,
+      "recommended_term": 3,
+      "category": "required",
+      "prerequisites": ["IF1201", "MA1102"],
+      "offered_terms": [1]
+    },
+    {
+      "code": "IF2102",
+      "name": "Database Systems",
+      "credits": 3,
+      "recommended_term": 3,
+      "category": "required",
+      "prerequisites": ["IF1101"],
+      "offered_terms": [1]
+    },
+    {
+      "code": "IF2103",
+      "name": "Probability and Statistics",
+      "credits": 3,
+      "recommended_term": 3,
+      "category": "required",
+      "prerequisites": ["MA1201"],
+      "offered_terms": [1]
+    },
+    {
+      "code": "IF2104",
+      "name": "Operating Systems",
+      "credits": 3,
+      "recommended_term": 3,
+      "category": "required",
+      "prerequisites": ["IF1202"],
+      "offered_terms": [1]
+    },
+    {
+      "code": "IF2105",
+      "name": "Human-Computer Interaction",
+      "credits": 3,
+      "recommended_term": 3,
+      "category": "required",
+      "prerequisites": ["IF1101"],
+      "offered_terms": [1]
+    },
+    {
+      "code": "IF2106",
+      "name": "Database Laboratory",
+      "credits": 2,
+      "recommended_term": 3,
+      "category": "required",
+      "prerequisites": [],
+      "corequisites": ["IF2102"],
+      "offered_terms": [1]
+    },
+    {
+      "code": "IF2201",
+      "name": "Algorithm Design and Analysis",
+      "credits": 3,
+      "recommended_term": 4,
+      "category": "required",
+      "prerequisites": ["IF2101", "MA1202"],
+      "offered_terms": [0]
+    },
+    {
+      "code": "IF2202",
+      "name": "Software Engineering",
+      "credits": 3,
+      "recommended_term": 4,
+      "category": "required",
+      "prerequisites": ["IF2101", "IF2102"],
+      "offered_terms": [0]
+    },
+    {
+      "code": "IF2203",
+      "name": "Computer Networks",
+      "credits": 3,
+      "recommended_term": 4,
+      "category": "required",
+      "prerequisites": ["IF2104"],
+      "offered_terms": [0]
+    },
+    {
+      "code": "IF2204",
+      "name": "Web Programming",
+      "credits": 3,
+      "recommended_term": 4,
+      "category": "required",
+      "prerequisites": ["IF2102"],
+      "offered_terms": [0]
+    },
+    {
+      "code": "IF2205",
+      "name": "Theory of Computation",
+      "credits": 3,
+      "recommended_term": 4,
+      "category": "required",
+      "prerequisites": ["MA1202"],
+      "offered_terms": [0]
+    },
+    {
+      "code": "IF2206",
+      "name": "Numerical Methods",
+      "credits": 3,
+      "recommended_term": 4,
+      "category": "required",
+      "prerequisites": ["MA1203"],
+      "offered_terms": [0]
+    },
+    {
+      "code": "IF3101",
+      "name": "Artificial Intelligence",
+      "credits": 3,
       "recommended_term": 5,
-      "prerequisites": ["CS302"]
+      "category": "required",
+      "prerequisites": ["IF2201", "IF2103"],
+      "offered_terms": [1]
+    },
+    {
+      "code": "IF3102",
+      "name": "Information Security",
+      "credits": 3,
+      "recommended_term": 5,
+      "category": "required",
+      "prerequisites": ["IF2203"],
+      "offered_terms": [1]
+    },
+    {
+      "code": "IF3103",
+      "name": "Software Project Management",
+      "credits": 3,
+      "recommended_term": 5,
+      "category": "required",
+      "prerequisites": ["IF2202"],
+      "offered_terms": [1]
+    },
+    {
+      "code": "IF3104",
+      "name": "Mobile Application Development",
+      "credits": 3,
+      "recommended_term": 5,
+      "category": "required",
+      "prerequisites": ["IF1201"],
+      "any_prerequisites": [["IF2204", "IF2105"]],
+      "offered_terms": [1]
+    },
+    {
+      "code": "IF3105",
+      "name": "Compiler Construction",
+      "credits": 3,
+      "recommended_term": 5,
+      "category": "required",
+      "prerequisites": ["IF2205"],
+      "offered_terms": [1]
+    },
+    {
+      "code": "IF3106",
+      "name": "Research Methodology",
+      "credits": 2,
+      "recommended_term": 5,
+      "category": "required",
+      "prerequisites": ["IF2103"],
+      "offered_terms": [1]
+    },
+    {
+      "code": "IF3201",
+      "name": "Machine Learning",
+      "credits": 3,
+      "recommended_term": 6,
+      "category": "required",
+      "prerequisites": ["IF3101", "MA1203"],
+      "offered_terms": [0]
+    },
+    {
+      "code": "IF3202",
+      "name": "Distributed Systems",
+      "credits": 3,
+      "recommended_term": 6,
+      "category": "required",
+      "prerequisites": ["IF2203", "IF2104"],
+      "offered_terms": [0]
+    },
+    {
+      "code": "IF3203",
+      "name": "Capstone Software Project",
+      "credits": 4,
+      "recommended_term": 6,
+      "category": "required",
+      "prerequisites": ["IF3103"],
+      "offered_terms": [0]
+    },
+    {
+      "code": "IF3204",
+      "name": "Technopreneurship",
+      "credits": 2,
+      "recommended_term": 6,
+      "category": "required",
+      "prerequisites": [],
+      "offered_terms": [0]
+    },
+    {
+      "code": "IF4101",
+      "name": "Internship",
+      "credits": 3,
+      "recommended_term": 7,
+      "category": "required",
+      "prerequisites": [],
+      "min_credits_earned": 90,
+      "offered_terms": [0, 1]
+    },
+    {
+      "code": "IF4102",
+      "name": "Professional Ethics",
+      "credits": 2,
+      "recommended_term": 7,
+      "category": "required",
+      "prerequisites": [],
+      "offered_terms": [1]
+    },
+    {
+      "code": "IF4103",
+      "name": "Thesis Proposal",
+      "credits": 2,
+      "recommended_term": 7,
+      "category": "required",
+      "prerequisites": ["IF3106"],
+      "min_credits_earned": 110,
+      "offered_terms": [0, 1]
+    },
+    {
+      "code": "IF4201",
+      "name": "Undergraduate Thesis",
+      "credits": 6,
+      "recommended_term": 8,
+      "category": "required",
+      "prerequisites": ["IF4103"],
+      "min_credits_earned": 120,
+      "offered_terms": [0, 1]
+    },
+    {
+      "code": "IF5001",
+      "name": "Computer Vision",
+      "credits": 3,
+      "recommended_term": 7,
+      "category": "elective",
+      "prerequisites": ["IF3201"],
+      "offered_terms": [0, 1]
+    },
+    {
+      "code": "IF5002",
+      "name": "Natural Language Processing",
+      "credits": 3,
+      "recommended_term": 7,
+      "category": "elective",
+      "prerequisites": ["IF3201"],
+      "offered_terms": [0, 1]
+    },
+    {
+      "code": "IF5003",
+      "name": "Cloud Computing",
+      "credits": 3,
+      "recommended_term": 7,
+      "category": "elective",
+      "prerequisites": ["IF3202"],
+      "offered_terms": [0, 1]
+    },
+    {
+      "code": "IF5004",
+      "name": "Game Development",
+      "credits": 3,
+      "recommended_term": 6,
+      "category": "elective",
+      "prerequisites": ["IF1201"],
+      "offered_terms": [0, 1]
+    },
+    {
+      "code": "IF5005",
+      "name": "Data Mining",
+      "credits": 3,
+      "recommended_term": 6,
+      "category": "elective",
+      "prerequisites": ["IF2102", "IF2103"],
+      "offered_terms": [0, 1]
+    },
+    {
+      "code": "IF5006",
+      "name": "Blockchain Fundamentals",
+      "credits": 3,
+      "recommended_term": 8,
+      "category": "elective",
+      "prerequisites": ["IF3102"],
+      "offered_terms": [0, 1]
+    },
+    {
+      "code": "IF5007",
+      "name": "UI/UX Design Studio",
+      "credits": 3,
+      "recommended_term": 8,
+      "category": "elective",
+      "prerequisites": ["IF2105"],
+      "offered_terms": [0, 1]
+    },
+    {
+      "code": "IF5008",
+      "name": "DevOps Practices",
+      "credits": 3,
+      "recommended_term": 8,
+      "category": "elective",
+      "prerequisites": ["IF2202"],
+      "offered_terms": [0, 1]
+    },
+    {
+      "code": "IF5009",
+      "name": "Big Data Analytics",
+      "credits": 3,
+      "recommended_term": 8,
+      "category": "elective",
+      "prerequisites": ["IF3202"],
+      "offered_terms": [0, 1]
+    },
+    {
+      "code": "IF5010",
+      "name": "Internet of Things",
+      "credits": 3,
+      "recommended_term": 6,
+      "category": "elective",
+      "prerequisites": ["IF2203"],
+      "offered_terms": [0, 1]
+    },
+    {
+      "code": "IF5011",
+      "name": "Digital Forensics",
+      "credits": 3,
+      "recommended_term": 8,
+      "category": "elective",
+      "prerequisites": ["IF3102"],
+      "offered_terms": [0, 1]
+    },
+    {
+      "code": "IF5012",
+      "name": "Introduction to Quantum Computing",
+      "credits": 3,
+      "recommended_term": 7,
+      "category": "elective",
+      "prerequisites": ["IF2206"],
+      "offered_terms": [0, 1]
     }
   ]
 }
