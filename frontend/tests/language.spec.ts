@@ -321,11 +321,11 @@ test.describe('every page in Indonesian', () => {
       .getByLabel('Sumber aturan atau rujukan kurikulum')
       .fill('Pedoman uji');
     await page.getByLabel('Atau tempel isi CSV').fill('code,name\nIF1,Dasar');
-    await page
-      .getByRole('button', { name: 'Buat workspace akademik saya' })
-      .click();
-    await expect(page.getByRole('alert')).toContainText(
-      'Kolom CSV tidak ada: credits.',
-    );
+    await expect(
+      page.getByText('Kolom "SKS" tidak ditemukan', { exact: false }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Buat workspace akademik saya' }),
+    ).toBeDisabled();
   });
 });

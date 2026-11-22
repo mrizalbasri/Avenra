@@ -2,23 +2,58 @@ import type { enPages } from './en-pages.js';
 
 // Typed against the English keys: a missing or extra key fails `pnpm check`.
 export const idPages: Record<keyof typeof enPages, string> = {
-  'error.CSV_UNCLOSED_QUOTE':
-    'CSV memiliki tanda kutip yang tidak ditutup. Periksa nama mata kuliah Anda.',
-  'error.CSV_MISSING_COLUMN':
-    'Kolom CSV tidak ada: {field}. Unduh templat untuk melihat format yang dibutuhkan.',
-  'error.CSV_ROW_COUNT': 'Impor antara 1 sampai 100 mata kuliah.',
-  'error.CSV_ROW_INVALID':
-    'Periksa baris mata kuliah {row}: kode, nama, SKS (1 sampai 24), dan semester (1 sampai 14) wajib diisi.',
-  'error.CSV_MIN_CREDITS':
-    'Baris {row}: min_credits harus bilangan bulat dari 0 sampai 300.',
-  'error.CSV_OFFERED':
-    'Baris {row}: offered_terms harus berupa odd, even, atau both.',
-  'error.CSV_CATEGORY':
-    'Baris {row}: category harus berupa required atau elective.',
   'error.IPS_RULE_INVALID':
     'Aturan IPS {index} harus berbentuk "3.00 = 24" (IPS 0 sampai 4, SKS 1 sampai 24).',
   'error.IPS_TOO_MANY': 'Gunakan paling banyak 10 aturan IPS.',
   'error.CSV_TOO_LARGE': 'Jaga CSV di bawah 60 KB dan 100 mata kuliah.',
+
+  // Pasted table import
+  'import.field.code': 'Kode mata kuliah',
+  'import.field.name': 'Nama mata kuliah',
+  'import.field.credits': 'SKS',
+  'import.field.recommended_term': 'Semester',
+  'import.field.prerequisites': 'Prasyarat',
+  'import.field.corequisites': 'Korequisit',
+  'import.field.min_credits': 'Minimum SKS terkumpul',
+  'import.field.offered_terms': 'Ditawarkan pada',
+  'import.field.category': 'Kategori',
+  'import.UNCLOSED_QUOTE':
+    'Tabel memiliki tanda kutip yang tidak ditutup. Periksa nama mata kuliah Anda.',
+  'import.MISSING_COLUMN':
+    'Kolom "{field}" tidak ditemukan. Pilih salah satu kolom di bawah atau tambahkan ke tabel.',
+  'import.NO_ROWS':
+    'Tempel tabel dengan baris judul dan minimal satu mata kuliah.',
+  'import.ROW_COUNT': 'Impor antara 1 sampai 100 mata kuliah.',
+  'import.MISSING_CODE': 'Baris {row}: kode mata kuliah wajib diisi.',
+  'import.MISSING_NAME': 'Baris {row}: nama mata kuliah wajib diisi.',
+  'import.BAD_CREDITS':
+    'Baris {row}: SKS harus bilangan bulat dari 1 sampai 24 (ditemukan "{value}").',
+  'import.BAD_TERM':
+    'Baris {row}: semester harus bilangan bulat dari 1 sampai 14 (ditemukan "{value}").',
+  'import.BAD_MIN_CREDITS':
+    'Baris {row}: min_credits harus bilangan bulat dari 0 sampai 300.',
+  'import.BAD_OFFERED':
+    'Baris {row}: offered_terms harus berupa ganjil, genap, atau semua (ditemukan "{value}").',
+  'import.BAD_CATEGORY':
+    'Baris {row}: kategori harus berupa wajib atau pilihan (ditemukan "{value}").',
+  'import.DUPLICATE_CODE':
+    'Baris {row}: kode mata kuliah {code} sudah muncul di baris {first}.',
+  'import.UNKNOWN_REFERENCE':
+    'Baris {row}: {code} mencantumkan {ref}, yang bukan mata kuliah di tabel ini.',
+  'import.paste_hint':
+    'Anda juga bisa menempel tabel yang disalin dari Excel, Google Sheets, atau PDF. Avenra mengenali pemisahnya dan nama kolom dalam bahasa Inggris maupun Indonesia.',
+  'import.separator': 'Pemisah terdeteksi: {name}',
+  'import.sep.tab': 'tab',
+  'import.sep.comma': 'koma',
+  'import.sep.semicolon': 'titik koma',
+  'import.sep.spaces': 'spasi',
+  'import.columns': 'Cara Avenra membaca kolom Anda',
+  'import.column_aria': 'Arti kolom {header}',
+  'import.ignore': 'Abaikan kolom ini',
+  'import.guess': 'Tidak dikenali',
+  'import.issues.one': '{count} masalah perlu diperbaiki sebelum lanjut',
+  'import.issues.other': '{count} masalah perlu diperbaiki sebelum lanjut',
+  'import.more': '…dan {count} lagi.',
 
   'ws.label': 'Workspace',
   'ws.aria': 'Ganti workspace',

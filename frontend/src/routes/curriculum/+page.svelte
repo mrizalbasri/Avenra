@@ -1,8 +1,14 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import { goto, invalidateAll } from '$app/navigation';
   import { api } from '#lib/api.js';
   import { useI18n } from '#lib/i18n/context.js';
-  import { parseCoursesCSV, parseGpaRules } from '#lib/curriculum-import.js';
+  import {
+    FIELDS,
+    parseCurriculumTable,
+    parseGpaRules,
+    type Field,
+  } from '#lib/curriculum-import.js';
   const { t, msg } = useI18n();
   let alias = $state('');
   let university = $state('');
@@ -21,13 +27,31 @@
   let busy = $state(false);
   let error = $state('');
   let filename = $state('');
-  let preview = $derived.by(() => {
-    try {
-      return csv.trim() ? parseCoursesCSV(csv) : [];
-    } catch {
-      return [];
-    }
+  // The user's choices for columns the headers did not reveal, by column index.
+  let columnFields = $state<Record<number, Field | ''>>({});
+  let parsed = $derived(
+    csv.trim() ? parseCurriculumTable(csv, columnFields) : null,
+  );
+  let preview = $derived(parsed?.courses ?? []);
+  let ready = $derived(
+    !!parsed && parsed.issues.length === 0 && parsed.courses.length > 0,
+  );
+  let headerLine = $derived(csv.split(/\r?\n/).find((l) => l.trim()) ?? '');
+  // A new table has different columns, so earlier choices no longer apply.
+  $effect(() => {
+    void headerLine;
+    untrack(() => {
+      columnFields = {};
+    });
   });
+  const separatorKey = {
+    ',': 'import.sep.comma',
+    ';': 'import.sep.semicolon',
+    '\t': 'import.sep.tab',
+    spaces: 'import.sep.spaces',
+  } as const;
+  const fieldLabel = (field: Field) => t(`import.field.${field}` as const);
+  const shownIssues = $derived(parsed?.issues.slice(0, 20) ?? []);
   async function readFile(file?: File) {
     if (!file) return;
     if (file.size > 60000) {
@@ -42,7 +66,8 @@
     busy = true;
     error = '';
     try {
-      const courses = parseCoursesCSV(csv);
+      if (!parsed || parsed.issues.length) return;
+      const courses = parsed.courses;
       const rules = parseGpaRules(gpaRules);
       await api('workspace/import', 'POST', {
         alias,
@@ -197,6 +222,7 @@
     <p class="muted small">
       {t('curriculum.csv_hint_a')}<code>A|B</code>{t('curriculum.csv_hint_b')}
     </p>
+    <p class="muted small">{t('import.paste_hint')}</p>
     <label
       >{t('curriculum.choose_file')}<input
         type="file"
@@ -209,7 +235,56 @@
         rows="9"
         placeholder="code,name,credits,recommended_term,prerequisites,offered_terms,category,corequisites,min_credits"
       ></textarea></label
-    >{#if preview.length}<p class="success-text">
+    >{#if parsed}
+      <p class="muted small">
+        {t('import.separator', { name: t(separatorKey[parsed.delimiter]) })}
+      </p>
+      <details class="column-map" open={parsed.missing.length > 0}>
+        <summary class="small">{t('import.columns')}</summary>
+        <div class="table-scroll">
+          <table>
+            <tbody
+              >{#each parsed.columns as column (column.index)}<tr
+                  ><td>{column.header || `#${column.index + 1}`}</td><td
+                    ><select
+                      aria-label={t('import.column_aria', {
+                        header: column.header || `#${column.index + 1}`,
+                      })}
+                      value={column.field ?? ''}
+                      onchange={(e) => {
+                        columnFields = {
+                          ...columnFields,
+                          [column.index]: e.currentTarget.value as Field | '',
+                        };
+                      }}
+                      ><option value=""
+                        >{column.field === null && column.auto
+                          ? t('import.guess')
+                          : t('import.ignore')}</option
+                      >{#each FIELDS as field}<option value={field}
+                          >{fieldLabel(field)}</option
+                        >{/each}</select
+                    ></td
+                  ></tr
+                >{/each}</tbody
+            >
+          </table>
+        </div>
+      </details>
+      {#if parsed.issues.length}<div class="warning-banner">
+          <strong>{t('import.issues', { count: parsed.issues.length })}</strong>
+          <ul class="finding-list">
+            {#each shownIssues as issue}<li>
+                <p>{msg.describe('import', issue)}</p>
+              </li>{/each}
+          </ul>
+          {#if parsed.issues.length > shownIssues.length}<p class="small">
+              {t('import.more', {
+                count: parsed.issues.length - shownIssues.length,
+              })}
+            </p>{/if}
+        </div>{/if}
+    {/if}{#if preview.length}<p class="success-text">
         {t('curriculum.ready', {
           count: preview.length,
           from: filename ? t('curriculum.from_file', { filename }) : '',
@@ -238,7 +313,7 @@
   <div class="warning-banner">{t('curriculum.warning')}</div>
   {#if error}<p class="error-banner" role="alert">{error}</p>{/if}<button
     class="button primary"
-    disabled={busy || !csv.trim()}
+    disabled={busy || !ready}
     >{busy ? t('curriculum.validating') : t('curriculum.create')}</button
   >
   <p class="footnote">{t('curriculum.footnote')}</p>

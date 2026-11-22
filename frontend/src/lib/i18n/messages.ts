@@ -10,7 +10,14 @@ export type Coded = {
   message: string;
 };
 export type MessageKind =
-  'finding' | 'diag' | 'suggest' | 'solve' | 'advisor' | 'assume' | 'error';
+  | 'finding'
+  | 'diag'
+  | 'suggest'
+  | 'solve'
+  | 'advisor'
+  | 'assume'
+  | 'error'
+  | 'import';
 
 const ips = (value: unknown) =>
   typeof value === 'number' ? value.toFixed(2) : String(value);
@@ -27,6 +34,8 @@ export function createMessages(locale: () => Locale) {
     for (const [key, value] of Object.entries(params)) {
       if (value === null || value === undefined) continue;
       if (key === 'gpa') out[key] = ips(value);
+      else if (key === 'field')
+        out[key] = say(`import.field.${value}`) ?? String(value);
       else if (key === 'options' && Array.isArray(value))
         out[key] = orList(value);
       else if (key === 'chain' && Array.isArray(value))
