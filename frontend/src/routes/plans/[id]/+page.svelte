@@ -12,6 +12,7 @@
   import CourseNode from '#lib/components/CourseNode.svelte';
   import SemesterNode from '#lib/components/SemesterNode.svelte';
   import Icon from '#lib/components/Icon.svelte';
+  import { useI18n } from '#lib/i18n/context.js';
   import { api } from '#lib/api.js';
   import {
     nextOffered,
@@ -22,6 +23,7 @@
   import type { Plan, SolveResult, Alternative } from '#lib/types.js';
   import type { PageProps } from './$types';
   let { data }: PageProps = $props();
+  const { t: tx, msg } = useI18n();
   type Draft = {
     name: string;
     assignments: Record<string, number | null>;
@@ -225,8 +227,7 @@
     remember();
     if (kind === 'horizon') draft.horizon = value;
     else draft.credit_cap = value;
-    notice =
-      'Suggestion applied. Save & validate, then generate alternatives again.';
+    notice = tx('plan.suggestion_applied');
   }
   $effect(() => {
     const columns: Node[] = terms.map((t, i) => ({
@@ -283,8 +284,7 @@
     return () => window.removeEventListener('beforeunload', beforeUnload);
   });
   beforeNavigate(({ cancel }) => {
-    if (dirty && !window.confirm('You have an unsaved draft. Leave this page?'))
-      cancel();
+    if (dirty && !window.confirm(tx('plan.leave'))) cancel();
   });
   $effect(() => {
     const current = clone(draft);
@@ -304,9 +304,7 @@
     try {
       const parsed = JSON.parse(recovered ?? 'null');
       if (parsed?.revision !== saved.revision)
-        throw new Error(
-          'This draft belongs to an older saved revision. Copy any notes before discarding it.',
-        );
+        throw new Error(tx('plan.draft_old'));
       if (
         !parsed.draft ||
         typeof parsed.draft.name !== 'string' ||
@@ -316,7 +314,7 @@
         parsed.draft.horizon < data.profile.current_term ||
         parsed.draft.horizon > data.curriculum.max_terms
       )
-        throw new Error('This browser draft is not valid.');
+        throw new Error(tx('plan.draft_invalid'));
       remember();
       draft = {
         ...parsed.draft,
@@ -324,7 +322,7 @@
       };
       recovered = null;
     } catch (e) {
-      error = (e as Error).message;
+      error = msg.errorText(e);
     }
   }
   async function save() {
@@ -344,16 +342,16 @@
       localStorage.removeItem(draftKey());
       recovered = null;
       await invalidateAll();
-      notice = 'Plan saved and checked against the modeled rules.';
+      notice = tx('plan.saved_ok');
     } catch (e) {
-      error = (e as Error).message;
+      error = msg.errorText(e);
     } finally {
       busy = false;
     }
   }
   async function generate() {
     if (dirty) {
-      error = 'Save your scenario changes before generating alternatives.';
+      error = tx('plan.save_before_generate');
       return;
     }
     solving = true;
@@ -365,7 +363,7 @@
         profile_revision: data.profile.revision,
       });
     } catch (e) {
-      error = (e as Error).message;
+      error = msg.errorText(e);
     } finally {
       solving = false;
     }
@@ -376,28 +374,33 @@
     try {
       // One request, so a failure never leaves a half-made copy behind.
       const created = await api<Plan>('plans', 'POST', {
-        name: `${saved.name} | ${alternative.name}`.slice(0, 100),
+        name: `${saved.name} | ${msg.altName(alternative)}`.slice(0, 100),
         copy_from: saved.id,
         assignments: alternative.assignments,
       });
       await invalidateAll();
       await goto(`/plans/${created.id}`);
     } catch (e) {
-      error = (e as Error).message;
+      error = msg.errorText(e);
     } finally {
       busy = false;
     }
   }
 </script>
 
-<svelte:head><title>Avenra | {saved.name}</title></svelte:head>
+<svelte:head
+  ><title>{tx('plan.title', { name: saved.name })}</title></svelte:head
+>
 <div class="editor-heading">
   <div>
-    <a href="/plans" class="back-link">Study plans /</a>
+    <a href="/plans" class="back-link">{tx('nav.plans')} /</a>
     <h1>{saved.name}</h1>
     <p>
-      Rev {saved.revision} | {dirty ? 'Unsaved changes' : 'Saved to PostgreSQL'} |
-      {data.curriculum.version}
+      {tx('plan.rev', {
+        revision: saved.revision,
+        state: dirty ? tx('plan.unsaved') : tx('plan.saved'),
+        version: data.curriculum.version,
+      })}
     </p>
   </div>
   <div class="toolbar-actions">
@@ -408,47 +411,49 @@
       onclick={(e) => {
         if (dirty) {
           e.preventDefault();
-          error = 'Save your draft before opening its Decision Passport.';
+          error = tx('plan.passport_blocked');
         }
-      }}><Icon name="print" size={16} />Passport</a
+      }}><Icon name="print" size={16} />{tx('plan.passport')}</a
     ><button
       class="button primary"
       disabled={busy || solving || !dirty}
-      onclick={save}>{busy ? 'Saving…' : 'Save & validate'}</button
+      onclick={save}>{busy ? tx('plan.saving') : tx('plan.save')}</button
     >
   </div>
 </div>
 {#if error}<div class="error-banner" role="alert">
     {error}<button class="button subtle" onclick={() => (error = '')}
-      >Dismiss</button
+      >{tx('plan.dismiss')}</button
     >
   </div>{/if}
 {#if notice}<p class="success-banner" role="status">{notice}</p>{/if}
 {#if recovered && !dirty}<div class="warning-banner">
-    An unsaved browser draft is available.<button
-      class="button"
-      onclick={restore}>Restore draft</button
+    {tx('plan.draft_available')}<button class="button" onclick={restore}
+      >{tx('plan.restore')}</button
     ><button
       class="button subtle"
       onclick={() => {
         localStorage.removeItem(draftKey());
         recovered = null;
-      }}>Discard draft</button
+      }}>{tx('plan.discard')}</button
     >
   </div>{/if}
 <div class="plan-summary">
   <span class="tag" class:warning={dirty || !!saved.validation.findings.length}
     >{dirty
-      ? 'Changes need checking'
+      ? tx('plan.needs_check')
       : saved.validation.findings.length
-        ? `${saved.validation.findings.length} rule ${saved.validation.findings.length === 1 ? 'finding' : 'findings'}`
-        : 'Valid under modeled assumptions'}</span
+        ? tx('plan.findings', { count: saved.validation.findings.length })
+        : tx('plan.valid')}</span
   ><span
-    >{completedCredits + plannedCredits} / {graduationCredits} credits planned</span
+    >{tx('plan.credits_planned', {
+      done: completedCredits + plannedCredits,
+      total: graduationCredits,
+    })}</span
   ><span
     >{saved.validation.completion_term && !dirty
-      ? `Modeled completion: semester ${saved.validation.completion_term}`
-      : 'Explore your semester assignments'}</span
+      ? tx('plan.completion', { term: saved.validation.completion_term })
+      : tx('plan.explore')}</span
   >
 </div>
 <div class="editor-layout" inert={busy || solving} aria-busy={busy || solving}>
@@ -457,17 +462,17 @@
       <div class="segmented">
         <button
           class:chosen={view === 'canvas'}
-          onclick={() => (view = 'canvas')}>Canvas</button
+          onclick={() => (view = 'canvas')}>{tx('plan.view.canvas')}</button
         ><button
           class:chosen={view === 'board'}
-          onclick={() => (view = 'board')}>Semester board</button
+          onclick={() => (view = 'board')}>{tx('plan.view.board')}</button
         >
       </div>
       <div class="toolbar-actions">
         <button class="button subtle" disabled={!history.length} onclick={undo}
-          >Undo</button
+          >{tx('plan.undo')}</button
         ><button class="button subtle" disabled={!future.length} onclick={redo}
-          >Redo</button
+          >{tx('plan.redo')}</button
         >
       </div>
     </div>
@@ -500,7 +505,7 @@
       </div>{:else}<div class="semester-board">
         {#each terms as term}<section
             class="term-column"
-            aria-label={`Semester ${term}`}
+            aria-label={tx('common.semester', { term })}
             ondragover={(e) => e.preventDefault()}
             ondrop={(e) => {
               e.preventDefault();
@@ -511,9 +516,12 @@
             role="group"
           >
             <div class="term-heading">
-              <h3>Semester {term}</h3>
+              <h3>{tx('common.semester', { term })}</h3>
               <span class:load-over={loads[term] > capFor(term)}
-                >{loads[term]} / {capFor(term)} cr</span
+                >{tx('plan.load', {
+                  load: loads[term],
+                  cap: capFor(term),
+                })}</span
               >
             </div>
             {#each remaining.filter((c) => draft.assignments[c.code] === term) as c}<div
@@ -525,36 +533,39 @@
                 aria-label={c.name}
               >
                 <button class="course-title" onclick={() => (selected = c.code)}
-                  ><small>{c.code} | {c.credits} credits</small><strong
-                    >{c.name}</strong
-                  ></button
+                  ><small
+                    >{tx('plan.course_meta', {
+                      code: c.code,
+                      credits: c.credits,
+                    })}</small
+                  ><strong>{c.name}</strong></button
                 ><label class="sr-only" for={`move-${c.code}`}
-                  >Move {c.code} to semester</label
+                  >{tx('plan.move_label', { code: c.code })}</label
                 ><select
                   id={`move-${c.code}`}
                   bind:value={
                     () => draft.assignments[c.code] ?? '',
                     (value) => move(c.code, value ? Number(value) : null)
                   }
-                  ><option value="">Unscheduled</option
-                  >{#each terms as t}<option value={t}>Semester {t}</option
+                  ><option value="">{tx('plan.unscheduled')}</option
+                  >{#each terms as t}<option value={t}
+                      >{tx('common.semester', { term: t })}</option
                     >{/each}</select
                 >
               </div>{/each}{#if !remaining.some((c) => draft.assignments[c.code] === term)}<p
                 class="drop-hint"
               >
-                Drop a course here
+                {tx('plan.drop_hint')}
               </p>{/if}
           </section>{/each}
       </div>{/if}
     <div class="workspace-hint">
-      Move a course across semester frames to reschedule it. Select a course for
-      details or keyboard-friendly movement.
+      {tx('plan.hint')}
     </div>
     {#if offPlan.some((c) => c.category === 'required')}<div
         class="unscheduled"
       >
-        <h3>Required courses unscheduled or outside the plan</h3>
+        <h3>{tx('plan.required_off')}</h3>
         {#each offPlan.filter((c) => c.category === 'required') as c}<button
             class="button"
             onclick={() => (selected = c.code)}>{c.code} | {c.name}</button
@@ -563,22 +574,26 @@
     {#if offPlan.some((c) => c.category === 'elective')}<div
         class="unscheduled elective-pool"
       >
-        <h3>Elective pool</h3>
+        <h3>{tx('plan.elective_pool')}</h3>
         <p class="muted small">
-          Optional. Select one to schedule it when you need more credits.
+          {tx('plan.elective_hint')}
         </p>
         {#each offPlan.filter((c) => c.category === 'elective') as c}<button
             class="button subtle"
             onclick={() => (selected = c.code)}
-            >{c.code} | {c.name} | {c.credits} cr</button
+            >{tx('plan.elective_chip', {
+              code: c.code,
+              name: c.name,
+              credits: c.credits,
+            })}</button
           >{/each}
       </div>{/if}
   </section>
-  <aside class="inspector" aria-label="Plan tools">
+  <aside class="inspector" aria-label={tx('plan.tools')}>
     <section class="ins-settings">
-      <h2>Plan settings</h2>
+      <h2>{tx('plan.settings')}</h2>
       <label
-        >Plan name<input
+        >{tx('plan.name')}<input
           value={draft.name}
           maxlength="100"
           oninput={(e) => {
@@ -589,7 +604,7 @@
       >
       <div class="form-grid">
         <label
-          >Credit limit<input
+          >{tx('plan.credit_limit')}<input
             type="number"
             min="1"
             max="24"
@@ -600,7 +615,7 @@
             }}
           /></label
         ><label
-          >Last semester<input
+          >{tx('plan.last_semester')}<input
             type="number"
             min={data.profile.current_term}
             max={data.curriculum.max_terms}
@@ -616,49 +631,57 @@
         >
       </div>
       <p class="muted small">
-        Semester {data.profile.current_term} limit: {capFor(
-          data.profile.current_term,
-        )} credits{gpa !== null && data.curriculum.gpa_credit_rules.length
-          ? ` (IPS ${gpa.toFixed(2)})`
-          : ''}. Maximum study period: {data.curriculum.max_terms} semesters.
+        {tx('plan.limit_note', {
+          term: data.profile.current_term,
+          cap: capFor(data.profile.current_term),
+          ips:
+            gpa !== null && data.curriculum.gpa_credit_rules.length
+              ? tx('plan.limit_ips', { gpa: gpa.toFixed(2) })
+              : '',
+          max: data.curriculum.max_terms,
+        })}
       </p>
     </section>
     <section class="ins-course">
-      <h2>{course ? course.name : 'Course details'}</h2>
+      <h2>{course ? course.name : tx('plan.course_details')}</h2>
       {#if course}<p class="muted small">
-          {course.code} | {course.credits} credits | {course.category ===
-          'elective'
-            ? 'Elective'
-            : 'Required'} | {offeringText(course)}
+          {tx('plan.course_line', {
+            code: course.code,
+            credits: course.credits,
+            category:
+              course.category === 'elective'
+                ? tx('course.elective')
+                : tx('course.required'),
+            offering: offeringText(course, tx),
+          })}
         </p>
         <ul class="small requirement-list">
-          {#each requirementText(course) as line}<li>{line}</li>{/each}
+          {#each requirementText(course, tx) as line}<li>{line}</li>{/each}
         </ul>
         <label
-          >Assigned semester<select
+          >{tx('plan.assigned')}<select
             bind:value={
               () => draft.assignments[course!.code] ?? '',
               (value) => move(course!.code, value ? Number(value) : null)
             }
-            ><option value="">Unscheduled</option>{#each terms as t}<option
-                value={t}>Semester {t}</option
+            ><option value="">{tx('plan.unscheduled')}</option
+            >{#each terms as t}<option value={t}
+                >{tx('common.semester', { term: t })}</option
               >{/each}</select
           ></label
         ><a href={`/study?course=${course.code}`} class="text-link"
-          >Create a study goal</a
+          >{tx('plan.study_goal')}</a
         >{:else}<p class="muted small">
-          Select a card on the canvas or board to inspect its prerequisites and
-          move it.
+          {tx('plan.select_hint')}
         </p>{/if}
     </section>
     <section class="ins-setback">
-      <h2>Simulate a setback</h2>
+      <h2>{tx('plan.setback')}</h2>
       <p class="muted small">
-        Mark a course you might fail this semester, or a passed course you must
-        retake. Your profile stays unchanged.
+        {tx('plan.setback_hint')}
       </p>
       <div class="setback-list">
-        <p class="small"><strong>This semester</strong></p>
+        <p class="small"><strong>{tx('plan.this_semester')}</strong></p>
         {#each thisSemester as c}<label
             ><input
               type="checkbox"
@@ -666,11 +689,11 @@
               onchange={() => toggleFailure(c.code)}
             /><span>{c.code}<small>{c.name}</small></span></label
           >{:else}<p class="muted small">
-            No courses planned for this semester.
+            {tx('plan.none_this_semester')}
           </p>{/each}
       </div>
       {#if passed.length}<details class="setback-list">
-          <summary class="small">Passed courses to retake</summary>
+          <summary class="small">{tx('plan.retake_passed')}</summary>
           {#each passed as c}<label
               ><input
                 type="checkbox"
@@ -680,12 +703,13 @@
             >{/each}
         </details>{/if}
       {#if data.curriculum.gpa_credit_rules.length}<label
-          >Expected IPS after this setback<input
+          >{tx('plan.expected_ips')}<input
             type="number"
             min="0"
             max="4"
             step="0.01"
-            placeholder={data.profile.last_gpa?.toFixed(2) ?? 'e.g. 2.40'}
+            placeholder={data.profile.last_gpa?.toFixed(2) ??
+              tx('plan.ips_placeholder')}
             value={draft.expected_gpa ?? ''}
             onchange={(e) => {
               remember();
@@ -698,22 +722,22 @@
           /></label
         >
         <p class="muted small">
-          A lower IPS can reduce next semester's credit limit. Leave empty to
-          use your profile IPS.
+          {tx('plan.ips_hint')}
         </p>{/if}
     </section>
     <section class="ins-recovery">
-      <h2>Find a recovery route</h2>
+      <h2>{tx('plan.recovery')}</h2>
       <p class="muted small">
-        Compare earlier completion with a lighter peak workload under the demo
-        rules.
+        {tx('plan.recovery_hint')}
       </p>
       <button
         class="button primary full-width"
         disabled={solving || busy || dirty}
         onclick={generate}
-        >{solving ? 'Finding alternatives…' : 'Generate alternatives'}</button
-      >{#if dirty}<p class="small muted">Save your changes first.</p>{/if}
+        >{solving
+          ? tx('plan.finding_alternatives')
+          : tx('plan.generate')}</button
+      >{#if dirty}<p class="small muted">{tx('plan.save_first')}</p>{/if}
     </section>
     <section class="ins-archive">
       <label class="checkbox-label"
@@ -724,104 +748,119 @@
             remember();
             draft.archived = !draft.archived;
           }}
-        />Archive this plan</label
+        />{tx('plan.archive')}</label
       >
       <p class="muted small">
-        Archived plans remain recoverable from Study plans.
+        {tx('plan.archive_hint')}
       </p>
     </section>
   </aside>
 </div>
 {#if results}<section class="panel recovery-results">
     <div class="section-heading">
-      <h2>Recovery alternatives</h2>
-      <span class="tag">{results.status}</span>
+      <h2>{tx('plan.results')}</h2>
+      <span class="tag"
+        >{tx(`status.${results.status}` as 'status.feasible')}</span
+      >
     </div>
-    <p class="muted" role="status">{results.message}</p>
+    <p class="muted" role="status">{msg.solveText(results)}</p>
     {#if results.diagnosis}<div class="diagnosis">
-        <h3>Why no plan fits</h3>
+        <h3>{tx('plan.why_none')}</h3>
         <ul class="finding-list">
           {#each results.diagnosis.reasons as reason}<li>
-              <span class="tag warning">{reason.rule.replaceAll('_', ' ')}</span
-              >
-              <p>{reason.message}</p>
+              <span class="tag warning">{msg.ruleLabel(reason.rule)}</span>
+              <p>{msg.describe('diag', reason)}</p>
             </li>{/each}
         </ul>
         {#if results.diagnosis.suggestions.length}<h3>
-            Smallest changes that work
+            {tx('plan.smallest')}
           </h3>
           <div class="toolbar-actions">
             {#each results.diagnosis.suggestions as suggestion}<button
                 class="button"
                 onclick={() =>
                   applySuggestion(suggestion.kind, suggestion.value)}
-                >{suggestion.message}</button
+                >{msg.describe('suggest', suggestion)}</button
               >{/each}
           </div>{:else}<p class="muted small">
-            No change to the plan length or your own credit limit is enough.
-            Discuss the conflicting rules with your academic advisor.
+            {tx('plan.no_suggestion')}
           </p>{/if}
       </div>{/if}
     <div class="comparison-summary">
       {#each results.alternatives as alternative}<article class="alternative">
-          <h3>{alternative.name}</h3>
-          <p>{alternative.summary}</p>
+          <h3>{msg.altName(alternative)}</h3>
+          <p>{msg.altSummary(alternative)}</p>
           <p class="muted small">
-            {alternative.optimal
-              ? 'Optimal for this modeled objective.'
-              : 'Feasible result found within the time limit.'} Independently checked.
+            {alternative.optimal ? tx('plan.optimal') : tx('plan.feasible')}{tx(
+              'plan.checked',
+            )}
           </p>
           {#if alternative.changes.length}<details>
               <summary class="small"
-                >{alternative.changes.length} changes from your plan</summary
+                >{tx('plan.changes', {
+                  count: alternative.changes.length,
+                })}</summary
               >
               <ul class="small">
                 {#each alternative.changes as change}<li>
-                    {change.code}
-                    {change.name}: {change.from
-                      ? `semester ${change.from}`
-                      : 'not planned'} | {change.to
-                      ? `semester ${change.to}`
-                      : 'left out'}
+                    {tx('plan.change_line', {
+                      code: change.code,
+                      name: change.name,
+                      from: change.from
+                        ? tx('plan.change_semester', { term: change.from })
+                        : tx('plan.change_none_from'),
+                      to: change.to
+                        ? tx('plan.change_semester', { term: change.to })
+                        : tx('plan.change_none_to'),
+                    })}
                   </li>{/each}
               </ul>
             </details>{:else}<p class="muted small">
-              Same arrangement as your saved plan.
+              {tx('plan.same_arrangement')}
             </p>{/if}
           <button
             class="button"
             disabled={busy}
             onclick={() => keepAlternative(alternative)}
-            >Save as a separate plan<Icon name="arrow" size={15} /></button
+            >{tx('plan.keep')}<Icon name="arrow" size={15} /></button
           >
         </article>{/each}
     </div>
   </section>{/if}
 <section class="panel">
   <div class="section-heading">
-    <h2>Rule checks & explanation</h2>
+    <h2>{tx('plan.checks')}</h2>
     <span class="tag"
-      >{dirty ? 'Awaiting save' : `Revision ${saved.revision}`}</span
+      >{dirty
+        ? tx('plan.awaiting')
+        : tx('plan.revision', { revision: saved.revision })}</span
     >
   </div>
   {#if dirty}<p class="muted">
-      Save to check this draft. Findings below belong to the last saved
-      revision.
+      {tx('plan.dirty_note')}
     </p>{/if}{#if saved.validation.findings.length}<ul class="finding-list">
       {#each saved.validation.findings as finding}<li>
-          <span class="tag warning">{finding.rule.replaceAll('_', ' ')}</span>
-          <p>{finding.message}</p>
+          <span class="tag warning">{msg.ruleLabel(finding.rule)}</span>
+          <p>{msg.describe('finding', finding)}</p>
         </li>{/each}
     </ul>{:else}<p class="success-text">
-      All modeled rules pass for the saved plan.
-    </p>{/if}{#if saved.bottlenecks.length}<h3>Downstream impact</h3>
+      {tx('plan.all_pass')}
+    </p>{/if}{#if saved.bottlenecks.length}<h3>{tx('plan.downstream')}</h3>
     <ul>
       {#each saved.bottlenecks as blocker}<li>
           {blocker.path.join(' → ')}
         </li>{/each}
     </ul>{/if}
   <p class="footnote">
-    {saved.validation.assumptions.join(' ')} Source: {saved.validation
-      .curriculum_version}.
+    {tx('plan.source_note', {
+      assumptions: saved.validation.assumption_items
+        .map((item) =>
+          item.code === 'DISCLAIMER'
+            ? msg.disclaimer(data.curriculum)
+            : msg.describe('assume', item),
+        )
+        .join(' '),
+      version: saved.validation.curriculum_version,
+    })}
   </p>
 </section>

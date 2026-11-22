@@ -46,7 +46,7 @@
     };
   });
 
-  const { t } = useI18n();
+  const { t, msg } = useI18n();
   const semesters = (count: number) => t('overview.semesters', { count });
   let headline = $derived(
     outlookLoading
@@ -143,7 +143,7 @@
       items.push({
         key: 'findings',
         title: t('overview.attention.findings', { count: findings.length }),
-        detail: findings[0].message,
+        detail: msg.describe('finding', findings[0]),
         href: `/plans/${primaryPlan.id}`,
         action: t('overview.attention.review_plan'),
       });
@@ -313,6 +313,8 @@
 {#if workspace?.profile && !page.url.searchParams.has('intro')}<p
     class="footnote"
   >
-    {workspace?.curriculum.disclaimer ?? t('overview.footnote')}
+    {workspace?.curriculum
+      ? msg.disclaimer(workspace.curriculum)
+      : t('overview.footnote')}
   </p>
 {/if}

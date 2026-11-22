@@ -33,9 +33,13 @@ export type Profile = {
   last_gpa: number | null;
   revision: number;
 };
+type Params = Record<string, unknown>;
+export type CodedMessage = { code: string; params: Params; message: string };
 export type Finding = {
   course: string | null;
   rule: string;
+  code: string;
+  params: Params;
   message: string;
   related: string | null;
 };
@@ -45,6 +49,7 @@ export type Validation = {
   loads: Record<string, number>;
   caps: Record<string, number>;
   cap_reasons: Record<string, string>;
+  cap_details: Record<string, { code: string; params: Params }>;
   completed_credits: number;
   planned_credits: number;
   graduation_credits: number;
@@ -56,7 +61,9 @@ export type Validation = {
   plan_revision: number;
   profile_revision: number;
   assumptions: string[];
+  assumption_items: CodedMessage[];
   advisor_questions: string[];
+  advisor_items: CodedMessage[];
 };
 export type Plan = {
   id: string;
@@ -97,6 +104,8 @@ export type FocusSession = {
 export type Study = { tasks: Task[]; sessions: FocusSession[] };
 export type Alternative = {
   name: string;
+  name_code: string;
+  summary_items: { code: string; params: Params }[];
   assignments: Record<string, number | null>;
   validation: Validation;
   optimal: boolean;
@@ -109,15 +118,16 @@ export type Alternative = {
   }[];
 };
 export type Diagnosis = {
-  reasons: { rule: string; message: string }[];
-  suggestions: {
+  reasons: (CodedMessage & { rule: string })[];
+  suggestions: (CodedMessage & {
     kind: 'horizon' | 'credit_cap';
     value: number;
-    message: string;
-  }[];
+  })[];
 };
 export type SolveResult = {
   status: string;
+  code: string;
+  params: Params;
   message: string;
   alternatives: Alternative[];
   diagnosis?: Diagnosis;

@@ -1,7 +1,9 @@
 <script lang="ts">
   import { Handle, Position, type NodeProps } from '@xyflow/svelte';
+  import { useI18n } from '#lib/i18n/context.js';
   import type { Course } from '#lib/types.js';
   let { data }: NodeProps = $props();
+  const { t } = useI18n();
   let course = $derived(data.course as Course);
 </script>
 
@@ -13,16 +15,19 @@
   <Handle type="target" position={Position.Left} isConnectable={false} />
   <div class="course-node-meta">
     <span>{course.code}</span><span
-      >{course.category === 'elective' ? 'Elective | ' : ''}{course.credits} cr</span
+      >{course.category === 'elective' ? t('node.elective') : ''}{t(
+        'node.credits_short',
+        { count: course.credits },
+      )}</span
     >
   </div>
   <strong>{course.name}</strong>
   <small
     >{data.failed
-      ? 'Retake in this scenario'
+      ? t('node.retake')
       : data.hasFinding
-        ? 'Review rule findings'
-        : 'Planned course'}</small
+        ? t('node.review')
+        : t('node.planned')}</small
   >
   <Handle type="source" position={Position.Right} isConnectable={false} />
 </div>
