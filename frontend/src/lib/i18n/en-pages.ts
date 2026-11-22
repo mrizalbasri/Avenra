@@ -2,21 +2,57 @@
 // the workspace switcher, calendar export and curriculum import errors.
 export const enPages = {
   // Import and parsing errors (also used as API-style codes by lib/curriculum-import.ts)
-  'error.CSV_UNCLOSED_QUOTE':
-    'The CSV has an unclosed quote. Check your course names.',
-  'error.CSV_MISSING_COLUMN':
-    'Missing CSV column: {field}. Download the template for the required format.',
-  'error.CSV_ROW_COUNT': 'Import between 1 and 100 courses.',
-  'error.CSV_ROW_INVALID':
-    'Check course row {row}: course code, name, credits (1 to 24), and semester (1 to 14) are required.',
-  'error.CSV_MIN_CREDITS':
-    'Row {row}: min_credits must be a whole number from 0 to 300.',
-  'error.CSV_OFFERED': 'Row {row}: offered_terms must be odd, even, or both.',
-  'error.CSV_CATEGORY': 'Row {row}: category must be required or elective.',
   'error.IPS_RULE_INVALID':
     'IPS rule {index} must look like "3.00 = 24" (IPS 0 to 4, credits 1 to 24).',
   'error.IPS_TOO_MANY': 'Use at most 10 IPS rules.',
   'error.CSV_TOO_LARGE': 'Keep the CSV under 60 KB and 100 courses.',
+
+  // Pasted table import
+  'import.field.code': 'Course code',
+  'import.field.name': 'Course name',
+  'import.field.credits': 'Credits',
+  'import.field.recommended_term': 'Semester',
+  'import.field.prerequisites': 'Prerequisites',
+  'import.field.corequisites': 'Corequisites',
+  'import.field.min_credits': 'Minimum credits earned',
+  'import.field.offered_terms': 'Offered in',
+  'import.field.category': 'Category',
+  'import.UNCLOSED_QUOTE':
+    'The table has an unclosed quote. Check your course names.',
+  'import.MISSING_COLUMN':
+    'Could not find a "{field}" column. Pick one below or add it to the table.',
+  'import.NO_ROWS': 'Paste a table with a header row and at least one course.',
+  'import.ROW_COUNT': 'Import between 1 and 100 courses.',
+  'import.MISSING_CODE': 'Row {row}: course code is required.',
+  'import.MISSING_NAME': 'Row {row}: course name is required.',
+  'import.BAD_CREDITS':
+    'Row {row}: credits must be a whole number from 1 to 24 (found "{value}").',
+  'import.BAD_TERM':
+    'Row {row}: semester must be a whole number from 1 to 14 (found "{value}").',
+  'import.BAD_MIN_CREDITS':
+    'Row {row}: min_credits must be a whole number from 0 to 300.',
+  'import.BAD_OFFERED':
+    'Row {row}: offered_terms must be odd, even, or both (found "{value}").',
+  'import.BAD_CATEGORY':
+    'Row {row}: category must be required or elective (found "{value}").',
+  'import.DUPLICATE_CODE':
+    'Row {row}: course code {code} already appears in row {first}.',
+  'import.UNKNOWN_REFERENCE':
+    'Row {row}: {code} lists {ref}, which is not a course in this table.',
+  'import.paste_hint':
+    'You can also paste a table copied from Excel, Google Sheets, or a PDF. Avenra detects the separator and recognises English and Indonesian column names.',
+  'import.separator': 'Detected separator: {name}',
+  'import.sep.tab': 'tab',
+  'import.sep.comma': 'comma',
+  'import.sep.semicolon': 'semicolon',
+  'import.sep.spaces': 'spaces',
+  'import.columns': 'How Avenra read your columns',
+  'import.column_aria': 'Meaning of column {header}',
+  'import.ignore': 'Ignore this column',
+  'import.guess': 'Not recognised',
+  'import.issues.one': '{count} problem to fix before you can continue',
+  'import.issues.other': '{count} problems to fix before you can continue',
+  'import.more': '…and {count} more.',
 
   // Workspace switcher
   'ws.label': 'Workspace',
