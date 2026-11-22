@@ -1,7 +1,9 @@
 <script lang="ts">
   import { goto, invalidateAll } from '$app/navigation';
   import { api } from '#lib/api.js';
+  import { useI18n } from '#lib/i18n/context.js';
   import { parseCoursesCSV, parseGpaRules } from '#lib/curriculum-import.js';
+  const { t, msg } = useI18n();
   let alias = $state('');
   let university = $state('');
   let program = $state('');
@@ -29,7 +31,7 @@
   async function readFile(file?: File) {
     if (!file) return;
     if (file.size > 60000) {
-      error = 'Keep the CSV under 60 KB and 100 courses.';
+      error = t('error.CSV_TOO_LARGE');
       return;
     }
     csv = await file.text();
@@ -66,21 +68,18 @@
       await invalidateAll();
       await goto('/profile');
     } catch (e) {
-      error = (e as Error).message;
+      error = msg.errorText(e);
     } finally {
       busy = false;
     }
   }
 </script>
 
-<svelte:head><title>Avenra | Bring your curriculum</title></svelte:head>
+<svelte:head><title>{t('curriculum.title')}</title></svelte:head>
 <div class="page-heading">
   <div>
-    <h1>Your campus. Your curriculum.</h1>
-    <p>
-      Build a workspace for your own program. Avenra uses the rules you provide,
-      without assuming every university is the same.
-    </p>
+    <h1>{t('curriculum.heading')}</h1>
+    <p>{t('curriculum.lead')}</p>
   </div>
 </div>
 <form
@@ -91,37 +90,37 @@
   }}
 >
   <section class="panel">
-    <h2>Academic context</h2>
+    <h2>{t('curriculum.context')}</h2>
     <div class="form-grid">
       <label
-        >Student alias<input
+        >{t('curriculum.alias')}<input
           bind:value={alias}
           required
           maxlength="80"
-          placeholder="Use an alias for this local prototype"
+          placeholder={t('curriculum.alias_placeholder')}
         /></label
       ><label
-        >University<input
+        >{t('curriculum.university')}<input
           bind:value={university}
           required
           maxlength="70"
-          placeholder="Your university"
+          placeholder={t('curriculum.university_placeholder')}
         /></label
       ><label
-        >Study program<input
+        >{t('curriculum.program')}<input
           bind:value={program}
           required
           maxlength="70"
-          placeholder="e.g. Informatika"
+          placeholder={t('curriculum.program_placeholder')}
         /></label
       ><label
-        >Curriculum year / version<input
+        >{t('curriculum.version')}<input
           bind:value={year}
           required
           maxlength="80"
         /></label
       ><label
-        >Current semester<input
+        >{t('curriculum.current')}<input
           type="number"
           min="1"
           max="14"
@@ -129,16 +128,16 @@
           required
         /></label
       ><label
-        >Last semester IPS (optional)<input
+        >{t('curriculum.last_ips')}<input
           type="number"
           min="0"
           max="4"
           step="0.01"
           bind:value={lastGpa}
-          placeholder="e.g. 3.25"
+          placeholder={t('curriculum.ips_placeholder')}
         /></label
       ><label
-        >Maximum credits per semester<input
+        >{t('curriculum.max_credits')}<input
           type="number"
           min="1"
           max="24"
@@ -146,15 +145,15 @@
           required
         /></label
       ><label
-        >Credits needed to graduate (optional)<input
+        >{t('curriculum.grad_credits')}<input
           type="number"
           min="1"
           max="300"
           bind:value={graduationCredits}
-          placeholder="e.g. 144"
+          placeholder={t('curriculum.grad_placeholder')}
         /></label
       ><label
-        >On-time graduation (semester)<input
+        >{t('curriculum.on_time')}<input
           type="number"
           min="1"
           max="14"
@@ -162,7 +161,7 @@
           required
         /></label
       ><label
-        >Maximum study period (semesters)<input
+        >{t('curriculum.max_period')}<input
           type="number"
           min="1"
           max="14"
@@ -172,88 +171,75 @@
       >
     </div>
     <label
-      >Credit limit by IPS<textarea
+      >{t('curriculum.ips_rules')}<textarea
         bind:value={gpaRules}
         rows="4"
         placeholder="3.00 = 24"
       ></textarea></label
     >
-    <p class="muted small">
-      One rule per line: minimum IPS = maximum credits. Copy the table from your
-      academic handbook. Leave empty if your campus has no IPS rule.
-    </p>
+    <p class="muted small">{t('curriculum.ips_rules_hint')}</p>
     <label
-      >Rule source or curriculum reference<input
+      >{t('curriculum.source')}<input
         bind:value={source}
         required
         maxlength="500"
-        placeholder="Official handbook URL, document title, or rule reference"
+        placeholder={t('curriculum.source_placeholder')}
       /></label
     >
   </section>
   <section class="panel">
     <div class="section-heading">
-      <h2>Import your courses</h2>
+      <h2>{t('curriculum.import')}</h2>
       <a href="/curriculum-template.csv" download class="button"
-        >Download CSV template</a
+        >{t('curriculum.template')}</a
       >
     </div>
     <p class="muted small">
-      Export a course list from your curriculum handbook into the template. Use
-      course codes for prerequisites, separated by semicolons; write
-      <code>A|B</code> when either course is enough. Offering: odd, even, or both.
-      Category: required or elective. Corequisites may be taken in the same semester.
-      min_credits is the credits needed before taking the course, for example an internship
-      or thesis.
+      {t('curriculum.csv_hint_a')}<code>A|B</code>{t('curriculum.csv_hint_b')}
     </p>
     <label
-      >Choose a CSV file<input
+      >{t('curriculum.choose_file')}<input
         type="file"
         accept=".csv,text/csv"
         onchange={(e) => readFile(e.currentTarget.files?.[0])}
       /></label
     ><label
-      >Or paste CSV content<textarea
+      >{t('curriculum.paste')}<textarea
         bind:value={csv}
         rows="9"
         placeholder="code,name,credits,recommended_term,prerequisites,offered_terms,category,corequisites,min_credits"
       ></textarea></label
     >{#if preview.length}<p class="success-text">
-        {preview.length} courses ready to validate{filename
-          ? ` from ${filename}`
-          : ''}.
+        {t('curriculum.ready', {
+          count: preview.length,
+          from: filename ? t('curriculum.from_file', { filename }) : '',
+        })}
       </p>
       <div class="table-scroll">
         <table>
           <thead
             ><tr
-              ><th>Code</th><th>Course</th><th>Credits</th><th>Prerequisites</th
+              ><th>{t('curriculum.col.code')}</th><th
+                >{t('curriculum.col.course')}</th
+              ><th>{t('curriculum.col.credits')}</th><th
+                >{t('curriculum.col.prereq')}</th
               ></tr
             ></thead
           ><tbody
             >{#each preview.slice(0, 8) as c}<tr
                 ><td>{c.code}</td><td>{c.name}</td><td>{c.credits}</td><td
-                  >{c.prerequisites.join(', ') || 'None'}</td
+                  >{c.prerequisites.join(', ') || t('curriculum.none')}</td
                 ></tr
               >{/each}</tbody
           >
         </table>
       </div>{/if}
   </section>
-  <div class="warning-banner">
-    Rules are user-supplied until independently verified. Avenra checks
-    prerequisites (including "either A or B"), corequisites, earned-credit
-    thresholds, electives toward a graduation total, odd/even offerings, and an
-    IPS-based credit limit for next semester. Exceptions, equivalent courses,
-    and credit transfer still need advisor review.
-  </div>
+  <div class="warning-banner">{t('curriculum.warning')}</div>
   {#if error}<p class="error-banner" role="alert">{error}</p>{/if}<button
     class="button primary"
     disabled={busy || !csv.trim()}
-    >{busy ? 'Validating curriculum…' : 'Create my academic workspace'}</button
+    >{busy ? t('curriculum.validating') : t('curriculum.create')}</button
   >
-  <p class="footnote">
-    A new workspace keeps any previous curriculum and plans intact. This local
-    prototype has no sign-in; use aliases and non-sensitive data.
-  </p>
+  <p class="footnote">{t('curriculum.footnote')}</p>
 </form>

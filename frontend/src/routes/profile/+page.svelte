@@ -2,8 +2,10 @@
   import { untrack } from 'svelte';
   import { invalidateAll } from '$app/navigation';
   import { api } from '#lib/api.js';
+  import { useI18n } from '#lib/i18n/context.js';
   import type { PageProps } from './$types';
   let { data }: PageProps = $props();
+  const { t, msg } = useI18n();
   let alias = $state(untrack(() => data.workspace?.profile?.alias ?? ''));
   let currentTerm = $state(
     untrack(() => data.workspace?.profile?.current_term ?? 2),
@@ -32,23 +34,20 @@
       });
       revision = profile.revision;
       await invalidateAll();
-      notice = 'Profile saved. All plan checks now use your updated progress.';
+      notice = t('profile.saved');
     } catch (e) {
-      error = (e as Error).message;
+      error = msg.errorText(e);
     } finally {
       busy = false;
     }
   }
 </script>
 
-<svelte:head><title>Avenra | Academic profile</title></svelte:head>
+<svelte:head><title>{t('profile.title')}</title></svelte:head>
 <div class="page-heading">
   <div>
-    <h1>Your starting point.</h1>
-    <p>
-      Set your current semester and completed courses. Plans build on this
-      shared baseline.
-    </p>
+    <h1>{t('profile.heading')}</h1>
+    <p>{t('profile.lead')}</p>
   </div>
 </div>
 {#if data.workspace?.profile}<form
@@ -58,19 +57,17 @@
     }}
   >
     <section class="panel profile-form">
-      <h2>Academic profile</h2>
-      <p class="muted">
-        Use an alias and fictional records in this local demo.
-      </p>
+      <h2>{t('profile.panel')}</h2>
+      <p class="muted">{t('profile.alias_hint')}</p>
       <div class="form-grid">
         <label
-          >Student alias<input
+          >{t('profile.alias')}<input
             bind:value={alias}
             maxlength="80"
             required
           /></label
         ><label
-          >Current semester<input
+          >{t('profile.current')}<input
             type="number"
             min="1"
             max={data.workspace.curriculum.max_terms}
@@ -78,12 +75,12 @@
             required
           /></label
         ><label
-          >Last semester IPS<input
+          >{t('profile.last_ips')}<input
             type="number"
             min="0"
             max="4"
             step="0.01"
-            placeholder="e.g. 3.25"
+            placeholder={t('profile.ips_placeholder')}
             value={lastGpa ?? ''}
             onchange={(e) => {
               const value = e.currentTarget.value;
@@ -98,23 +95,27 @@
       {#if data.workspace.curriculum.gpa_credit_rules.length}<p
           class="muted small"
         >
-          Credit limits by IPS: {[...data.workspace.curriculum.gpa_credit_rules]
-            .sort((a, b) => b.min_gpa - a.min_gpa)
-            .map(
-              (r) => `IPS ${r.min_gpa.toFixed(2)}+ | ${r.max_credits} credits`,
-            )
-            .join('; ')}.
+          {t('profile.ips_limits', {
+            list: [...data.workspace.curriculum.gpa_credit_rules]
+              .sort((a, b) => b.min_gpa - a.min_gpa)
+              .map((r) =>
+                t('profile.ips_limit_item', {
+                  gpa: r.min_gpa.toFixed(2),
+                  credits: r.max_credits,
+                }),
+              )
+              .join('; '),
+          })}
         </p>{/if}
     </section>
     <section class="panel">
       <div class="section-heading">
-        <h2>Completed courses</h2>
-        <span class="tag">{completed.length} selected</span>
+        <h2>{t('profile.completed')}</h2>
+        <span class="tag"
+          >{t('profile.selected', { count: completed.length })}</span
+        >
       </div>
-      <p class="muted small">
-        Mark only courses already passed. Scenario failures stay inside
-        individual plans.
-      </p>
+      <p class="muted small">{t('profile.completed_hint')}</p>
       <div class="course-checklist">
         {#each data.workspace.curriculum.courses as course}<label
             ><input
@@ -124,10 +125,15 @@
             />
             <div>
               <strong>{course.name}</strong><small
-                >{course.code} | {course.credits} credits | Semester {course.recommended_term}{course.category ===
-                'elective'
-                  ? ' | Elective'
-                  : ''}</small
+                >{t('profile.course_line', {
+                  code: course.code,
+                  credits: course.credits,
+                  term: course.recommended_term,
+                  extra:
+                    course.category === 'elective'
+                      ? t('profile.elective_extra')
+                      : '',
+                })}</small
               >
             </div></label
           >{/each}
@@ -138,9 +144,9 @@
       </p>{/if}{#if notice}<p class="success-banner" role="status">
         {notice}
       </p>{/if}<button class="button primary" disabled={busy}
-      >{busy ? 'Saving…' : 'Save academic profile'}</button
+      >{busy ? t('profile.saving') : t('profile.save')}</button
     >
   </form>{:else}<div class="empty-panel">
-    <h2>No academic profile yet.</h2>
-    <a class="button primary" href="/">Open the demo workspace</a>
+    <h2>{t('profile.none')}</h2>
+    <a class="button primary" href="/">{t('profile.open_demo')}</a>
   </div>{/if}

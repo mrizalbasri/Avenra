@@ -1,3 +1,5 @@
+import { ApiError } from '#lib/errors.js';
+
 export function parseCoursesCSV(text: string) {
   const rows: string[][] = [];
   let row: string[] = [];
@@ -21,7 +23,10 @@ export function parseCoursesCSV(text: string) {
     } else cell += c;
   }
   if (quoted)
-    throw new Error('The CSV has an unclosed quote. Check your course names.');
+    throw new ApiError(
+      'The CSV has an unclosed quote. Check your course names.',
+      'CSV_UNCLOSED_QUOTE',
+    );
   row.push(cell.trim());
   if (row.some(Boolean)) rows.push(row);
   const header = rows.shift()?.map((s) => s.toLowerCase()) ?? [];
@@ -33,11 +38,13 @@ export function parseCoursesCSV(text: string) {
     'prerequisites',
   ])
     if (!header.includes(field))
-      throw new Error(
+      throw new ApiError(
         `Missing CSV column: ${field}. Download the template for the required format.`,
+        'CSV_MISSING_COLUMN',
+        { field },
       );
   if (!rows.length || rows.length > 100)
-    throw new Error('Import between 1 and 100 courses.');
+    throw new ApiError('Import between 1 and 100 courses.', 'CSV_ROW_COUNT');
   const list = (value: string) =>
     value
       .split(';')
@@ -59,25 +66,33 @@ export function parseCoursesCSV(text: string) {
       term < 1 ||
       term > 14
     )
-      throw new Error(
+      throw new ApiError(
         `Check course row ${index + 2}: course code, name, credits (1 to 24), and semester (1 to 14) are required.`,
+        'CSV_ROW_INVALID',
+        { row: index + 2 },
       );
     if (!Number.isInteger(minCredits) || minCredits < 0 || minCredits > 300)
-      throw new Error(
+      throw new ApiError(
         `Row ${index + 2}: min_credits must be a whole number from 0 to 300.`,
+        'CSV_MIN_CREDITS',
+        { row: index + 2 },
       );
     const offering = get('offered_terms').toLowerCase();
     const odd = ['odd', 'ganjil'].includes(offering);
     const even = ['even', 'genap'].includes(offering);
     if (offering && !odd && !even && !['both', 'semua'].includes(offering))
-      throw new Error(
+      throw new ApiError(
         `Row ${index + 2}: offered_terms must be odd, even, or both.`,
+        'CSV_OFFERED',
+        { row: index + 2 },
       );
     const category = get('category').toLowerCase();
     const elective = ['elective', 'pilihan'].includes(category);
     if (category && !elective && !['required', 'wajib'].includes(category))
-      throw new Error(
+      throw new ApiError(
         `Row ${index + 2}: category must be required or elective.`,
+        'CSV_CATEGORY',
+        { row: index + 2 },
       );
     const requirements = list(get('prerequisites'));
     return {
@@ -117,11 +132,14 @@ export function parseGpaRules(text: string) {
         !(minGpa >= 0 && minGpa <= 4) ||
         !(Number.isInteger(maxCredits) && maxCredits >= 1 && maxCredits <= 24)
       )
-        throw new Error(
+        throw new ApiError(
           `IPS rule ${index + 1} must look like "3.00 = 24" (IPS 0 to 4, credits 1 to 24).`,
+          'IPS_RULE_INVALID',
+          { index: index + 1 },
         );
       return { min_gpa: minGpa, max_credits: maxCredits };
     });
-  if (rules.length > 10) throw new Error('Use at most 10 IPS rules.');
+  if (rules.length > 10)
+    throw new ApiError('Use at most 10 IPS rules.', 'IPS_TOO_MANY');
   return rules;
 }

@@ -36,6 +36,11 @@ export function tasksToIcs(
   tasks: Task[],
   courseNames: Record<string, string>,
   now = new Date(),
+  text = {
+    withCourse: (course: string) =>
+      `Study target for ${course}. Added from Avenra.`,
+    plain: 'Added from Avenra.',
+  },
 ) {
   const stamp = now
     .toISOString()
@@ -57,7 +62,7 @@ export function tasksToIcs(
       `DTSTART;VALUE=DATE:${compactDate(task.due_date)}`,
       `DTEND;VALUE=DATE:${compactDate(nextDay(task.due_date))}`,
       `SUMMARY:${escapeText(`${task.course_code} | ${task.title}`)}`,
-      `DESCRIPTION:${escapeText(course ? `Study target for ${course}. Added from Avenra.` : 'Added from Avenra.')}`,
+      `DESCRIPTION:${escapeText(course ? text.withCourse(course) : text.plain)}`,
       'BEGIN:VALARM',
       'ACTION:DISPLAY',
       `DESCRIPTION:${escapeText(task.title)}`,
