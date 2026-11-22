@@ -5,6 +5,7 @@
   import Hero from '#lib/components/dusk/hero/six/hero.svelte';
   import Icon from '#lib/components/Icon.svelte';
   import { api } from '#lib/api.js';
+  import { useI18n } from '#lib/i18n/context.js';
   import type { Outlook } from '#lib/types.js';
   import type { PageProps } from './$types';
   let { data }: PageProps = $props();
@@ -45,41 +46,48 @@
     };
   });
 
-  const semesters = (n: number) => (n === 1 ? '1 semester' : `${n} semesters`);
+  const { t, msg } = useI18n();
+  const semesters = (count: number) => t('overview.semesters', { count });
   let headline = $derived(
     outlookLoading
-      ? 'Checking your graduation outlook…'
+      ? t('overview.headline.loading')
       : !outlook || outlook.status === 'unknown'
-        ? 'Make your next semester count.'
+        ? t('overview.headline.unknown')
         : outlook.status === 'on_track'
-          ? `On track for semester ${outlook.completion_term}.`
+          ? t('overview.headline.on_track', {
+              term: outlook.completion_term ?? 0,
+            })
           : outlook.status === 'late'
-            ? `Heading for semester ${outlook.completion_term}.`
-            : 'No plan fits within the study period yet.',
+            ? t('overview.headline.late', {
+                term: outlook.completion_term ?? 0,
+              })
+            : t('overview.headline.unresolved'),
   );
   let subline = $derived.by(() => {
-    if (outlookLoading)
-      return 'Comparing your saved plan with the curriculum rules.';
+    if (outlookLoading) return t('overview.sub.loading');
     if (!outlook || outlook.status === 'unknown')
-      return 'The outlook could not be confirmed in time. Your plans are saved; open one to check it.';
-    if (outlook.status === 'unresolved')
-      return 'Open your plan to see which rule blocks it and the smallest change that helps.';
+      return t('overview.sub.unknown');
+    if (outlook.status === 'unresolved') return t('overview.sub.unresolved');
     const base =
       outlook.basis === 'plan'
-        ? 'Your saved plan'
-        : `Your saved plan has ${outlook.plan_findings} rule ${outlook.plan_findings === 1 ? 'check' : 'checks'} to fix, so this is the earliest modeled finish`;
-    const target = `the semester ${outlook.target_term} target set in your curriculum`;
+        ? t('overview.sub.basis.plan')
+        : t('overview.sub.basis.fix', { count: outlook.plan_findings });
+    const target = t('overview.sub.target', { term: outlook.target_term });
     const earlier =
       outlook.basis === 'plan' &&
       outlook.earliest_term !== null &&
       outlook.earliest_term < (outlook.plan_term ?? 0)
-        ? ` A rearranged plan could finish in semester ${outlook.earliest_term}.`
+        ? t('overview.sub.earlier', { term: outlook.earliest_term })
         : '';
     const timing =
       outlook.status === 'late'
-        ? `${base} finishes ${semesters(outlook.delay ?? 0)} after ${target}.`
-        : `${base} meets ${target}.`;
-    return `${timing}${earlier} A modeled estimate, not an official decision.`;
+        ? t('overview.sub.late', {
+            base,
+            delay: semesters(outlook.delay ?? 0),
+            target,
+          })
+        : t('overview.sub.ontime', { base, target });
+    return `${timing}${earlier}${t('overview.sub.estimate')}`;
   });
 
   const isoDay = (offset = 0) => {
@@ -99,38 +107,45 @@
     const open = data.study?.tasks.filter((t) => !t.done) ?? [];
     const today = isoDay();
     const soon = isoDay(2);
-    for (const t of open) {
-      if (!t.due_date || t.due_date > soon) continue;
+    for (const task of open) {
+      if (!task.due_date || task.due_date > soon) continue;
       items.push({
-        key: `task-${t.id}`,
+        key: `task-${task.id}`,
         title:
-          t.due_date < today ? `Overdue: ${t.title}` : `Due soon: ${t.title}`,
-        detail: `Course ${t.course_code} | due ${t.due_date}`,
+          task.due_date < today
+            ? t('overview.attention.overdue', { title: task.title })
+            : t('overview.attention.due_soon', { title: task.title }),
+        detail: t('overview.attention.task_detail', {
+          course: task.course_code,
+          date: task.due_date,
+        }),
         href: '/study',
-        action: 'Open study',
+        action: t('overview.attention.open_study'),
       });
     }
     for (const c of outlook?.critical ?? []) {
-      if (open.some((t) => t.course_code === c.code)) continue;
+      if (open.some((task) => task.course_code === c.code)) continue;
       items.push({
         key: `critical-${c.code}`,
-        title: `Protect ${c.name}`,
+        title: t('overview.attention.protect', { name: c.name }),
         detail:
           c.extra_semesters === null
-            ? 'If you fail it this semester, no modeled plan finishes within the study period.'
-            : `If you fail it this semester, the earliest modeled finish moves to semester ${c.finish_if_failed}.`,
+            ? t('overview.attention.fail_none')
+            : t('overview.attention.fail_moves', {
+                term: c.finish_if_failed ?? 0,
+              }),
         href: `/study?course=${c.code}`,
-        action: 'Set a target',
+        action: t('overview.attention.set_target'),
       });
     }
     const findings = primaryPlan?.validation.findings ?? [];
     if (primaryPlan && findings.length)
       items.push({
         key: 'findings',
-        title: `Your plan has ${findings.length} rule ${findings.length === 1 ? 'check' : 'checks'} to review`,
-        detail: findings[0].message,
+        title: t('overview.attention.findings', { count: findings.length }),
+        detail: msg.describe('finding', findings[0]),
         href: `/plans/${primaryPlan.id}`,
-        action: 'Review plan',
+        action: t('overview.attention.review_plan'),
       });
     return items;
   });
@@ -158,7 +173,7 @@
   }
 </script>
 
-<svelte:head><title>Avenra | Your academic workspace</title></svelte:head>
+<svelte:head><title>{t('overview.title')}</title></svelte:head>
 {#if !workspace?.profile || page.url.searchParams.has('intro')}
   {#if error}<p class="error-banner" role="alert">{error}</p>{/if}
   <Hero
@@ -172,25 +187,31 @@
     data-status={outlookLoading ? 'loading' : (outlook?.status ?? 'none')}
     aria-busy={outlookLoading}
   >
-    <p class="eyebrow">Graduation outlook</p>
+    <p class="eyebrow">{t('overview.eyebrow')}</p>
     <h1>{headline}</h1>
     <p class="today-sub">{subline}</p>
     {#if !outlookLoading && outlook?.completion_term && outlook.status !== 'unknown'}<div
         class="today-meta"
       >
         <div>
-          <small>Finish</small><strong
-            >Semester {outlook.completion_term}</strong
+          <small>{t('overview.meta.finish')}</small><strong
+            >{t('overview.meta.semester', {
+              term: outlook.completion_term,
+            })}</strong
           >
         </div>
         <div>
-          <small>Target</small><strong>Semester {outlook.target_term}</strong>
+          <small>{t('overview.meta.target')}</small><strong
+            >{t('overview.meta.semester', {
+              term: outlook.target_term,
+            })}</strong
+          >
         </div>
         <div>
-          <small>Status</small><strong
+          <small>{t('overview.meta.status')}</small><strong
             >{outlook.delay
-              ? `${semesters(outlook.delay)} late`
-              : 'On time'}</strong
+              ? t('overview.meta.late', { delay: semesters(outlook.delay) })
+              : t('overview.meta.ontime')}</strong
           >
         </div>
       </div>{/if}
@@ -199,16 +220,16 @@
         class="button primary"
         href={primaryPlan ? `/plans/${primaryPlan.id}` : '/plans'}
         >{outlook && outlook.status !== 'on_track'
-          ? 'Find a recovery plan'
-          : 'Open your plan'}<Icon name="arrow" size={16} /></a
+          ? t('overview.action.recovery')
+          : t('overview.action.open_plan')}<Icon name="arrow" size={16} /></a
       ><a class="button" href="/study"
-        ><Icon name="clock" size={16} />Study space</a
+        ><Icon name="clock" size={16} />{t('overview.action.study_space')}</a
       >
     </div>
   </section>
   <section aria-labelledby="attention-heading">
     <div class="section-heading">
-      <h2 id="attention-heading">Needs your attention</h2>
+      <h2 id="attention-heading">{t('overview.attention.heading')}</h2>
       {#if attention.length}<span class="tag warning">{attention.length}</span
         >{/if}
     </div>
@@ -224,35 +245,41 @@
           </li>{/each}
       </ul>{:else}<p class="muted attention-empty">
         {outlook
-          ? 'Nothing flagged right now. Check again after new grades or deadlines.'
+          ? t('overview.attention.empty.ready')
           : outlookLoading
-            ? 'Checking for deadlines and critical courses…'
-            : 'The outlook is unavailable right now. Your plans are still saved.'}
+            ? t('overview.attention.empty.loading')
+            : t('overview.attention.empty.unavailable')}
       </p>{/if}
   </section>
   <section class="progress-panel">
     <div class="section-heading">
-      <h2>Credits toward graduation</h2>
-      <a href="/profile" class="text-link">Edit profile</a>
+      <h2>{t('overview.progress.heading')}</h2>
+      <a href="/profile" class="text-link">{t('overview.progress.edit')}</a>
     </div>
     <div class="progress-number">
-      {completed}<span>/ {total} credits</span>
+      {completed}<span>{t('overview.progress.credits', { total })}</span>
     </div>
     <progress
       value={completed}
       max={total}
-      aria-label="Completed credits toward graduation"
+      aria-label={t('overview.progress.aria')}
     ></progress>
     <div class="meta-row">
-      <span>{workspace.profile.completed.length} courses completed</span><span
-        >Now in semester {workspace.profile.current_term}</span
+      <span
+        >{t('overview.progress.courses', {
+          count: workspace.profile.completed.length,
+        })}</span
+      ><span
+        >{t('overview.progress.now', {
+          term: workspace.profile.current_term,
+        })}</span
       >
     </div>
   </section>
   <section>
     <div class="section-heading">
-      <h2>Your plans</h2>
-      <a href="/plans" class="text-link">All plans</a>
+      <h2>{t('overview.plans.heading')}</h2>
+      <a href="/plans" class="text-link">{t('overview.plans.all')}</a>
     </div>
     <div class="plan-grid">
       {#each plans.slice(0, 3) as plan}<a
@@ -263,16 +290,21 @@
               class="tag"
               class:warning={plan.validation.findings.length > 0}
               >{plan.validation.findings.length
-                ? `${plan.validation.findings.length} checks to review`
-                : 'Valid under assumptions'}</span
+                ? t('overview.plans.checks', {
+                    count: plan.validation.findings.length,
+                  })
+                : t('overview.plans.valid')}</span
             >
           </div>
           <h3>{plan.name}</h3>
           <p>
-            {plan.validation.planned_credits} credits planned | Up to semester {plan.horizon}
+            {t('overview.plans.summary', {
+              credits: plan.validation.planned_credits,
+              horizon: plan.horizon,
+            })}
           </p>
           <span class="text-link"
-            >Open plan <Icon name="arrow" size={15} /></span
+            >{t('overview.plans.open')} <Icon name="arrow" size={15} /></span
           ></a
         >{/each}
     </div>
@@ -281,7 +313,8 @@
 {#if workspace?.profile && !page.url.searchParams.has('intro')}<p
     class="footnote"
   >
-    {workspace?.curriculum.disclaimer ??
-      'Avenra supports planning and advisor consultation. It does not issue academic approvals.'}
+    {workspace?.curriculum
+      ? msg.disclaimer(workspace.curriculum)
+      : t('overview.footnote')}
   </p>
 {/if}

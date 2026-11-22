@@ -1,7 +1,9 @@
 <script lang="ts">
   import { untrack } from 'svelte';
+  import { useI18n } from '#lib/i18n/context.js';
   import type { PageProps } from './$types';
   let { data }: PageProps = $props();
+  const { t } = useI18n();
   let plans = $derived(data.workspace?.plans.filter((p) => !p.archived) ?? []);
   let leftId = $state(untrack(() => plans[0]?.id ?? ''));
   let rightId = $state(untrack(() => plans[1]?.id ?? ''));
@@ -9,31 +11,25 @@
   let right = $derived(plans.find((p) => p.id === rightId));
 </script>
 
-<svelte:head><title>Avenra | Compare plans</title></svelte:head>
+<svelte:head><title>{t('compare.title')}</title></svelte:head>
 <div class="page-heading">
   <div>
-    <h1>See the trade-offs clearly.</h1>
-    <p>
-      Compare saved snapshots under the same academic profile and curriculum
-      assumptions.
-    </p>
+    <h1>{t('compare.heading')}</h1>
+    <p>{t('compare.lead')}</p>
   </div>
 </div>
 {#if plans.length < 2}<div class="empty-panel">
-    <h2>Give yourself another option.</h2>
-    <p>
-      Create or duplicate a second plan, then come back to compare the
-      differences.
-    </p>
-    <a href="/plans" class="button primary">Open study plans</a>
+    <h2>{t('compare.empty')}</h2>
+    <p>{t('compare.empty_hint')}</p>
+    <a href="/plans" class="button primary">{t('compare.open_plans')}</a>
   </div>{:else}<div class="compare-selectors">
     <label
-      >Plan A<select bind:value={leftId}
+      >{t('compare.plan_a')}<select bind:value={leftId}
         >{#each plans as plan}<option value={plan.id}>{plan.name}</option
           >{/each}</select
       ></label
     ><label
-      >Plan B<select bind:value={rightId}
+      >{t('compare.plan_b')}<select bind:value={rightId}
         >{#each plans as plan}<option value={plan.id}>{plan.name}</option
           >{/each}</select
       ></label
@@ -44,24 +40,32 @@
           <h2>{plan.name}</h2>
           <p class="tag" class:warning={!!plan.validation.findings.length}>
             {plan.validation.findings.length
-              ? `${plan.validation.findings.length} rule findings`
-              : 'Valid under modeled assumptions'}
+              ? t('compare.findings', {
+                  count: plan.validation.findings.length,
+                })
+              : t('plan.valid')}
           </p>
           <dl class="metrics">
             <div>
-              <dt>Modeled completion</dt>
+              <dt>{t('compare.completion')}</dt>
               <dd>
                 {plan.validation.completion_term
-                  ? `Semester ${plan.validation.completion_term}`
-                  : 'Unresolved'}
+                  ? t('common.semester', {
+                      term: plan.validation.completion_term,
+                    })
+                  : t('compare.unresolved')}
               </dd>
             </div>
             <div>
-              <dt>Peak semester load</dt>
-              <dd>{plan.validation.peak_credits} credits</dd>
+              <dt>{t('compare.peak')}</dt>
+              <dd>
+                {t('compare.credits_n', {
+                  count: plan.validation.peak_credits,
+                })}
+              </dd>
             </div>
             <div>
-              <dt>Credits planned</dt>
+              <dt>{t('compare.planned')}</dt>
               <dd>
                 {plan.validation.completed_credits +
                   plan.validation.planned_credits} / {plan.validation
@@ -69,34 +73,38 @@
               </dd>
             </div>
             <div>
-              <dt>Your credit limit</dt>
-              <dd>{plan.credit_cap} credits</dd>
+              <dt>{t('compare.your_limit')}</dt>
+              <dd>{t('compare.credits_n', { count: plan.credit_cap })}</dd>
             </div>
             <div>
-              <dt>Scenario IPS</dt>
+              <dt>{t('compare.ips')}</dt>
               <dd>
                 {plan.validation.planning_gpa !== null
                   ? plan.validation.planning_gpa.toFixed(2)
-                  : 'Not set'}
+                  : t('compare.not_set')}
               </dd>
             </div>
             <div>
-              <dt>Scenario setbacks</dt>
-              <dd>{plan.failed.join(', ') || 'None'}</dd>
+              <dt>{t('compare.setbacks')}</dt>
+              <dd>{plan.failed.join(', ') || t('passport.none')}</dd>
             </div>
             <div>
-              <dt>Saved revision</dt>
+              <dt>{t('compare.revision')}</dt>
               <dd>{plan.revision}</dd>
             </div>
           </dl>
-          <a href={`/plans/${plan.id}`} class="text-link">Edit this plan</a>
+          <a href={`/plans/${plan.id}`} class="text-link">{t('compare.edit')}</a
+          >
         </section>{/each}
     </div>
     <section class="panel table-scroll">
-      <h2>Course-by-course differences</h2>
+      <h2>{t('compare.differences')}</h2>
       <table>
         <thead
-          ><tr><th>Course</th><th>{left.name}</th><th>{right.name}</th></tr
+          ><tr
+            ><th>{t('compare.course')}</th><th>{left.name}</th><th
+              >{right.name}</th
+            ></tr
           ></thead
         ><tbody
           >{#each data.workspace?.curriculum.courses ?? [] as course}<tr
@@ -111,20 +119,21 @@
               >{#each [left, right] as plan}<td
                   >{data.workspace?.profile?.completed.includes(course.code) &&
                   !plan.failed.includes(course.code)
-                    ? 'Completed'
+                    ? t('compare.completed')
                     : plan.assignments[course.code]
-                      ? `Semester ${plan.assignments[course.code]}`
+                      ? t('common.semester', {
+                          term: plan.assignments[course.code]!,
+                        })
                       : course.category === 'elective'
-                        ? 'Not chosen'
-                        : 'Unscheduled'}</td
+                        ? t('compare.not_chosen')
+                        : t('compare.unscheduled')}</td
                 >{/each}</tr
             >{/each}</tbody
         >
       </table>
     </section>
-    <p class="footnote">
-      Highlighted rows differ. Completion is conditional on the modeled demo
-      rules, not a graduation guarantee.
-    </p>{:else}<p class="warning-banner">
-      Choose two different plans.
+    <p class="footnote">{t('compare.footnote')}</p>{:else}<p
+      class="warning-banner"
+    >
+      {t('compare.choose_two')}
     </p>{/if}{/if}

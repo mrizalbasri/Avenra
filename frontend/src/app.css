@@ -208,6 +208,31 @@ p {
 .sidebar-bottom {
   margin-top: auto;
 }
+.lang-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.lang-switcher button {
+  background: none;
+  border: 0;
+  padding: 4px 2px;
+  font: inherit;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.lang-switcher button[aria-pressed='true'] {
+  color: var(--accent);
+  font-weight: 650;
+}
+.lang-switcher.in-sidebar {
+  padding: 0 12px 10px;
+}
+.lang-switcher.in-topbar {
+  display: none;
+}
 .identity {
   display: flex;
   align-items: center;
@@ -1137,6 +1162,9 @@ td {
   }
   .sidebar-bottom {
     display: none;
+  }
+  .lang-switcher.in-topbar {
+    display: inline-flex;
   }
   .app-topbar {
     padding: 0 17px;

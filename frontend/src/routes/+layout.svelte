@@ -4,30 +4,53 @@
   import { invalidateAll } from '$app/navigation';
   import Icon from '#lib/components/Icon.svelte';
   import WorkspaceSwitcher from '#lib/components/WorkspaceSwitcher.svelte';
+  import LanguageSwitcher from '#lib/components/LanguageSwitcher.svelte';
+  import { provideI18n, useI18n } from '#lib/i18n/context.js';
   import favicon from '#lib/assets/avenra.svg';
   import type { LayoutProps } from './$types';
   let { children, data }: LayoutProps = $props();
+  provideI18n(() => data.locale);
+  const { t } = useI18n();
+  // The server sets lang on first render; keep it in step after a client-side switch.
+  $effect(() => {
+    document.documentElement.lang = data.locale;
+  });
   let landing = $derived(
     page.url.pathname === '/' &&
       (!data.workspace?.profile || page.url.searchParams.has('intro')),
   );
   const navigation = [
-    { href: '/', label: 'Overview', short: 'Overview', icon: 'home' },
-    { href: '/plans', label: 'Study plans', short: 'Plans', icon: 'plans' },
+    {
+      href: '/',
+      key: 'nav.overview',
+      short: 'nav.overview.short',
+      icon: 'home',
+    },
+    {
+      href: '/plans',
+      key: 'nav.plans',
+      short: 'nav.plans.short',
+      icon: 'plans',
+    },
     {
       href: '/compare',
-      label: 'Compare plans',
-      short: 'Compare',
+      key: 'nav.compare',
+      short: 'nav.compare.short',
       icon: 'compare',
     },
-    { href: '/study', label: 'Study & focus', short: 'Study', icon: 'study' },
+    {
+      href: '/study',
+      key: 'nav.study',
+      short: 'nav.study.short',
+      icon: 'study',
+    },
     {
       href: '/profile',
-      label: 'Academic profile',
-      short: 'Profile',
+      key: 'nav.profile',
+      short: 'nav.profile.short',
       icon: 'profile',
     },
-  ];
+  ] as const;
 </script>
 
 <svelte:head
@@ -40,7 +63,7 @@
     {#if data.workspaceError}<div class="error-banner" role="alert">
         {data.workspaceError}<button
           class="button subtle"
-          onclick={() => invalidateAll()}>Retry connection</button
+          onclick={() => invalidateAll()}>{t('layout.retry')}</button
         >
       </div>{/if}{@render children()}
   </main>{:else}<div class="app-shell">
@@ -48,7 +71,7 @@
       <a href="/" class="logo"
         ><img src={favicon} alt="" width="34" height="28" />avenra.</a
       >
-      <nav aria-label="Main navigation">
+      <nav aria-label={t('nav.main')}>
         {#each navigation as item}<a
             href={item.href}
             class:active={item.href === '/'
@@ -62,26 +85,31 @@
               ? 'page'
               : undefined}
             ><Icon name={item.icon} size={18} /><span class="label-full"
-              >{item.label}</span
-            ><span class="label-short" aria-hidden="true">{item.short}</span></a
+              >{t(item.key)}</span
+            ><span class="label-short" aria-hidden="true">{t(item.short)}</span
+            ></a
           >{/each}
       </nav>
       <div class="sidebar-bottom">
-        <a href="/?intro=1"><Icon name="home" size={16} />About Avenra</a>
-        <a href="/methodology"
-          ><Icon name="info" size={16} /> Rules & methodology</a
+        <a href="/?intro=1"
+          ><Icon name="home" size={16} />{t('sidebar.about')}</a
         >
+        <a href="/methodology"
+          ><Icon name="info" size={16} /> {t('sidebar.methodology')}</a
+        >
+        <LanguageSwitcher class="in-sidebar" />
         <div class="identity">
           <span class="avatar"
             >{data.workspace?.profile?.alias?.[0] ?? 'A'}</span
           >
           <div>
-            <strong>{data.workspace?.profile?.alias ?? 'Your workspace'}</strong
+            <strong
+              >{data.workspace?.profile?.alias ??
+                t('sidebar.workspace')}</strong
             ><small
-              >Local prototype | {data.workspace?.curriculum.status ===
-              'synthetic'
-                ? 'Synthetic data'
-                : 'Your curriculum'}</small
+              >{data.workspace?.curriculum.status === 'synthetic'
+                ? t('sidebar.identity.synthetic')
+                : t('sidebar.identity.own')}</small
             >
           </div>
         </div>
@@ -94,19 +122,20 @@
           name={data.workspace?.profile?.alias}
         />
         <div>
+          <LanguageSwitcher class="in-topbar" />
           <span class="connection-dot" class:disconnected={!data.workspace}
           ></span><span
             >{data.workspace
-              ? 'Workspace connected'
-              : 'Workspace unavailable'}</span
-          ><span class="tag">DEMO</span>
+              ? t('topbar.connected')
+              : t('topbar.unavailable')}</span
+          ><span class="tag">{t('topbar.demo')}</span>
         </div>
       </header>
       <main id="main-content" class:landing-main={landing}>
         {#if data.workspaceError}<div class="error-banner" role="alert">
             {data.workspaceError}<button
               class="button subtle"
-              onclick={() => invalidateAll()}>Retry connection</button
+              onclick={() => invalidateAll()}>{t('layout.retry')}</button
             >
           </div>{/if}
         {#key page.url.pathname}{@render children()}{/key}

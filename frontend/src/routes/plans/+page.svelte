@@ -2,9 +2,11 @@
   import { goto, invalidateAll } from '$app/navigation';
   import { api } from '#lib/api.js';
   import Icon from '#lib/components/Icon.svelte';
+  import { useI18n } from '#lib/i18n/context.js';
   import type { Plan } from '#lib/types.js';
   import type { PageProps } from './$types';
   let { data }: PageProps = $props();
+  const { t, msg } = useI18n();
   let name = $state('');
   let busy = $state(false);
   let error = $state('');
@@ -18,32 +20,30 @@
     error = '';
     try {
       const plan = await api<Plan>('plans', 'POST', {
-        name: copy ? `${copy.name} copy` : name,
+        name: copy ? t('plans.copy_name', { name: copy.name }) : name,
         copy_from: copy?.id ?? null,
       });
       await invalidateAll();
       await goto(`/plans/${plan.id}`);
     } catch (e) {
-      error = (e as Error).message;
+      error = msg.errorText(e);
     } finally {
       busy = false;
     }
   }
 </script>
 
-<svelte:head><title>Avenra | Study plans</title></svelte:head>
+<svelte:head><title>{t('plans.title')}</title></svelte:head>
 <div class="page-heading">
   <div>
-    <h1>Your plans. Your possibilities.</h1>
-    <p>
-      Keep a baseline, try something different, and compare before deciding.
-    </p>
+    <h1>{t('plans.heading')}</h1>
+    <p>{t('plans.lead')}</p>
   </div>
 </div>
 {#if !data.workspace?.profile}<div class="empty-panel">
-    <h2>Start with your academic profile.</h2>
-    <p>Open the demo workspace from Overview to create your first plan.</p>
-    <a href="/" class="button primary">Go to overview</a>
+    <h2>{t('plans.start')}</h2>
+    <p>{t('plans.start_hint')}</p>
+    <a href="/" class="button primary">{t('plans.go_overview')}</a>
   </div>{:else}
   <form
     class="inline-create"
@@ -52,28 +52,26 @@
       create();
     }}
   >
-    <label for="plan-name">New plan name</label><input
+    <label for="plan-name">{t('plans.new_name')}</label><input
       id="plan-name"
       bind:value={name}
-      placeholder="e.g. Internship next year"
+      placeholder={t('plans.name_placeholder')}
       maxlength="100"
       required
     /><button class="button primary" disabled={busy}
-      ><Icon name="plus" size={16} />Create plan</button
+      ><Icon name="plus" size={16} />{t('plans.create')}</button
     >
   </form>
   {#if error}<p class="error-banner" role="alert">{error}</p>{/if}
   <div class="section-heading">
     <div class="segmented">
       <button class:chosen={!archived} onclick={() => (archived = false)}
-        >Active plans</button
+        >{t('plans.active')}</button
       ><button class:chosen={archived} onclick={() => (archived = true)}
-        >Archived</button
+        >{t('plans.archived')}</button
       >
     </div>
-    <span class="muted small"
-      >{plans.length} {plans.length === 1 ? 'plan' : 'plans'}</span
-    >
+    <span class="muted small">{t('plans.count', { count: plans.length })}</span>
   </div>
   <div class="plan-grid">
     {#each plans as plan}<article class="plan-tile">
@@ -82,29 +80,32 @@
             class="tag"
             class:warning={!!plan.validation.findings.length}
             >{plan.validation.findings.length
-              ? 'Needs review'
-              : 'Valid under assumptions'}</span
+              ? t('plans.needs_review')
+              : t('overview.plans.valid')}</span
           >
         </div>
         <h2><a href={`/plans/${plan.id}`}>{plan.name}</a></h2>
         <p>
-          {plan.validation.remaining_credits} remaining credits | {plan.credit_cap}
-          credit cap
+          {t('plans.tile_meta', {
+            remaining: plan.validation.remaining_credits,
+            cap: plan.credit_cap,
+          })}
         </p>
         <p class="small muted">
           {plan.validation.completion_term
-            ? `Modeled completion: semester ${plan.validation.completion_term}`
-            : `${plan.validation.findings.length} rule findings to review`}
+            ? t('plan.completion', { term: plan.validation.completion_term })
+            : t('plans.findings_review', {
+                count: plan.validation.findings.length,
+              })}
         </p>
         <div class="tile-actions">
           <a class="button" href={`/plans/${plan.id}`}
-            >{archived ? 'View & restore' : 'Open plan'}<Icon
-              name="arrow"
-              size={15}
-            /></a
+            >{archived
+              ? t('plans.view_restore')
+              : t('overview.plans.open')}<Icon name="arrow" size={15} /></a
           ><button
             class="button icon-button"
-            aria-label={`Duplicate ${plan.name}`}
+            aria-label={t('plans.duplicate', { name: plan.name })}
             disabled={busy}
             onclick={() => create(plan)}><Icon name="copy" size={17} /></button
           >
@@ -112,11 +113,13 @@
       </article>{/each}
   </div>
   {#if !plans.length}<div class="empty-panel">
-      <h2>{archived ? 'No archived plans.' : 'Your next plan starts here.'}</h2>
+      <h2>
+        {archived ? t('plans.empty_archived') : t('plans.empty_active')}
+      </h2>
       <p>
         {archived
-          ? 'Plans you archive remain available here.'
-          : 'Give your plan a name above to start exploring.'}
+          ? t('plans.empty_archived_hint')
+          : t('plans.empty_active_hint')}
       </p>
     </div>{/if}
 {/if}
