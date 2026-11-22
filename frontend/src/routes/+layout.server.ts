@@ -1,7 +1,12 @@
 import { validWorkspaceId, workspaceCookie } from '#lib/workspace.js';
 import type { LayoutServerLoad } from './$types';
 
-export const load: LayoutServerLoad = async ({ depends, cookies, url }) => {
+export const load: LayoutServerLoad = async ({
+  depends,
+  cookies,
+  url,
+  locals,
+}) => {
   depends('avenra:workspace');
   let workspaceId = cookies.get(workspaceCookie);
   if (!validWorkspaceId(workspaceId)) {
@@ -15,5 +20,5 @@ export const load: LayoutServerLoad = async ({ depends, cookies, url }) => {
     secure: url.protocol === 'https:',
     maxAge: 31536000,
   });
-  return { workspaceId };
+  return { workspaceId, locale: locals.locale };
 };
