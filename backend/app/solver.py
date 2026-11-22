@@ -326,6 +326,68 @@ def _explain(curriculum, plan, alternatives):
         alternative["changes"] = changes
 
 
+def _finish_term(curriculum, profile, plan, time_limit=1.0):
+    """Earliest semester every requirement can be finished, or None if it cannot."""
+    status, assignments = _solve(curriculum, profile, plan, OBJECTIVES[0], time_limit=time_limit)
+    if assignments is None:
+        return None, status == cp_model.UNKNOWN
+    placed = [term for term in assignments.values() if term is not None]
+    return (max(placed) if placed else profile.current_term - 1), False
+
+
+def outlook(curriculum: Curriculum, profile, plan) -> dict:
+    """Will this plan graduate on time, and which courses would delay it if failed?
+
+    A course is critical when failing it this semester pushes the earliest
+    possible graduation later (or beyond the plan). Each course is tested with the
+    same solver and rules, so the answer is not a guess.
+    """
+    target = curriculum.target_terms
+    # Simulate over the full study period, so a delay is a number, not "does not fit".
+    longest = curriculum.max_terms
+    finish, timed_out = _finish_term(curriculum, profile, variant(plan, horizon=longest))
+    result = {
+        "target_term": target,
+        "completion_term": finish,
+        "delay": None if finish is None else max(0, finish - target),
+        "critical": [],
+        "timed_out": timed_out,
+    }
+    if finish is None:
+        result["status"] = "unknown" if timed_out else "unresolved"
+        return result
+    result["status"] = "late" if finish > target else "on_track"
+    names = {c.code: c for c in curriculum.courses}
+    completed = completed_codes(profile, plan)
+    this_term = [
+        code
+        for code, term in plan.assignments.items()
+        if term == profile.current_term and code in names and code not in completed
+    ]
+    for code in this_term:
+        if code in plan.failed:
+            continue
+        failed_finish, _ = _finish_term(
+            curriculum, profile, variant(plan, failed=[*plan.failed, code], horizon=longest)
+        )
+        extra = None if failed_finish is None else failed_finish - finish
+        if extra is None or extra > 0:
+            result["critical"].append(
+                {
+                    "code": code,
+                    "name": names[code].name,
+                    "extra_semesters": extra,
+                    "finish_if_failed": failed_finish,
+                    "late_if_failed": failed_finish is None or failed_finish > target,
+                }
+            )
+    # Unrecoverable first, then the largest delay.
+    result["critical"].sort(
+        key=lambda c: (c["extra_semesters"] is not None, -(c["extra_semesters"] or 0))
+    )
+    return result
+
+
 def solve_plans(curriculum: Curriculum, profile, plan, time_limit=3.0) -> dict:
     base = {"source_revision": plan.revision, "profile_revision": profile.revision}
     completed = completed_codes(profile, plan)

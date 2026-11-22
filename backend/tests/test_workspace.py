@@ -86,6 +86,36 @@ def test_failing_a_current_course_moves_its_retake_to_a_later_semester(client, w
     assert all(a["assignments"]["IF2201"] >= 6 for a in result["alternatives"])
 
 
+def test_outlook_reports_on_time_graduation_and_critical_courses(client, workspace):
+    plan = workspace["plans"][0]
+    result = client.get(f"/api/v1/plans/{plan['id']}/outlook").json()
+    assert result["status"] == "on_track"
+    assert (result["target_term"], result["completion_term"], result["delay"]) == (8, 8, 0)
+    critical = {c["code"]: c for c in result["critical"]}
+    assert set(critical) == {"IF2103"}
+    assert critical["IF2103"]["extra_semesters"] == 1
+    assert critical["IF2103"]["finish_if_failed"] == 9
+    assert critical["IF2103"]["late_if_failed"]
+
+
+def test_outlook_counts_an_existing_setback_and_reports_lateness(client, workspace):
+    plan = save(client, workspace["plans"][0], failed=["IF2101"])
+    result = client.get(f"/api/v1/plans/{plan['id']}/outlook").json()
+    assert result["status"] == "on_track"
+    assert {"IF2103", "IF2104"} <= {c["code"] for c in result["critical"]}
+    tight = save(client, plan, failed=["IF2101", "IF2103"], expected_gpa=1.8)
+    late = client.get(f"/api/v1/plans/{tight['id']}/outlook").json()
+    assert late["status"] == "late"
+    assert late["completion_term"] > 8
+    assert late["delay"] == late["completion_term"] - 8
+
+
+def test_outlook_is_scoped_to_the_workspace(client, workspace):
+    plan = workspace["plans"][0]
+    other = {"X-Workspace-ID": "someone-else"}
+    assert client.get(f"/api/v1/plans/{plan['id']}/outlook", headers=other).status_code == 404
+
+
 def test_infeasible_reports_reasons_and_smallest_fix(client, workspace):
     plan = save(client, workspace["plans"][0], credit_cap=12)
     result = solve(client, plan)
