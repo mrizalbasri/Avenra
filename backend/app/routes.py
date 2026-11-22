@@ -18,7 +18,7 @@ from app.schemas import (
     TaskEdit,
     WorkspaceImport,
 )
-from app.solver import solve_plans
+from app.solver import outlook, solve_plans
 from app.validation import bottlenecks, validate_plan
 
 router = APIRouter(prefix="/api/v1")
@@ -259,6 +259,14 @@ def edit_plan(plan_id: str, payload: PlanEdit, db: DB):
         )
     db.commit()
     return plan_response(plan_or_404(db, plan_id), profile)
+
+
+@router.get("/plans/{plan_id}/outlook")
+def plan_outlook(plan_id: str, db: DB):
+    """Graduation timing and critical courses for a saved plan."""
+    plan = plan_or_404(db, plan_id)
+    profile = profile_or_404(db)
+    return outlook(curriculum_for(profile), profile, plan)
 
 
 @router.post("/plans/{plan_id}/solve")

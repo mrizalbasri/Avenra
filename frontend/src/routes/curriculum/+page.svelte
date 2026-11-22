@@ -13,6 +13,7 @@
   let lastGpa = $state<number | null>(null);
   let graduationCredits = $state<number | null>(null);
   let maxTerms = $state(14);
+  let targetTerms = $state(8);
   let gpaRules = $state('3.00 = 24\n2.50 = 21\n2.00 = 18\n0.00 = 15');
   let csv = $state('');
   let busy = $state(false);
@@ -57,6 +58,7 @@
           graduation_credits:
             typeof graduationCredits === 'number' ? graduationCredits : null,
           max_terms: maxTerms,
+          target_terms: targetTerms,
           gpa_credit_rules: rules,
           courses,
         },
@@ -150,6 +152,14 @@
           max="300"
           bind:value={graduationCredits}
           placeholder="e.g. 144"
+        /></label
+      ><label
+        >On-time graduation (semester)<input
+          type="number"
+          min="1"
+          max="14"
+          bind:value={targetTerms}
+          required
         /></label
       ><label
         >Maximum study period (semesters)<input

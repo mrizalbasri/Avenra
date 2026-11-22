@@ -38,7 +38,30 @@ This extends the foundation plan with operational local workflows.
 The existing `postgres-local` instance on port 5434 hosts database `avenra`.
 Revisions 0002–0005 add profiles/plans/tasks/sessions, personal curriculum JSON,
 independent canvas coordinates, and profile/scenario IPS values. Existing tables in other databases are untouched.
-Apply migrations before opening the app; no schema is auto-created at API startup.
+Apply migrations before opening the app; with PostgreSQL no schema is auto-created
+at API startup.
+
+Local mode (`AVENRA_LOCAL=1`) is groundwork for a desktop build. The API then
+ignores `DATABASE_URL`, keeps a SQLite file at `%APPDATA%\Avenra\avenra.db` on
+Windows or `~/Library/Application Support/Avenra/avenra.db` on macOS
+(`AVENRA_DATA_DIR` overrides it), and applies migrations itself on start.
+
+## Graduation outlook and reminders
+
+- `GET /api/v1/plans/{id}/outlook` compares the saved plan's completion semester with
+  the curriculum's `target_terms` (default 8). When the plan still has rule findings
+  it falls back to the earliest modeled finish and says so. It re-solves once per
+  course planned this semester to flag courses whose failure would push the earliest
+  modeled finish later, searching the full study period so a delay is a number of
+  semesters. Only optimal solves count; a time-limited answer is reported as unknown
+  and never flags a course. The Overview renders first and fills the outlook in.
+- The Overview shows that outlook, the credits toward graduation, and a "Needs your
+  attention" list: targets due within two days or overdue, critical courses without
+  a study target, and rule findings in the first active plan.
+- Study targets with a due date export to an `.ics` file with a reminder the evening
+  before. Reminders inside Avenra appear only while it is open.
+- Phones get a bottom tab bar, 44 px touch targets, 16 px inputs, and the semester
+  board with the setback tools before it.
 
 ## Privacy and release boundary
 

@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -5,10 +7,20 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.config import get_settings
 from app.curriculum import Curriculum, load_demo_curriculum
-from app.database import check_database
+from app.database import check_database, migrate
 from app.routes import router
 
+
+@asynccontextmanager
+async def lifespan(_):
+    # The desktop app has no separate migration step, so the API upgrades its own file.
+    if get_settings().local_mode:
+        migrate()
+    yield
+
+
 app = FastAPI(
+    lifespan=lifespan,
     title="Avenra API",
     version="0.2.0",
     description="Single-user synthetic academic planning and learning workspace. Local use only.",

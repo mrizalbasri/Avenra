@@ -326,6 +326,92 @@ def _explain(curriculum, plan, alternatives):
         alternative["changes"] = changes
 
 
+def _finish_term(curriculum, profile, plan, time_limit=2.0):
+    """Earliest semester every requirement can be finished.
+
+    Returns (term, proven). Only an OPTIMAL solve proves the earliest term; a
+    time-limited FEASIBLE answer or a timeout is reported as unproven so the caller
+    never shows a guess as fact. (None, True) means no plan fits at all.
+    """
+    status, assignments = _solve(curriculum, profile, plan, OBJECTIVES[0], time_limit=time_limit)
+    if assignments is None:
+        return None, status == cp_model.INFEASIBLE
+    placed = [term for term in assignments.values() if term is not None]
+    term = max(placed) if placed else profile.current_term - 1
+    return term, status == cp_model.OPTIMAL
+
+
+def outlook(curriculum: Curriculum, profile, plan) -> dict:
+    """When this student graduates under the saved plan, and what could delay it.
+
+    completion_term follows the saved plan when it passes every rule, otherwise the
+    earliest modeled finish. A course planned this semester is critical when failing
+    it pushes the earliest modeled finish later. Every number comes from the same
+    solver and checker; unproven answers are left out rather than guessed.
+    """
+    target = curriculum.target_terms
+    # Simulate over the full study period, so a delay is a number, not "does not fit".
+    longest = curriculum.max_terms
+    earliest, proven = _finish_term(curriculum, profile, variant(plan, horizon=longest))
+    checked = validate_plan(curriculum, profile, plan)
+    plan_term = checked["completion_term"]
+    completion = plan_term if plan_term is not None else earliest
+    result = {
+        "target_term": target,
+        "completion_term": completion,
+        "plan_term": plan_term,
+        "earliest_term": earliest if proven else None,
+        "basis": "plan" if plan_term is not None else "earliest",
+        "plan_findings": len(checked["findings"]),
+        "delay": None if completion is None else max(0, completion - target),
+        "critical": [],
+        "timed_out": not proven,
+    }
+    if completion is None:
+        result["status"] = "unresolved" if proven else "unknown"
+        return result
+    if plan_term is None and not proven:
+        # Neither a valid saved plan nor a proven earliest finish: say nothing definite.
+        result["status"] = "unknown"
+        return result
+    result["status"] = "late" if completion > target else "on_track"
+    if not proven:
+        return result
+    names = {c.code: c for c in curriculum.courses}
+    completed = completed_codes(profile, plan)
+    this_term = [
+        code
+        for code, term in plan.assignments.items()
+        if term == profile.current_term and code in names and code not in completed
+    ]
+    for code in this_term:
+        if code in plan.failed:
+            continue
+        failed_finish, failed_proven = _finish_term(
+            curriculum, profile, variant(plan, failed=[*plan.failed, code], horizon=longest)
+        )
+        if not failed_proven:
+            # A timeout says nothing about the course; do not flag it.
+            result["timed_out"] = True
+            continue
+        extra = None if failed_finish is None else failed_finish - earliest
+        if extra is None or extra > 0:
+            result["critical"].append(
+                {
+                    "code": code,
+                    "name": names[code].name,
+                    "extra_semesters": extra,
+                    "finish_if_failed": failed_finish,
+                    "late_if_failed": failed_finish is None or failed_finish > target,
+                }
+            )
+    # Unrecoverable first, then the largest delay.
+    result["critical"].sort(
+        key=lambda c: (c["extra_semesters"] is not None, -(c["extra_semesters"] or 0))
+    )
+    return result
+
+
 def solve_plans(curriculum: Curriculum, profile, plan, time_limit=3.0) -> dict:
     base = {"source_revision": plan.revision, "profile_revision": profile.revision}
     completed = completed_codes(profile, plan)

@@ -21,6 +21,7 @@ export type Curriculum = {
   credit_cap: number;
   graduation_credits: number | null;
   max_terms: number;
+  target_terms: number;
   gpa_credit_rules: GpaCreditRule[];
   courses: Course[];
 };
@@ -122,4 +123,23 @@ export type SolveResult = {
   diagnosis?: Diagnosis;
   source_revision: number;
   profile_revision: number;
+};
+export type CriticalCourse = {
+  code: string;
+  name: string;
+  extra_semesters: number | null;
+  finish_if_failed: number | null;
+  late_if_failed: boolean;
+};
+export type Outlook = {
+  status: 'on_track' | 'late' | 'unresolved' | 'unknown';
+  target_term: number;
+  completion_term: number | null;
+  plan_term: number | null;
+  earliest_term: number | null;
+  basis: 'plan' | 'earliest';
+  plan_findings: number;
+  delay: number | null;
+  critical: CriticalCourse[];
+  timed_out: boolean;
 };

@@ -12,11 +12,21 @@
       (!data.workspace?.profile || page.url.searchParams.has('intro')),
   );
   const navigation = [
-    { href: '/', label: 'Overview', icon: 'home' },
-    { href: '/plans', label: 'Study plans', icon: 'plans' },
-    { href: '/compare', label: 'Compare plans', icon: 'compare' },
-    { href: '/study', label: 'Study & focus', icon: 'study' },
-    { href: '/profile', label: 'Academic profile', icon: 'profile' },
+    { href: '/', label: 'Overview', short: 'Overview', icon: 'home' },
+    { href: '/plans', label: 'Study plans', short: 'Plans', icon: 'plans' },
+    {
+      href: '/compare',
+      label: 'Compare plans',
+      short: 'Compare',
+      icon: 'compare',
+    },
+    { href: '/study', label: 'Study & focus', short: 'Study', icon: 'study' },
+    {
+      href: '/profile',
+      label: 'Academic profile',
+      short: 'Profile',
+      icon: 'profile',
+    },
   ];
 </script>
 
@@ -50,7 +60,10 @@
                 : page.url.pathname.startsWith(item.href)
             )
               ? 'page'
-              : undefined}><Icon name={item.icon} size={18} />{item.label}</a
+              : undefined}
+            ><Icon name={item.icon} size={18} /><span class="label-full"
+              >{item.label}</span
+            ><span class="label-short" aria-hidden="true">{item.short}</span></a
           >{/each}
       </nav>
       <div class="sidebar-bottom">

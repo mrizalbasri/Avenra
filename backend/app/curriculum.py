@@ -43,6 +43,8 @@ class Curriculum(BaseModel):
     # None means every listed course is needed to graduate.
     graduation_credits: int | None = Field(default=None, ge=1, le=300)
     max_terms: int = Field(default=MAX_TERM, ge=1, le=MAX_TERM)
+    # The semester the program is meant to finish in; "on time" is measured against it.
+    target_terms: int = Field(default=8, ge=1, le=MAX_TERM)
     gpa_credit_rules: list[GpaCreditRule] = Field(default_factory=list, max_length=10)
 
     @model_validator(mode="after")
@@ -82,6 +84,8 @@ class Curriculum(BaseModel):
                 raise ValueError("Required courses exceed the graduation credits")
         if any(c.recommended_term > self.max_terms for c in self.courses):
             raise ValueError("A recommended semester is beyond the maximum study period")
+        if self.target_terms > self.max_terms:
+            raise ValueError("The target semester is beyond the maximum study period")
         return self
 
     def gpa_cap(self, gpa: float | None) -> int | None:
