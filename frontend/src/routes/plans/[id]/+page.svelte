@@ -269,6 +269,8 @@
     nodes = [...columns, ...cards];
   });
   onMount(() => {
+    // Dragging cards on a small canvas is awkward, so phones start on the board.
+    if (window.matchMedia('(max-width: 720px)').matches) view = 'board';
     try {
       recovered = localStorage.getItem(draftKey());
     } catch {
@@ -573,7 +575,7 @@
       </div>{/if}
   </section>
   <aside class="inspector">
-    <section>
+    <section class="ins-settings">
       <h2>Plan settings</h2>
       <label
         >Plan name<input
@@ -621,7 +623,7 @@
           : ''}. Maximum study period: {data.curriculum.max_terms} semesters.
       </p>
     </section>
-    <section>
+    <section class="ins-course">
       <h2>{course ? course.name : 'Course details'}</h2>
       {#if course}<p class="muted small">
           {course.code} | {course.credits} credits | {course.category ===
@@ -649,7 +651,7 @@
           move it.
         </p>{/if}
     </section>
-    <section>
+    <section class="ins-setback">
       <h2>Simulate a setback</h2>
       <p class="muted small">
         Mark a course you might fail this semester, or a passed course you must
@@ -700,7 +702,7 @@
           use your profile IPS.
         </p>{/if}
     </section>
-    <section>
+    <section class="ins-recovery">
       <h2>Find a recovery route</h2>
       <p class="muted small">
         Compare earlier completion with a lighter peak workload under the demo
@@ -713,7 +715,7 @@
         >{solving ? 'Finding alternatives…' : 'Generate alternatives'}</button
       >{#if dirty}<p class="small muted">Save your changes first.</p>{/if}
     </section>
-    <section>
+    <section class="ins-archive">
       <label class="checkbox-label"
         ><input
           type="checkbox"
