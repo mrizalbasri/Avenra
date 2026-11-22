@@ -4,10 +4,12 @@
   import { invalidateAll } from '$app/navigation';
   import { api } from '#lib/api.js';
   import Icon from '#lib/components/Icon.svelte';
+  import { useI18n } from '#lib/i18n/context.js';
   import { downloadIcs, tasksToIcs } from '#lib/calendar.js';
   import type { Task } from '#lib/types.js';
   import type { PageProps } from './$types';
   let { data }: PageProps = $props();
+  const { t, locale, msg } = useI18n();
   let course = $state(
     untrack(
       () =>
@@ -50,7 +52,8 @@
   );
   let tasks = $derived(
     data.study.tasks.filter(
-      (t) => filter === 'all' || (filter === 'done' ? t.done : !t.done),
+      (task) =>
+        filter === 'all' || (filter === 'done' ? task.done : !task.done),
     ),
   );
   let focusTotal = $derived(
@@ -79,8 +82,7 @@
         }),
       );
     } catch {
-      notice =
-        'Browser recovery is unavailable. Keep this page open until you save the session.';
+      notice = t('study.notice.no_storage');
     }
   }
   onMount(() => {
@@ -119,7 +121,7 @@
         restored = true;
       }
     } catch {
-      notice = 'The previous timer could not be restored. Start a new session.';
+      notice = t('study.notice.no_restore');
     }
     hydrated = true;
     const timer = setInterval(() => {
@@ -139,8 +141,8 @@
       running = false;
       notice =
         mode === 'focus'
-          ? 'Focus block complete. Save your reflection, then take a break.'
-          : 'Break complete. Ready for your next focus block?';
+          ? t('study.notice.focus_done')
+          : t('study.notice.break_done');
     }
   });
   $effect(() => {
@@ -175,7 +177,7 @@
     if (
       (running || accumulated > 0) &&
       mode === 'focus' &&
-      !window.confirm('Discard this unsaved focus session?')
+      !window.confirm(t('study.discard'))
     )
       return;
     running = false;
@@ -211,9 +213,9 @@
       duration = (minutes || 25) * 60;
       localStorage.removeItem(key);
       await invalidateAll();
-      notice = 'Focus session saved. Time spent does not imply course mastery.';
+      notice = t('study.notice.saved');
     } catch (e) {
-      error = (e as Error).message;
+      error = msg.errorText(e);
     } finally {
       busy = false;
     }
@@ -230,9 +232,9 @@
       title = '';
       due = '';
       await invalidateAll();
-      notice = 'Study target added.';
+      notice = t('study.notice.added');
     } catch (e) {
-      error = (e as Error).message;
+      error = msg.errorText(e);
     } finally {
       busy = false;
     }
@@ -247,30 +249,31 @@
       });
       await invalidateAll();
     } catch (e) {
-      error = (e as Error).message;
+      error = msg.errorText(e);
     } finally {
       busy = false;
     }
   }
 </script>
 
-<svelte:head><title>Avenra | Study & focus</title></svelte:head>
+<svelte:head><title>{t('study.title')}</title></svelte:head>
 <div class="page-heading">
   <div>
-    <h1>Give your plan some focus.</h1>
-    <p>Small, specific learning targets. Time set aside to work on them.</p>
+    <h1>{t('study.heading')}</h1>
+    <p>{t('study.lead')}</p>
   </div>
   <span class="tag"
-    ><Icon name="clock" size={14} />{Math.floor(focusTotal / 60)} focused minutes
-    recorded</span
+    ><Icon name="clock" size={14} />{t('study.minutes_tag', {
+      minutes: Math.floor(focusTotal / 60),
+    })}</span
   >
 </div>
 {#if error || data.studyError}<p class="error-banner" role="alert">
-    {error || data.studyError}
+    {error || msg.errorText(data.studyError)}
   </p>{/if}{#if notice}<p class="success-banner" role="status">{notice}</p>{/if}
 {#if !data.workspace?.profile}<div class="empty-panel">
-    <h2>Open a workspace to start learning.</h2>
-    <a href="/" class="button primary">Go to overview</a>
+    <h2>{t('study.open_workspace')}</h2>
+    <a href="/" class="button primary">{t('plans.go_overview')}</a>
   </div>{:else}
   <div class="study-layout">
     <section>
@@ -281,48 +284,51 @@
           addTask();
         }}
       >
-        <h2>What's your next learning target?</h2>
+        <h2>{t('study.next_target')}</h2>
         <label
-          >Course<select bind:value={course}
+          >{t('study.course')}<select bind:value={course}
             >{#each data.workspace.curriculum.courses as c}<option
                 value={c.code}>{c.code} | {c.name}</option
               >{/each}</select
           ></label
         ><label
-          >Specific target<input
+          >{t('study.target')}<input
             bind:value={title}
-            placeholder="e.g. Solve 5 linked-list exercises"
+            placeholder={t('study.target_placeholder')}
             maxlength="250"
             required
           /></label
         >
         <div class="form-grid">
           <label
-            >Target date (optional)<input type="date" bind:value={due} /></label
+            >{t('study.target_date')}<input
+              type="date"
+              bind:value={due}
+            /></label
           ><button
             class="button primary align-end"
             disabled={busy || !title.trim()}
-            >Add study target<Icon name="plus" size={15} /></button
+            >{t('study.add')}<Icon name="plus" size={15} /></button
           >
         </div>
       </form>
       <section class="panel">
         <div class="section-heading">
-          <h2>Your study targets</h2>
+          <h2>{t('study.targets')}</h2>
           <div class="segmented">
             <button
               class:chosen={filter === 'all'}
-              onclick={() => (filter = 'all')}>All</button
+              onclick={() => (filter = 'all')}>{t('study.filter.all')}</button
             ><button
               class:chosen={filter === 'open'}
-              onclick={() => (filter = 'open')}>Open</button
+              onclick={() => (filter = 'open')}>{t('study.filter.open')}</button
             ><button
               class:chosen={filter === 'done'}
-              onclick={() => (filter = 'done')}>Done</button
+              onclick={() => (filter = 'done')}>{t('study.filter.done')}</button
             >
           </div>
         </div>
-        {#if data.study.tasks.some((t) => t.due_date && !t.done)}<div
+        {#if data.study.tasks.some((task) => task.due_date && !task.done)}<div
             class="calendar-export"
           >
             <button
@@ -337,12 +343,16 @@
                         c.name,
                       ]),
                     ),
+                    new Date(),
+                    {
+                      withCourse: (course) => t('study.ics_course', { course }),
+                      plain: t('study.ics_plain'),
+                    },
                   ),
-                )}>Add open targets to my calendar (.ics)</button
+                )}>{t('study.ics')}</button
             >
             <p class="muted small">
-              Opens in Google Calendar, Apple Calendar, or Outlook with a
-              reminder at 19:00 the day before each due date.
+              {t('study.ics_hint')}
             </p>
           </div>{/if}
         {#each tasks as task}<div class="study-task">
@@ -355,60 +365,63 @@
               /><span class:completed-task={task.done}
                 ><strong>{task.title}</strong><small
                   >{task.course_code}{task.due_date
-                    ? ` | Due ${task.due_date}`
+                    ? t('study.due', { date: task.due_date })
                     : ''}</small
                 ></span
               ></label
             >
           </div>{/each}{#if !tasks.length}<p class="muted">
-            No targets in this view. Add a clear, achievable target above.
+            {t('study.no_targets')}
           </p>{/if}
       </section>
       <section class="panel">
-        <h2>Recent focus sessions</h2>
+        <h2>{t('study.recent')}</h2>
         {#each data.study.sessions.slice(0, 12) as session}<div
             class="session-row"
           >
             <div>
               <strong>{session.course_code}</strong>
-              <p>{session.note || 'Focused study session'}</p>
+              <p>{session.note || t('study.default_note')}</p>
             </div>
             <span
               >{Math.floor(session.seconds / 60)}m {session.seconds % 60}s</span
             ><time datetime={session.created_at}
-              >{new Date(session.created_at).toLocaleDateString('en-GB', {
-                timeZone: 'Asia/Jakarta',
-              })}</time
+              >{new Date(session.created_at).toLocaleDateString(
+                locale() === 'id' ? 'id-ID' : 'en-GB',
+                { timeZone: 'Asia/Jakarta' },
+              )}</time
             >
           </div>{/each}{#if !data.study.sessions.length}<p class="muted">
-            Your saved sessions will appear here.
+            {t('study.no_sessions')}
           </p>{/if}
       </section>
     </section>
     <aside class="panel focus-panel">
       <div class="section-heading">
-        <h2>Focus space</h2>
+        <h2>{t('study.focus_space')}</h2>
         <Icon name="clock" />
       </div>
       <div class="segmented">
         <button
           class:chosen={mode === 'focus'}
           disabled={busy}
-          onclick={() => reset('focus')}>Focus</button
+          onclick={() => reset('focus')}>{t('study.mode.focus')}</button
         ><button
           class:chosen={mode === 'break'}
           disabled={busy}
-          onclick={() => reset('break')}>Break</button
+          onclick={() => reset('break')}>{t('study.mode.break')}</button
         >
       </div>
-      <div class="timer" role="timer" aria-label="Time remaining">{clock}</div>
+      <div class="timer" role="timer" aria-label={t('study.timer_aria')}>
+        {clock}
+      </div>
       <p class="timer-caption">
         {sessionId ? sessionCourse : course} | {mode === 'focus'
-          ? 'One thing at a time.'
-          : 'Step away and recharge.'}
+          ? t('study.caption.focus')
+          : t('study.caption.break')}
       </p>
       {#if restored}<p class="warning-banner small">
-          Restored in a paused state. Resume when you're ready.
+          {t('study.restored')}
         </p>{/if}
       <div class="timer-actions">
         <button
@@ -416,17 +429,17 @@
           disabled={busy || remaining === 0}
           onclick={() => (running ? pause() : start())}
           >{running
-            ? 'Pause'
+            ? t('study.pause')
             : accumulated > 0
-              ? 'Resume'
-              : 'Start session'}</button
+              ? t('study.resume')
+              : t('study.start')}</button
         ><button class="button" disabled={busy} onclick={() => reset(mode)}
-          >Reset</button
+          >{t('study.reset')}</button
         >
       </div>
       <div class="form-grid">
         <label
-          >Focus minutes<input
+          >{t('study.focus_minutes')}<input
             type="number"
             min="1"
             max="120"
@@ -436,7 +449,7 @@
               (duration = Math.min(120, Math.max(1, minutes || 25)) * 60)}
           /></label
         ><label
-          >Break minutes<input
+          >{t('study.break_minutes')}<input
             type="number"
             min="1"
             max="120"
@@ -446,22 +459,20 @@
         >
       </div>
       {#if mode === 'focus'}<label
-          >What did you learn?<textarea
+          >{t('study.learned')}<textarea
             bind:value={sessionNote}
             maxlength="500"
             rows="3"
-            placeholder="A short reflection or your next question…"
+            placeholder={t('study.learned_placeholder')}
           ></textarea></label
         ><button
           class="button full-width"
           disabled={busy || elapsed < 1}
           onclick={saveSession}
-          >{busy ? 'Saving…' : 'Finish & save session'}</button
+          >{busy ? t('study.saving') : t('study.finish')}</button
         >{/if}
       <p class="footnote">
-        The timer uses timestamps, so background tabs do not lose elapsed time.
-        Reload restores it paused. Sessions are saved to PostgreSQL when you
-        finish.
+        {t('study.footnote')}
       </p>
     </aside>
   </div>{/if}

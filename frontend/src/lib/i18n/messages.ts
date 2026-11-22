@@ -1,4 +1,3 @@
-import { ApiError } from '#lib/errors.js';
 import type { Curriculum, Alternative, SolveResult } from '#lib/types.js';
 import { lookup, type Locale, type Params } from './index.js';
 
@@ -69,12 +68,18 @@ export function createMessages(locale: () => Locale) {
     describe,
     ruleLabel: (rule: string) =>
       say(`rule.${rule}`) ?? rule.replaceAll('_', ' '),
+    // Accepts an ApiError or a plain {message, code, params} object from a load function.
     errorText(error: unknown): string {
-      if (error instanceof ApiError && error.code)
+      const known = error as {
+        code?: string;
+        params?: Record<string, unknown>;
+        message?: string;
+      } | null;
+      if (known && typeof known === 'object' && known.code)
         return describe('error', {
-          code: error.code,
-          params: error.params,
-          message: error.message,
+          code: known.code,
+          params: known.params,
+          message: known.message ?? known.code,
         });
       return error instanceof Error ? error.message : String(error);
     },

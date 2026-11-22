@@ -2,9 +2,11 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { requestApi } from '#lib/api.js';
+  import { useI18n } from '#lib/i18n/context.js';
   import { selectWorkspace, validWorkspaceId } from '#lib/workspace.js';
   import type { Workspace } from '#lib/types.js';
   let { id, name }: { id?: string; name?: string } = $props();
+  const { t, msg } = useI18n();
   let workspaces = $state<{ id: string; name: string }[]>([]);
   let ready = $state(false);
   let error = $state('');
@@ -43,27 +45,27 @@
     error = '';
     switching = true;
     try {
-      if (!validWorkspaceId(next)) throw new Error('Invalid workspace.');
+      if (!validWorkspaceId(next)) throw new Error(t('ws.invalid'));
       const workspace = await requestApi<Workspace>(fetch, 'workspace', next);
-      if (!workspace.profile) throw new Error('Workspace not found.');
+      if (!workspace.profile) throw new Error(t('ws.not_found'));
       selectWorkspace(next);
       window.location.assign('/');
     } catch (e) {
-      error = (e as Error).message;
+      error = msg.errorText(e);
       switching = false;
     }
   }
 </script>
 
 <label class="workspace-switcher"
-  >Workspace<select
-    aria-label="Switch workspace"
+  >{t('ws.label')}<select
+    aria-label={t('ws.aria')}
     disabled={switching}
     value={id ?? ''}
     onchange={(e) => switchTo(e.currentTarget.value)}
-    >{#if !id}<option value="">Choose a workspace</option
+    >{#if !id}<option value="">{t('ws.choose')}</option
       >{/if}{#each workspaces as w}<option value={w.id}>{w.name}</option
-      >{/each}<option value="new">+ Import another curriculum</option></select
+      >{/each}<option value="new">{t('ws.import')}</option></select
   ></label
 >
 {#if error}<p class="small" role="alert">{error}</p>{/if}

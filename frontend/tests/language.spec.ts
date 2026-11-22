@@ -213,3 +213,119 @@ test.describe('plan editor in Indonesian', () => {
     ).toBeVisible();
   });
 });
+
+test.describe('every page in Indonesian', () => {
+  test.beforeEach(async ({ context }) => {
+    await context.addCookies([
+      { name: 'avenra_locale', value: 'id', url: webOrigin },
+    ]);
+  });
+
+  // A raw message key such as "plan.save" means a translation is missing.
+  const rawKey =
+    /\b(nav|overview|plans?|study|profile|curriculum|method|errorpage|ws|finding|diag|suggest|solve|alt|advisor|assume|error|compare|passport|node|req|offer|common|rule|cap|status|lang)\.(?!json)[A-Za-z_]+/;
+
+  async function expectNoRawKeys(page: Page) {
+    const text = await page.locator('body').innerText();
+    expect(text.match(rawKey)?.[0]).toBeUndefined();
+  }
+
+  test('translates Plans, Compare, Study, Profile and Methodology', async ({
+    page,
+  }) => {
+    await openDemo(page);
+    const pages: [string, string, string][] = [
+      ['/', 'Sesuai jalur untuk semester 8.', 'Rencana studi'],
+      ['/plans', 'Rencana Anda. Kemungkinan Anda.', 'Buat rencana'],
+      ['/compare', 'Lihat untung ruginya dengan jelas.', 'Beri diri Anda'],
+      ['/study', 'Beri rencana Anda sedikit fokus.', 'Ruang fokus'],
+      ['/profile', 'Titik awal Anda.', 'Mata kuliah selesai'],
+      [
+        '/methodology',
+        'Ketahui dasar penyusunan rencana Anda.',
+        'Apa yang diperiksa',
+      ],
+      ['/curriculum', 'Kampus Anda. Kurikulum Anda.', 'Impor mata kuliah Anda'],
+    ];
+    for (const [path, heading, other] of pages) {
+      await page.goto(path);
+      await expect(
+        page.getByRole('heading', { name: heading, exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByText(other, { exact: false }).first(),
+      ).toBeVisible();
+      await expectNoRawKeys(page);
+    }
+    await expect(
+      page.getByRole('combobox', { name: 'Ganti workspace' }),
+    ).toBeVisible();
+  });
+
+  test('translates the error page, the plan editor and the passport', async ({
+    page,
+  }) => {
+    await openDemo(page);
+    await expectNoRawKeys(page);
+    await page
+      .getByRole('button', { name: 'Papan semester', exact: true })
+      .click();
+    await expectNoRawKeys(page);
+    await page.getByRole('link', { name: 'Paspor', exact: true }).click();
+    await expect(
+      page.getByRole('heading', { name: 'Paspor Keputusan Akademik' }),
+    ).toBeVisible();
+    await expectNoRawKeys(page);
+    await page.goto('/no-such-page');
+    await expect(
+      page.getByRole('heading', { name: 'Halaman itu tidak tersedia.' }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('link', { name: 'Kembali ke ringkasan' }),
+    ).toBeVisible();
+  });
+
+  test('exports the calendar file with an Indonesian description', async ({
+    page,
+  }) => {
+    await openDemo(page);
+    await page.goto('/study');
+    await page.getByLabel('Target spesifik').fill('Selesaikan latihan bab 3');
+    await page.getByLabel('Tanggal target (opsional)').fill('2026-12-01');
+    await page.getByRole('button', { name: 'Tambah target belajar' }).click();
+    await expect(page.getByText('Selesaikan latihan bab 3')).toBeVisible();
+    const download = page.waitForEvent('download');
+    await page
+      .getByRole('button', {
+        name: 'Tambahkan target terbuka ke kalender saya (.ics)',
+      })
+      .click();
+    const text = await (
+      await import('node:fs/promises')
+    ).readFile((await (await download).path())!, 'utf8');
+    // Long lines are folded with CRLF + space (RFC 5545), so unfold before matching.
+    const unfolded = text.replace(/\r\n /g, '');
+    expect(unfolded).toContain('Target belajar untuk');
+    expect(unfolded).toContain('Ditambahkan dari Avenra.');
+    expect(text).toContain('BEGIN:VALARM');
+  });
+
+  test('reports a CSV import problem in Indonesian', async ({ page }) => {
+    await page.goto('/curriculum');
+    await page.getByLabel('Alias mahasiswa').fill('Budi');
+    await page
+      .getByLabel('Universitas', { exact: true })
+      .fill('Universitas Uji');
+    await page.getByLabel('Program studi').fill('Informatika');
+    await page
+      .getByLabel('Sumber aturan atau rujukan kurikulum')
+      .fill('Pedoman uji');
+    await page.getByLabel('Atau tempel isi CSV').fill('code,name\nIF1,Dasar');
+    await page
+      .getByRole('button', { name: 'Buat workspace akademik saya' })
+      .click();
+    await expect(page.getByRole('alert')).toContainText(
+      'Kolom CSV tidak ada: credits.',
+    );
+  });
+});
