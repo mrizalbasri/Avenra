@@ -94,4 +94,29 @@ Deadline: 3 Des 2026 pukul 23:59 WIB`;
     expect(result.warnings).toEqual(['NO_TARGET', 'NO_DUE_DATE']);
     expect(result.start_date).toBe('2026-11-23');
   });
+
+  it('avoids false positives on decimals, modal may, duration weeks, and posting dates', () => {
+    const versionAndModal = parseAnnouncement(
+      '[Pengumuman]\nTugas IF2101 dengan Python 3.12.\nAssignment 1 may be done in pairs within 2 minggu.',
+      courses,
+      goals,
+      today,
+      'en',
+    );
+    expect(versionAndModal.title).toContain('Tugas IF2101');
+    expect(versionAndModal.due_time).toBeNull();
+    expect(versionAndModal.due_date).toBeNull();
+    expect(versionAndModal.warnings).toEqual(['NO_DUE_DATE']);
+
+    const withHeaderDate = parseAnnouncement(
+      'Pengumuman 20/11/2026\nTugas Basis Data dikumpulkan sebelum 28/11/2026 pukul 18.30 WIB.',
+      courses,
+      goals,
+      today,
+      'id',
+    );
+    expect(withHeaderDate.course_code).toBe('IF2102');
+    expect(withHeaderDate.due_date).toBe('2026-11-28');
+    expect(withHeaderDate.due_time).toBe('18:30 WIB');
+  });
 });

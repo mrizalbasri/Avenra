@@ -5,7 +5,7 @@ const escapeText = (value: string) =>
     .replace(/\\/g, '\\\\')
     .replace(/;/g, '\\;')
     .replace(/,/g, '\\,')
-    .replace(/\r?\n/g, '\\n');
+    .replace(/\r\n|\r|\n/g, '\\n');
 
 // Content lines longer than 75 octets must be folded (RFC 5545).
 function fold(line: string) {

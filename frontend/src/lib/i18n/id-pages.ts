@@ -191,9 +191,9 @@ export const idPages: Record<keyof typeof enPages, string> = {
   'study.announce_extract': 'Ekstrak & tinjau',
   'study.review_heading': 'Konfirmasi tugas & rencana mulai',
   'study.review_warn_target':
-    'Mata kuliah atau tujuan belum terdeteksi otomatis — silakan pilih di bawah.',
+    'Mata kuliah atau tujuan belum terdeteksi otomatis | silakan pilih di bawah.',
   'study.review_warn_due':
-    'Tanggal tenggat belum terdeteksi — tambahkan jika tugas ini punya tenggat.',
+    'Tanggal tenggat belum terdeteksi | tambahkan jika tugas ini punya tenggat.',
   'study.start_date': 'Rencana tanggal mulai (opsional)',
   'study.first_step': 'Langkah pertama kecil (opsional)',
   'study.first_step_placeholder':
@@ -206,8 +206,9 @@ export const idPages: Record<keyof typeof enPages, string> = {
   'study.start_badge': ' | Mulai {date}',
   'study.first_step_prefix': 'Langkah pertama: {step}',
   'study.start_now': 'Mulai sekarang',
-  'study.notice.started_task':
-    'Dimuat ke Ruang fokus: {step}. Tekan Mulai sesi saat siap.',
+  'study.notice.started_task': 'Sprint fokus dimulai: {step}',
+  'study.notice.session_active':
+    'Selesaikan atau atur ulang sesi fokus saat ini dulu sebelum berpindah tugas.',
   'study.ics_start_prefix': 'Mulai',
   'study.ics_first_step': 'Langkah pertama: {step}',
   'study.course': 'Mata kuliah',
@@ -228,7 +229,7 @@ export const idPages: Record<keyof typeof enPages, string> = {
   'study.filter.done': 'Selesai',
   'study.ics': 'Tambahkan target terbuka ke kalender saya (.ics)',
   'study.ics_hint':
-    'Terbuka di Google Calendar, Apple Calendar, atau Outlook dengan pengingat pukul 19.00 sehari sebelum setiap tenggat.',
+    'Terbuka di Google Calendar, Apple Calendar, atau Outlook dengan pengingat pukul 09.00 pada tanggal mulai dan pukul 19.00 sehari sebelum setiap tenggat.',
   'study.ics_course': 'Target belajar untuk {course}. Ditambahkan dari Avenra.',
   'study.ics_goal': 'Target tujuan untuk {goal}. Ditambahkan dari Avenra.',
   'study.ics_both': 'Target untuk {course} ({goal}). Ditambahkan dari Avenra.',

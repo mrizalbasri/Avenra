@@ -285,20 +285,29 @@
   }
 
   function startTaskInFocus(task: Task) {
+    if (mode === 'focus' && (running || accumulated > 0)) {
+      notice = t('study.notice.session_active');
+      return;
+    }
     if (task.course_code) {
       focusCourse = task.course_code;
     }
     const step = task.first_step || task.title;
-    if (!sessionId) {
-      sessionNote = step;
-      if (minutes > 15 && task.first_step) {
-        minutes = 15;
-        duration = 15 * 60;
-      }
-      start();
-    } else {
-      sessionNote = step;
-    }
+    const baseMinutes = Math.min(120, Math.max(1, minutes || 25));
+    const sprintMinutes = task.first_step
+      ? Math.min(baseMinutes, 15)
+      : baseMinutes;
+    mode = 'focus';
+    running = false;
+    accumulated = 0;
+    restored = false;
+    sessionId = crypto.randomUUID();
+    sessionCourse = focusCourse;
+    sessionNote = step;
+    duration = sprintMinutes * 60;
+    startedAt = Date.now();
+    tick = Date.now();
+    running = true;
     notice = t('study.notice.started_task', { step });
   }
 
@@ -306,11 +315,19 @@
     const isGoal = targetRef.startsWith('goal:');
     const targetId = targetRef.slice(targetRef.indexOf(':') + 1);
     if (!targetId) return;
-    const details = detailsText
-      .split(/\r?\n/)
-      .map((line) => line.replace(/^[-•*]\s*/, '').trim())
-      .filter(Boolean)
-      .slice(0, 8);
+    const details =
+      inputMode === 'announce'
+        ? detailsText
+            .split(/\r?\n/)
+            .map((line) =>
+              line
+                .replace(/^[-•*]\s*/, '')
+                .trim()
+                .slice(0, 160),
+            )
+            .filter(Boolean)
+            .slice(0, 8)
+        : [];
     busy = true;
     error = '';
     try {
@@ -398,6 +415,8 @@
               onclick={() => {
                 inputMode = 'manual';
                 reviewing = false;
+                reviewWarnings = [];
+                detailsText = '';
               }}>{t('study.mode_manual')}</button
             ><button
               type="button"
@@ -578,7 +597,7 @@
               {t('study.ics_hint')}
             </p>
           </div>{/if}
-        {#each tasks as task}<div class="study-task">
+        {#each tasks as task (task.id)}<div class="study-task">
             <div class="study-task-head">
               <label
                 ><input

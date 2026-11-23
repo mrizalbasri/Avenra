@@ -192,9 +192,9 @@ export const enPages = {
   'study.announce_extract': 'Extract & review',
   'study.review_heading': 'Confirm task & start plan',
   'study.review_warn_target':
-    'Could not match a course or goal automatically — choose one below.',
+    'Could not match a course or goal automatically | choose one below.',
   'study.review_warn_due':
-    'No due date was detected — add one if this task has a deadline.',
+    'No due date was detected | add one if this task has a deadline.',
   'study.start_date': 'Planned start date (optional)',
   'study.first_step': 'First tiny step (optional)',
   'study.first_step_placeholder':
@@ -206,8 +206,9 @@ export const enPages = {
   'study.start_badge': ' | Start {date}',
   'study.first_step_prefix': 'First step: {step}',
   'study.start_now': 'Start now',
-  'study.notice.started_task':
-    'Loaded into Focus space: {step}. Press Start session when ready.',
+  'study.notice.started_task': 'Focus sprint started: {step}',
+  'study.notice.session_active':
+    'Finish or reset your current focus session first before switching tasks.',
   'study.ics_start_prefix': 'Start',
   'study.ics_first_step': 'First step: {step}',
   'study.course': 'Course',
@@ -228,7 +229,7 @@ export const enPages = {
   'study.filter.done': 'Done',
   'study.ics': 'Add open targets to my calendar (.ics)',
   'study.ics_hint':
-    'Opens in Google Calendar, Apple Calendar, or Outlook with a reminder at 19:00 the day before each due date.',
+    'Opens in Google Calendar, Apple Calendar, or Outlook with a 09:00 reminder on planned start dates and a 19:00 reminder the day before each due date.',
   'study.ics_course': 'Study target for {course}. Added from Avenra.',
   'study.ics_goal': 'Goal target for {goal}. Added from Avenra.',
   'study.ics_both': 'Target for {course} ({goal}). Added from Avenra.',

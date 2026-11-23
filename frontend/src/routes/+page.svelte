@@ -183,7 +183,7 @@
       const detail = task.first_step
         ? `${context ? `${context} | ` : ''}${t('overview.attention.start_detail', { step: task.first_step })}`
         : task.due_date
-          ? t('overview.attention.task_detail_plain', { date: task.due_date })
+          ? `${context ? `${context} | ` : ''}${t('overview.attention.task_detail_plain', { date: task.due_date })}`
           : context;
       items.push({
         key: `start-${task.id}`,

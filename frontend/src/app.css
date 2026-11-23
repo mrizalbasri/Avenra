@@ -455,6 +455,7 @@ main {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
   gap: 15px;
   margin-bottom: 20px;
 }
@@ -1827,8 +1828,19 @@ html {
   .course-title small,
   .term-heading span,
   .setback-list small,
-  .identity small {
+  .identity small,
+  .study-task small,
+  .task-start-step,
+  .task-details {
     font-size: 13px;
+  }
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .study-task strong,
+  .task-start-step,
+  .task-details {
+    overflow-wrap: anywhere;
   }
   .button {
     font-size: 14px;

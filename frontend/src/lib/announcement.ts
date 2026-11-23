@@ -58,7 +58,6 @@ const WEEKDAYS: Record<string, number> = {
   minggu: 0,
   ahad: 0,
   sunday: 0,
-  sun: 0,
   senin: 1,
   monday: 1,
   mon: 1,
@@ -67,7 +66,6 @@ const WEEKDAYS: Record<string, number> = {
   tue: 2,
   rabu: 3,
   wednesday: 3,
-  wed: 3,
   kamis: 4,
   thursday: 4,
   thu: 4,
@@ -77,7 +75,6 @@ const WEEKDAYS: Record<string, number> = {
   fri: 5,
   sabtu: 6,
   saturday: 6,
-  sat: 6,
 };
 
 const toIso = (date: Date) => {
@@ -107,7 +104,10 @@ const validDate = (year: number, month: number, day: number) => {
 
 function resolveYear(month: number, day: number, today: Date): Date | null {
   const sameYear = validDate(today.getFullYear(), month, day);
-  if (!sameYear) return null;
+  if (!sameYear) {
+    // Handle Feb 29 when today is in a non-leap year.
+    return validDate(today.getFullYear() + 1, month, day);
+  }
   // If that month/day already passed more than 30 days ago, assume next year.
   const cutoff = addDays(today, -30);
   if (sameYear < cutoff) {
@@ -116,7 +116,7 @@ function resolveYear(month: number, day: number, today: Date): Date | null {
   return sameYear;
 }
 
-function extractDueDate(text: string, today: Date): string | null {
+function extractDateFromSlice(text: string, today: Date): string | null {
   // 1. ISO YYYY-MM-DD
   const iso = text.match(/\b(20\d{2})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])\b/);
   if (iso) {
@@ -133,14 +133,27 @@ function extractDueDate(text: string, today: Date): string | null {
 
   // 3. "3 Des 2026" / "3 Desember" / "15 Oct"
   const monthNames = Object.keys(MONTHS).join('|');
-  const dayMonth = text.match(
-    new RegExp(`\\b([0-3]?\\d)\\s+(${monthNames})(?:\\s+(20\\d{2}))?\\b`, 'i'),
+  const dayMonthRe = new RegExp(
+    `\\b([0-3]?\\d)\\s+(${monthNames})(?:\\s+(20\\d{2}))?\\b`,
+    'gi',
   );
-  if (dayMonth) {
-    const day = Number(dayMonth[1]);
-    const month = MONTHS[dayMonth[2].toLowerCase()];
-    const parsed = dayMonth[3]
-      ? validDate(Number(dayMonth[3]), month, day)
+  for (const match of text.matchAll(dayMonthRe)) {
+    const monthToken = match[2];
+    // Avoid false positives like "Assignment 1 may be done in pairs".
+    if (monthToken === 'may' && !match[3]) {
+      const trailing = text.slice((match.index ?? 0) + match[0].length);
+      if (
+        /^\s+(?:be|have|take|need|require|include|not|also|use|submit)\b/i.test(
+          trailing,
+        )
+      ) {
+        continue;
+      }
+    }
+    const day = Number(match[1]);
+    const month = MONTHS[monthToken.toLowerCase()];
+    const parsed = match[3]
+      ? validDate(Number(match[3]), month, day)
       : resolveYear(month, day, today);
     if (parsed) return toIso(parsed);
   }
@@ -168,14 +181,20 @@ function extractDueDate(text: string, today: Date): string | null {
   if (/\blusa\b/.test(lower)) return toIso(addDays(today, 2));
 
   // 6. Upcoming weekday names (Senin..Minggu, Monday..Sunday).
-  // Avoid matching Indonesian "minggu ini / depan / lalu / ke-N" ("week") as Sunday.
+  // Avoid matching Indonesian duration/week phrases ("minggu ini/depan/ke-N", "2 minggu", "tiap minggu") as Sunday.
   const dayPattern = new RegExp(
     `\\b(${Object.keys(WEEKDAYS).join('|')})\\b(?!\\s+(?:ini|depan|lalu|berikutnya|ke\\b|ke-\\d|\\d))`,
-    'i',
+    'gi',
   );
-  const weekdayMatch = lower.match(dayPattern);
-  if (weekdayMatch) {
-    const target = WEEKDAYS[weekdayMatch[1]];
+  for (const match of lower.matchAll(dayPattern)) {
+    const token = match[1];
+    if (token === 'minggu') {
+      const before = lower.slice(0, match.index ?? 0);
+      if (/(?:\d+|dalam|tiap|setiap|per|selama|akhir)\s+$/.test(before)) {
+        continue;
+      }
+    }
+    const target = WEEKDAYS[token];
     const diff = (target - today.getDay() + 7) % 7 || 7;
     return toIso(addDays(today, diff));
   }
@@ -183,15 +202,49 @@ function extractDueDate(text: string, today: Date): string | null {
   return null;
 }
 
+function extractDueDate(text: string, today: Date): string | null {
+  // Prefer lines or clauses explicitly mentioning a deadline over posting/header dates.
+  const deadlineRe =
+    /\b(deadline|due|batas|maksimal|maks|kumpul|dikumpulkan|pengumpulan|submit|sebelum|before)\b/i;
+  for (const line of text.split(/\r?\n/)) {
+    if (!deadlineRe.test(line)) continue;
+    const match = line.match(deadlineRe);
+    const tail = match ? line.slice(match.index ?? 0) : line;
+    const found =
+      extractDateFromSlice(tail, today) ?? extractDateFromSlice(line, today);
+    if (found) return found;
+  }
+  return extractDateFromSlice(text, today);
+}
+
 function extractTime(text: string): string | null {
-  const explicit = text.match(
-    /\b(?:pukul|jam|at|by|before|sebelum)?\s*([01]?\d|2[0-3])[:.]([0-5]\d)\s*(wib|wita|wit|am|pm)?\b/i,
+  // Colon-separated HH:MM is unambiguous; dot-separated HH.MM requires a time cue or timezone/AM-PM
+  // so decimals like "Python 3.12" or "IPS 3.25" are not misread as cutoff times.
+  const colon = text.match(
+    /\b(?:pukul|jam|at|by|before|sebelum)?\s*([01]?\d|2[0-3]):([0-5]\d)\s*(wib|wita|wit|am|pm)?\b/i,
   );
-  if (explicit) {
-    const hh = explicit[1].padStart(2, '0');
-    const mm = explicit[2];
-    const suffix = explicit[3] ? ` ${explicit[3].toUpperCase()}` : '';
+  if (colon) {
+    const hh = colon[1].padStart(2, '0');
+    const mm = colon[2];
+    const suffix = colon[3] ? ` ${colon[3].toUpperCase()}` : '';
     return `${hh}:${mm}${suffix}`;
+  }
+  const dottedWithCue = text.match(
+    /\b(?:pukul|jam|at|by|before|sebelum)\s+([01]?\d|2[0-3])\.([0-5]\d)\s*(wib|wita|wit|am|pm)?\b/i,
+  );
+  if (dottedWithCue) {
+    const hh = dottedWithCue[1].padStart(2, '0');
+    const mm = dottedWithCue[2];
+    const suffix = dottedWithCue[3] ? ` ${dottedWithCue[3].toUpperCase()}` : '';
+    return `${hh}:${mm}${suffix}`;
+  }
+  const dottedWithZone = text.match(
+    /\b([01]?\d|2[0-3])\.([0-5]\d)\s*(wib|wita|wit|am|pm)\b/i,
+  );
+  if (dottedWithZone) {
+    const hh = dottedWithZone[1].padStart(2, '0');
+    const mm = dottedWithZone[2];
+    return `${hh}:${mm} ${dottedWithZone[3].toUpperCase()}`;
   }
   const ampm = text.match(/\b(1[0-2]|[1-9])\s*(am|pm)\b/i);
   if (ampm) return `${ampm[1]}:00 ${ampm[2].toUpperCase()}`;
@@ -238,19 +291,26 @@ function matchTarget(
 }
 
 function extractTitle(text: string): string {
+  const prefixRe =
+    /^(?:\[[^\]]+\]\s*|(?:pengumuman|info|informasi|announcement|reminder|pengingat|perhatian)\s*[:\-–]?\s*)+/i;
   const lines = text
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
-  const firstLine = (lines[0] ?? text.trim())
-    .replace(
-      /^(?:\[[^\]]+\]\s*|(?:pengumuman|info|informasi|announcement|reminder|pengingat|perhatian)\s*[:\-–]\s*)+/i,
-      '',
-    )
-    .trim();
-  const sentence = firstLine.split(/(?<=[.!?])\s+/)[0] ?? firstLine;
+  let candidate = '';
+  for (const line of lines) {
+    const stripped = line.replace(prefixRe, '').trim();
+    if (stripped) {
+      candidate = stripped;
+      break;
+    }
+  }
+  const source = candidate || lines[0] || text.trim();
+  const sentence =
+    source.split(/(?<!\b(?:Dr|Prof|Mr|Mrs|Ms|No|S\.T|M\.T))(?<=[.!?])\s+/)[0] ??
+    source;
   const cleaned = sentence.replace(/[.]+$/, '').trim();
-  if (cleaned.length <= 120) return cleaned || text.trim().slice(0, 120);
+  if (cleaned.length <= 120) return cleaned || source.slice(0, 120);
   return cleaned.slice(0, 117).trimEnd() + '…';
 }
 
@@ -261,8 +321,11 @@ function extractDetails(
 ): string[] {
   const details: string[] = [];
   const add = (item: string) => {
-    const trimmed = item.trim().replace(/\s+/g, ' ');
-    if (!trimmed || trimmed.length > 160) return;
+    let trimmed = item.trim().replace(/\s+/g, ' ');
+    if (!trimmed) return;
+    if (trimmed.length > 160) {
+      trimmed = trimmed.slice(0, 157).trimEnd() + '…';
+    }
     if (
       !details.some(
         (existing) => existing.toLowerCase() === trimmed.toLowerCase(),
@@ -288,16 +351,19 @@ function extractDetails(
     );
   }
 
-  // Highlight file formats and submission channels mentioned in prose.
-  const formats = [
-    ...new Set(
-      (
-        text.match(
-          /\b(PDF|DOCX?|PPTX?|ZIP|RAR|CSV|SQL|IPYNB|GitHub|Google Drive|Google Classroom|LMS|e-learning|E-Learning)\b/gi,
-        ) ?? []
-      ).map((token) => (token.length <= 5 ? token.toUpperCase() : token)),
-    ),
-  ];
+  // Highlight file formats and submission channels mentioned in prose (case-insensitive dedupe).
+  const seenFormats = new Set<string>();
+  const formats: string[] = [];
+  for (const raw of text.match(
+    /\b(PDF|DOCX?|PPTX?|ZIP|RAR|CSV|SQL|IPYNB|GitHub|Google Drive|Google Classroom|LMS|e-learning|E-Learning)\b/gi,
+  ) ?? []) {
+    const normalized = raw.length <= 5 ? raw.toUpperCase() : raw;
+    const key = normalized.toLowerCase();
+    if (!seenFormats.has(key)) {
+      seenFormats.add(key);
+      formats.push(normalized);
+    }
+  }
   if (formats.length && details.length < 6) {
     const listed = formats.join(', ');
     if (
