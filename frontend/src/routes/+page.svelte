@@ -130,18 +130,41 @@
     const open = data.study?.tasks.filter((t) => !t.done) ?? [];
     const today = isoDay();
     const soon = isoDay(2);
+    const goalNames = Object.fromEntries(
+      (workspace?.profile?.goals ?? []).map((goal) => [goal.id, goal.title]),
+    );
     for (const task of open) {
       if (!task.due_date || task.due_date > soon) continue;
+      const goalTitle = task.goal_id
+        ? (goalNames[task.goal_id] ?? task.goal_id)
+        : null;
+      const detail =
+        task.course_code && goalTitle
+          ? t('overview.attention.task_detail_both', {
+              course: task.course_code,
+              goal: goalTitle,
+              date: task.due_date,
+            })
+          : task.course_code
+            ? t('overview.attention.task_detail', {
+                course: task.course_code,
+                date: task.due_date,
+              })
+            : goalTitle
+              ? t('overview.attention.task_detail_goal', {
+                  goal: goalTitle,
+                  date: task.due_date,
+                })
+              : t('overview.attention.task_detail_plain', {
+                  date: task.due_date,
+                });
       items.push({
         key: `task-${task.id}`,
         title:
           task.due_date < today
             ? t('overview.attention.overdue', { title: task.title })
             : t('overview.attention.due_soon', { title: task.title }),
-        detail: t('overview.attention.task_detail', {
-          course: task.course_code ?? '',
-          date: task.due_date,
-        }),
+        detail,
         href: '/study',
         action: t('overview.attention.open_study'),
       });

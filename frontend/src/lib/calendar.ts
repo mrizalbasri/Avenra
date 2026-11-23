@@ -31,16 +31,27 @@ function nextDay(iso: string) {
   return date.toISOString().slice(0, 10);
 }
 
+export type CalendarText = {
+  withCourse: (course: string) => string;
+  withGoal?: (goal: string) => string;
+  withBoth?: (course: string, goal: string) => string;
+  plain: string;
+};
+
 /** Builds an all-day calendar event per open target, with a reminder at 19:00 the day before. */
 export function tasksToIcs(
   tasks: Task[],
   courseNames: Record<string, string>,
   now = new Date(),
-  text = {
+  text: CalendarText = {
     withCourse: (course: string) =>
       `Study target for ${course}. Added from Avenra.`,
+    withGoal: (goal: string) => `Goal target for ${goal}. Added from Avenra.`,
+    withBoth: (course: string, goal: string) =>
+      `Target for ${course} (${goal}). Added from Avenra.`,
     plain: 'Added from Avenra.',
   },
+  goalNames: Record<string, string> = {},
 ) {
   const stamp = now
     .toISOString()
@@ -55,14 +66,25 @@ export function tasksToIcs(
   for (const task of tasks) {
     if (!task.due_date || task.done) continue;
     const course = task.course_code ? courseNames[task.course_code] : undefined;
+    const goal = task.goal_id ? goalNames[task.goal_id] : undefined;
+    const label = [task.course_code, goal].filter(Boolean).join(' | ');
+    const summary = label ? `${label} | ${task.title}` : task.title;
+    const description =
+      course && goal && text.withBoth
+        ? text.withBoth(course, goal)
+        : course
+          ? text.withCourse(course)
+          : goal && text.withGoal
+            ? text.withGoal(goal)
+            : text.plain;
     lines.push(
       'BEGIN:VEVENT',
       `UID:${task.id}@avenra`,
       `DTSTAMP:${stamp}`,
       `DTSTART;VALUE=DATE:${compactDate(task.due_date)}`,
       `DTEND;VALUE=DATE:${compactDate(nextDay(task.due_date))}`,
-      `SUMMARY:${escapeText(task.course_code ? `${task.course_code} | ${task.title}` : task.title)}`,
-      `DESCRIPTION:${escapeText(course ? text.withCourse(course) : text.plain)}`,
+      `SUMMARY:${escapeText(summary)}`,
+      `DESCRIPTION:${escapeText(description)}`,
       'BEGIN:VALARM',
       'ACTION:DISPLAY',
       `DESCRIPTION:${escapeText(task.title)}`,

@@ -161,6 +161,7 @@ export const enPlan = {
     'Choose a new workspace for a different curriculum.',
   'error.GOAL_TERM_RANGE':
     'Goal semesters must be within the maximum study period of {max} semesters.',
+  'error.UNKNOWN_GOAL': 'Choose a goal from this workspace.',
 
   // Course requirement text (lib/rules.ts)
   'req.prerequisites': 'Prerequisites: {list}',

@@ -160,6 +160,7 @@ export const idPlan: Record<keyof typeof enPlan, string> = {
     'Pilih workspace baru untuk kurikulum yang berbeda.',
   'error.GOAL_TERM_RANGE':
     'Semester tujuan harus berada dalam masa studi maksimum {max} semester.',
+  'error.UNKNOWN_GOAL': 'Pilih tujuan dari workspace ini.',
 
   'req.prerequisites': 'Prasyarat: {list}',
   'req.any_of': 'Salah satu: {list}',

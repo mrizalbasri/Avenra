@@ -75,6 +75,10 @@ export const id: Record<MessageKey, string> = {
   'overview.attention.overdue': 'Terlambat: {title}',
   'overview.attention.due_soon': 'Segera jatuh tempo: {title}',
   'overview.attention.task_detail': 'Mata kuliah {course} | tenggat {date}',
+  'overview.attention.task_detail_goal': 'Tujuan {goal} | tenggat {date}',
+  'overview.attention.task_detail_both':
+    'Mata kuliah {course} | Tujuan {goal} | tenggat {date}',
+  'overview.attention.task_detail_plain': 'Tenggat {date}',
   'overview.attention.open_study': 'Buka ruang belajar',
   'overview.attention.protect': 'Jaga {name}',
   'overview.attention.fail_none':

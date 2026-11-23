@@ -10,17 +10,22 @@
   import type { PageProps } from './$types';
   let { data }: PageProps = $props();
   const { t, locale, msg } = useI18n();
-  let course = $state(
-    untrack(
-      () =>
-        page.url.searchParams.get('course') ??
-        data.workspace?.curriculum.courses[0]?.code ??
-        '',
-    ),
+  let goals = $derived(data.workspace?.profile?.goals ?? []);
+  let goalNames = $derived(
+    Object.fromEntries(goals.map((goal) => [goal.id, goal.title])),
   );
+  let initialCourse = untrack(
+    () =>
+      page.url.searchParams.get('course') ??
+      data.workspace?.curriculum.courses[0]?.code ??
+      '',
+  );
+  let targetRef = $state(initialCourse ? `course:${initialCourse}` : '');
+  let focusCourse = $state(initialCourse);
   let title = $state('');
   let due = $state('');
   let filter = $state('all');
+  let goalFilter = $state('all');
   let error = $state('');
   let notice = $state('');
   let busy = $state(false);
@@ -51,11 +56,21 @@
       .padStart(2, '0')}:${(remaining % 60).toString().padStart(2, '0')}`,
   );
   let tasks = $derived(
-    data.study.tasks.filter(
-      (task) =>
-        filter === 'all' || (filter === 'done' ? task.done : !task.done),
-    ),
+    data.study.tasks.filter((task) => {
+      const statusOk =
+        filter === 'all' || (filter === 'done' ? task.done : !task.done);
+      if (!statusOk) return false;
+      if (goalFilter === 'all') return true;
+      if (goalFilter === 'courses') return !task.goal_id;
+      return task.goal_id === goalFilter;
+    }),
   );
+  const taskContext = (task: Task) => {
+    const parts: string[] = [];
+    if (task.course_code) parts.push(task.course_code);
+    if (task.goal_id) parts.push(goalNames[task.goal_id] ?? task.goal_id);
+    return parts.join(' | ');
+  };
   let focusTotal = $derived(
     data.study.sessions.reduce((sum, session) => sum + session.seconds, 0),
   );
@@ -160,7 +175,7 @@
   function start() {
     if (!sessionId) {
       sessionId = crypto.randomUUID();
-      sessionCourse = course;
+      sessionCourse = focusCourse;
       duration = Math.min(120, Math.max(1, minutes || 25)) * 60;
     }
     if (remaining === 0) return;
@@ -189,7 +204,7 @@
         Math.max(1, nextMode === 'focus' ? minutes || 25 : breakMinutes || 5),
       ) * 60;
     sessionId = nextMode === 'break' ? crypto.randomUUID() : '';
-    sessionCourse = course;
+    sessionCourse = focusCourse;
     sessionNote = '';
     restored = false;
     localStorage.removeItem(key);
@@ -221,11 +236,15 @@
     }
   }
   async function addTask() {
+    const isGoal = targetRef.startsWith('goal:');
+    const targetId = targetRef.slice(targetRef.indexOf(':') + 1);
+    if (!targetId) return;
     busy = true;
     error = '';
     try {
       await api('study/tasks', 'POST', {
-        course_code: course,
+        course_code: isGoal ? null : targetId,
+        goal_id: isGoal ? targetId : null,
         title,
         due_date: due || null,
       });
@@ -286,10 +305,25 @@
       >
         <h2>{t('study.next_target')}</h2>
         <label
-          >{t('study.course')}<select bind:value={course}
-            >{#each data.workspace.curriculum.courses as c}<option
-                value={c.code}>{c.code} | {c.name}</option
-              >{/each}</select
+          >{goals.length ? t('study.course_or_goal') : t('study.course')}<select
+            value={targetRef}
+            onchange={(e) => {
+              targetRef = e.currentTarget.value;
+              if (targetRef.startsWith('course:')) {
+                focusCourse = targetRef.slice('course:'.length);
+              }
+            }}
+            >{#if goals.length}<optgroup label={t('study.group_courses')}
+                >{#each data.workspace.curriculum.courses as c}<option
+                    value={`course:${c.code}`}>{c.code} | {c.name}</option
+                  >{/each}</optgroup
+              ><optgroup label={t('study.group_goals')}
+                >{#each goals as g}<option value={`goal:${g.id}`}
+                    >{g.title}</option
+                  >{/each}</optgroup
+              >{:else}{#each data.workspace.curriculum.courses as c}<option
+                  value={`course:${c.code}`}>{c.code} | {c.name}</option
+                >{/each}{/if}</select
           ></label
         ><label
           >{t('study.target')}<input
@@ -315,17 +349,30 @@
       <section class="panel">
         <div class="section-heading">
           <h2>{t('study.targets')}</h2>
-          <div class="segmented">
-            <button
-              class:chosen={filter === 'all'}
-              onclick={() => (filter = 'all')}>{t('study.filter.all')}</button
-            ><button
-              class:chosen={filter === 'open'}
-              onclick={() => (filter = 'open')}>{t('study.filter.open')}</button
-            ><button
-              class:chosen={filter === 'done'}
-              onclick={() => (filter = 'done')}>{t('study.filter.done')}</button
-            >
+          <div class="study-filters">
+            {#if goals.length}<select
+                aria-label={t('study.filter_goal')}
+                bind:value={goalFilter}
+                ><option value="all">{t('study.filter_goal_all')}</option
+                ><option value="courses"
+                  >{t('study.filter_goal_courses')}</option
+                >{#each goals as g}<option value={g.id}>{g.title}</option
+                  >{/each}</select
+              >{/if}
+            <div class="segmented">
+              <button
+                class:chosen={filter === 'all'}
+                onclick={() => (filter = 'all')}>{t('study.filter.all')}</button
+              ><button
+                class:chosen={filter === 'open'}
+                onclick={() => (filter = 'open')}
+                >{t('study.filter.open')}</button
+              ><button
+                class:chosen={filter === 'done'}
+                onclick={() => (filter = 'done')}
+                >{t('study.filter.done')}</button
+              >
+            </div>
           </div>
         </div>
         {#if data.study.tasks.some((task) => task.due_date && !task.done)}<div
@@ -346,8 +393,12 @@
                     new Date(),
                     {
                       withCourse: (course) => t('study.ics_course', { course }),
+                      withGoal: (goal) => t('study.ics_goal', { goal }),
+                      withBoth: (course, goal) =>
+                        t('study.ics_both', { course, goal }),
                       plain: t('study.ics_plain'),
                     },
+                    goalNames,
                   ),
                 )}>{t('study.ics')}</button
             >
@@ -364,7 +415,7 @@
                 onchange={() => toggle(task)}
               /><span class:completed-task={task.done}
                 ><strong>{task.title}</strong><small
-                  >{task.course_code}{task.due_date
+                  >{taskContext(task)}{task.due_date
                     ? t('study.due', { date: task.due_date })
                     : ''}</small
                 ></span
@@ -416,10 +467,19 @@
         {clock}
       </div>
       <p class="timer-caption">
-        {sessionId ? sessionCourse : course} | {mode === 'focus'
+        {sessionId ? sessionCourse : focusCourse} | {mode === 'focus'
           ? t('study.caption.focus')
           : t('study.caption.break')}
       </p>
+      {#if goals.length}<label class="focus-course-picker"
+          >{t('study.focus_course')}<select
+            bind:value={focusCourse}
+            disabled={running || !!sessionId}
+            >{#each data.workspace.curriculum.courses as c}<option
+                value={c.code}>{c.code} | {c.name}</option
+              >{/each}</select
+          ></label
+        >{/if}
       {#if restored}<p class="warning-banner small">
           {t('study.restored')}
         </p>{/if}

@@ -172,6 +172,13 @@ export const idPages: Record<keyof typeof enPages, string> = {
   'study.open_workspace': 'Buka workspace untuk mulai belajar.',
   'study.next_target': 'Apa target belajar Anda berikutnya?',
   'study.course': 'Mata kuliah',
+  'study.course_or_goal': 'Mata kuliah atau tujuan',
+  'study.group_courses': 'Mata kuliah',
+  'study.group_goals': 'Tujuan',
+  'study.filter_goal': 'Filter berdasarkan tujuan',
+  'study.filter_goal_all': 'Semua mata kuliah & tujuan',
+  'study.filter_goal_courses': 'Hanya mata kuliah',
+  'study.focus_course': 'Mata kuliah fokus',
   'study.target': 'Target spesifik',
   'study.target_placeholder': 'mis. Kerjakan 5 latihan linked list',
   'study.target_date': 'Tanggal target (opsional)',
@@ -184,6 +191,8 @@ export const idPages: Record<keyof typeof enPages, string> = {
   'study.ics_hint':
     'Terbuka di Google Calendar, Apple Calendar, atau Outlook dengan pengingat pukul 19.00 sehari sebelum setiap tenggat.',
   'study.ics_course': 'Target belajar untuk {course}. Ditambahkan dari Avenra.',
+  'study.ics_goal': 'Target tujuan untuk {goal}. Ditambahkan dari Avenra.',
+  'study.ics_both': 'Target untuk {course} ({goal}). Ditambahkan dari Avenra.',
   'study.ics_plain': 'Ditambahkan dari Avenra.',
   'study.due': ' | Tenggat {date}',
   'study.no_targets':
