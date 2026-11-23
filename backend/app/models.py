@@ -26,6 +26,10 @@ class Profile(Base):
     revision: Mapped[int] = mapped_column(Integer, default=1)
     curriculum: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     last_gpa: Mapped[float | None] = mapped_column(Float, nullable=True)
+    mission: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # {available_hours, minutes_per_credit}; None until the student sets a weekly budget.
+    time_budget: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    goals: Mapped[list] = mapped_column(JSON, default=list)
 
 
 class Plan(Base):
@@ -48,7 +52,9 @@ class StudyTask(Base):
     __tablename__ = "study_tasks"
     id: Mapped[str] = mapped_column(String(40), primary_key=True, default=new_id)
     profile_id: Mapped[str] = mapped_column(ForeignKey("profiles.id"), index=True)
-    course_code: Mapped[str] = mapped_column(String(20), index=True)
+    course_code: Mapped[str | None] = mapped_column(String(20), index=True, nullable=True)
+    # A task belongs to a course, a goal, or both.
+    goal_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
     title: Mapped[str] = mapped_column(String(250))
     due_date: Mapped[str | None] = mapped_column(String(10), nullable=True)
     done: Mapped[bool] = mapped_column(Boolean, default=False)

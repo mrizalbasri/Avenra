@@ -201,6 +201,8 @@ export const enPages = {
   'curriculum.max_credits': 'Maximum credits per semester',
   'curriculum.grad_credits': 'Credits needed to graduate (optional)',
   'curriculum.grad_placeholder': 'e.g. 144',
+  'curriculum.grad_too_high':
+    'The courses in your table add up to {total} credits, fewer than the {target} graduation credits. Add the missing courses, or change or clear this number.',
   'curriculum.on_time': 'On-time graduation (semester)',
   'curriculum.max_period': 'Maximum study period (semesters)',
   'curriculum.ips_rules': 'Credit limit by IPS',

@@ -32,6 +32,21 @@ export type Profile = {
   completed: string[];
   last_gpa: number | null;
   revision: number;
+  mission: string | null;
+  goals: Goal[];
+  time_budget: TimeBudget | null;
+};
+export type Goal = {
+  id: string;
+  title: string;
+  kind: 'internship' | 'work' | 'organisation' | 'graduation' | 'other';
+  start_term: number;
+  end_term: number;
+  weekly_hours: number;
+};
+export type TimeBudget = {
+  available_hours: number;
+  minutes_per_credit: number;
 };
 type Params = Record<string, unknown>;
 export type CodedMessage = { code: string; params: Params; message: string };
@@ -88,7 +103,9 @@ export type Workspace = {
 };
 export type Task = {
   id: string;
-  course_code: string;
+  // A task belongs to a course, a goal, or both.
+  course_code: string | null;
+  goal_id: string | null;
   title: string;
   due_date: string | null;
   done: boolean;
