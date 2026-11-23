@@ -147,6 +147,8 @@ export const idPlan: Record<keyof typeof enPlan, string> = {
   'error.SESSION_NOT_FOUND': 'Sesi tidak ditemukan',
   'error.WORKSPACE_EXISTS':
     'Pilih workspace baru untuk kurikulum yang berbeda.',
+  'error.GOAL_TERM_RANGE':
+    'Semester tujuan harus berada dalam masa studi maksimum {max} semester.',
 
   'req.prerequisites': 'Prasyarat: {list}',
   'req.any_of': 'Salah satu: {list}',

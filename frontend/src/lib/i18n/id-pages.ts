@@ -199,6 +199,8 @@ export const idPages: Record<keyof typeof enPages, string> = {
   'curriculum.max_credits': 'SKS maksimum per semester',
   'curriculum.grad_credits': 'SKS yang dibutuhkan untuk lulus (opsional)',
   'curriculum.grad_placeholder': 'mis. 144',
+  'curriculum.grad_too_high':
+    'Mata kuliah di tabel Anda berjumlah {total} SKS, kurang dari {target} SKS kelulusan. Tambahkan mata kuliah yang kurang, atau ubah atau kosongkan angka ini.',
   'curriculum.on_time': 'Lulus tepat waktu (semester)',
   'curriculum.max_period': 'Masa studi maksimum (semester)',
   'curriculum.ips_rules': 'Batas SKS berdasarkan IPS',

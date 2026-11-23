@@ -163,9 +163,18 @@ test('imports a personal curriculum and keeps the original workspace separate', 
     .fill(
       'code,name,credits,recommended_term,prerequisites,offered_terms\nIF001,Introduction,3,1,,both\nIF002,Advanced topic,3,2,IF001,both',
     );
-  await page
-    .getByRole('button', { name: 'Create my academic workspace' })
-    .click();
+  // Two courses cannot reach the 144-credit default, so the form warns until it is cleared.
+  const create = page.getByRole('button', {
+    name: 'Create my academic workspace',
+  });
+  await expect(
+    page.getByText('add up to 6 credits, fewer than the 144 graduation', {
+      exact: false,
+    }),
+  ).toBeVisible();
+  await expect(create).toBeDisabled();
+  await page.getByLabel('Credits needed to graduate (optional)').fill('');
+  await create.click();
   await expect(page).toHaveURL(/\/profile$/);
   await expect(
     page.getByText('IF001 | 3 credits | Semester 1', { exact: true }),

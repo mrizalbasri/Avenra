@@ -12,6 +12,8 @@ async function fillContext(page: Page) {
   await page
     .getByLabel('Rule source or curriculum reference')
     .fill('Example faculty handbook');
+  // These small tables cannot reach the 144-credit default.
+  await page.getByLabel('Credits needed to graduate (optional)').fill('');
 }
 
 test('a table pasted from Excel with Indonesian headers becomes a workspace', async ({

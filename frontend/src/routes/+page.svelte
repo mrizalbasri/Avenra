@@ -116,7 +116,7 @@
             ? t('overview.attention.overdue', { title: task.title })
             : t('overview.attention.due_soon', { title: task.title }),
         detail: t('overview.attention.task_detail', {
-          course: task.course_code,
+          course: task.course_code ?? '',
           date: task.due_date,
         }),
         href: '/study',

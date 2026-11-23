@@ -149,6 +149,8 @@ export const enPlan = {
   'error.SESSION_NOT_FOUND': 'Session not found',
   'error.WORKSPACE_EXISTS':
     'Choose a new workspace for a different curriculum.',
+  'error.GOAL_TERM_RANGE':
+    'Goal semesters must be within the maximum study period of {max} semesters.',
 
   // Course requirement text (lib/rules.ts)
   'req.prerequisites': 'Prerequisites: {list}',

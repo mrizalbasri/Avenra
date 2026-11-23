@@ -54,14 +54,14 @@ export function tasksToIcs(
   ];
   for (const task of tasks) {
     if (!task.due_date || task.done) continue;
-    const course = courseNames[task.course_code];
+    const course = task.course_code ? courseNames[task.course_code] : undefined;
     lines.push(
       'BEGIN:VEVENT',
       `UID:${task.id}@avenra`,
       `DTSTAMP:${stamp}`,
       `DTSTART;VALUE=DATE:${compactDate(task.due_date)}`,
       `DTEND;VALUE=DATE:${compactDate(nextDay(task.due_date))}`,
-      `SUMMARY:${escapeText(`${task.course_code} | ${task.title}`)}`,
+      `SUMMARY:${escapeText(task.course_code ? `${task.course_code} | ${task.title}` : task.title)}`,
       `DESCRIPTION:${escapeText(course ? text.withCourse(course) : text.plain)}`,
       'BEGIN:VALARM',
       'ACTION:DISPLAY',

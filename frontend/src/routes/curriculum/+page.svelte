@@ -19,7 +19,7 @@
   let currentTerm = $state(1);
   // Number inputs bind to null when empty.
   let lastGpa = $state<number | null>(null);
-  let graduationCredits = $state<number | null>(null);
+  let graduationCredits = $state<number | null>(144);
   let maxTerms = $state(14);
   let targetTerms = $state(8);
   let gpaRules = $state('3.00 = 24\n2.50 = 21\n2.00 = 18\n0.00 = 15');
@@ -33,8 +33,18 @@
     csv.trim() ? parseCurriculumTable(csv, columnFields) : null,
   );
   let preview = $derived(parsed?.courses ?? []);
+  let tableCredits = $derived(preview.reduce((sum, c) => sum + c.credits, 0));
+  // The API rejects graduation credits the listed courses cannot reach.
+  let gradTooHigh = $derived(
+    typeof graduationCredits === 'number' &&
+      preview.length > 0 &&
+      tableCredits < graduationCredits,
+  );
   let ready = $derived(
-    !!parsed && parsed.issues.length === 0 && parsed.courses.length > 0,
+    !!parsed &&
+      parsed.issues.length === 0 &&
+      parsed.courses.length > 0 &&
+      !gradTooHigh,
   );
   let headerLine = $derived(csv.split(/\r?\n/).find((l) => l.trim()) ?? '');
   // A new table has different columns, so earlier choices no longer apply.
@@ -310,6 +320,12 @@
         </table>
       </div>{/if}
   </section>
+  {#if gradTooHigh}<p class="warning-banner" role="status">
+      {t('curriculum.grad_too_high', {
+        total: tableCredits,
+        target: graduationCredits ?? 0,
+      })}
+    </p>{/if}
   <div class="warning-banner">{t('curriculum.warning')}</div>
   {#if error}<p class="error-banner" role="alert">{error}</p>{/if}<button
     class="button primary"
