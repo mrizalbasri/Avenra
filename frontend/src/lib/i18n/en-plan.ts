@@ -162,6 +162,10 @@ export const enPlan = {
   'error.GOAL_TERM_RANGE':
     'Goal semesters must be within the maximum study period of {max} semesters.',
   'error.UNKNOWN_GOAL': 'Choose a goal from this workspace.',
+  'error.COMPLETED_COURSE_REMOVED':
+    'Uncheck these passed courses in your profile before removing them from the curriculum: {courses}.',
+  'error.CURRENT_BEYOND_MAX':
+    'Current semester ({current}) is beyond the maximum study period of {max} semesters.',
 
   // Course requirement text (lib/rules.ts)
   'req.prerequisites': 'Prerequisites: {list}',

@@ -1122,6 +1122,25 @@ td {
 .focus-course-picker {
   margin-top: 10px;
 }
+.edit-courses {
+  margin-top: 24px;
+}
+.edit-courses-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  list-style: none;
+}
+.edit-courses-summary::-webkit-details-marker {
+  display: none;
+}
+.edit-courses[open] .edit-courses-summary {
+  margin-bottom: 12px;
+}
 .study-task {
   padding: 15px 0;
   border-top: 1px solid var(--border);

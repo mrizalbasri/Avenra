@@ -9,6 +9,7 @@ from app.curriculum import MAX_TERM, Course, Curriculum, load_demo_curriculum
 from app.database import get_session
 from app.models import FocusSession, Plan, Profile, StudyTask, new_id
 from app.schemas import (
+    CurriculumEdit,
     FocusCreate,
     PlanCreate,
     PlanEdit,
@@ -239,6 +240,64 @@ def edit_profile(payload: ProfileEdit, db: DB):
         fail(409, "PROFILE_CONFLICT", "The profile changed in another tab. Reload before saving.")
     db.commit()
     return row(profile_or_404(db))
+
+
+@router.patch("/curriculum")
+def edit_curriculum(payload: CurriculumEdit, db: DB):
+    profile = profile_or_404(db)
+    curriculum = payload.curriculum.model_copy(
+        update={
+            "status": "user_supplied",
+            "disclaimer": "User-supplied curriculum. Verify rules with your university.",
+        }
+    )
+    codes = {course.code for course in curriculum.courses}
+    missing_passed = sorted(set(profile.completed) - codes)
+    if missing_passed:
+        fail(
+            422,
+            "COMPLETED_COURSE_REMOVED",
+            "Remove these passed courses from your profile before deleting them from the "
+            f"curriculum: {', '.join(missing_passed)}.",
+            courses=missing_passed,
+        )
+    check_progress(curriculum, profile.completed)
+    if profile.current_term > curriculum.max_terms:
+        fail(
+            422,
+            "CURRENT_BEYOND_MAX",
+            f"Current semester ({profile.current_term}) is beyond the maximum study period of "
+            f"{curriculum.max_terms} semesters.",
+            current=profile.current_term,
+            max=curriculum.max_terms,
+        )
+    if any(goal["end_term"] > curriculum.max_terms for goal in (profile.goals or [])):
+        fail(
+            422,
+            "GOAL_TERM_RANGE",
+            "Goal semesters must be within the maximum study period of "
+            f"{curriculum.max_terms} semesters.",
+            max=curriculum.max_terms,
+        )
+    result = db.execute(
+        update(Profile)
+        .where(Profile.id == workspace_key(db), Profile.revision == payload.revision)
+        .values(curriculum=curriculum.model_dump(), revision=payload.revision + 1)
+    )
+    if not result.rowcount:
+        db.rollback()
+        fail(409, "PROFILE_CONFLICT", "The profile changed in another tab. Reload before saving.")
+    plans = db.scalars(select(Plan).where(Plan.profile_id == workspace_key(db))).all()
+    for plan in plans:
+        assignments = {k: v for k, v in plan.assignments.items() if k in codes}
+        layout = {k: v for k, v in plan.layout.items() if k in codes}
+        failed = [c for c in plan.failed if c in codes]
+        if assignments != plan.assignments or layout != plan.layout or failed != plan.failed:
+            plan.assignments = assignments
+            plan.layout = layout
+            plan.failed = failed
+    db.commit()
+    return workspace(db)
 
 
 @router.post("/plans", status_code=201)

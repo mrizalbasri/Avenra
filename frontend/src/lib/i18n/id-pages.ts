@@ -123,6 +123,15 @@ export const idPages: Record<keyof typeof enPages, string> = {
   'profile.mission_section': 'Misi, waktu mingguan & tujuan',
   'profile.mission_lead':
     'Tulis tujuan utama Anda dan berapa jam per minggu yang tersedia di luar kuliah. Avenra memakainya untuk menghitung batas SKS semester yang realistis.',
+  'profile.edit_courses': 'Ubah mata kuliah',
+  'profile.edit_courses_hint':
+    'Lengkapi prasyarat yang tertinggal, perbarui aturan IPS, atau ubah daftar mata kuliah kapan saja. Semua rencana langsung diperiksa ulang.',
+  'profile.save_courses': 'Simpan kurikulum',
+  'profile.saving_courses': 'Menyimpan kurikulum…',
+  'profile.courses_saved':
+    'Kurikulum disimpan. Semua rencana kini memakai mata kuliah dan aturan terbaru.',
+  'profile.courses_removed_passed':
+    'Hapus centang mata kuliah lulus ini dulu sebelum menghapusnya: {courses}.',
 
   'goals.available_hours': 'Jam tersedia per minggu (opsional)',
   'goals.available_placeholder': 'mis. 45',

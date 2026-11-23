@@ -3,6 +3,15 @@
   import { invalidateAll } from '$app/navigation';
   import { api } from '#lib/api.js';
   import GoalsBudgetEditor from '#lib/components/GoalsBudgetEditor.svelte';
+  import CourseRowsEditor from '#lib/components/start/CourseRowsEditor.svelte';
+  import {
+    checkCourseRows,
+    checkPassed,
+    courseToRow,
+    parseGpaRules,
+    rowsToCourses,
+    type CourseRow,
+  } from '#lib/curriculum-import.js';
   import {
     DEFAULT_MINUTES_PER_CREDIT,
     buildGoalsPayload,
@@ -12,7 +21,7 @@
     type GoalDraft,
   } from '#lib/goals.js';
   import { useI18n } from '#lib/i18n/context.js';
-  import type { Profile } from '#lib/types.js';
+  import type { Curriculum, Profile, Workspace } from '#lib/types.js';
   import type { PageProps } from './$types';
   let { data }: PageProps = $props();
   const { t, msg } = useI18n();
@@ -54,6 +63,156 @@
   let notice = $state('');
   let busy = $state(false);
   let error = $state('');
+
+  // Editable curriculum state (reusing the wizard's rows-table component).
+  const formatGpaRules = (c?: Curriculum) =>
+    (c?.gpa_credit_rules ?? [])
+      .map((rule) => `${rule.min_gpa.toFixed(2)} = ${rule.max_credits}`)
+      .join('\n');
+  let courseRows = $state<CourseRow[]>(
+    untrack(() => (data.workspace?.curriculum.courses ?? []).map(courseToRow)),
+  );
+  let cap = $state<number | null>(
+    untrack(() => data.workspace?.curriculum.credit_cap ?? 24),
+  );
+  let graduationCredits = $state<number | null>(
+    untrack(() => data.workspace?.curriculum.graduation_credits ?? null),
+  );
+  let targetTerms = $state<number | null>(
+    untrack(() => data.workspace?.curriculum.target_terms ?? 8),
+  );
+  let maxTerms = $state<number | null>(
+    untrack(() => data.workspace?.curriculum.max_terms ?? 14),
+  );
+  let gpaRulesText = $state(
+    untrack(() => formatGpaRules(data.workspace?.curriculum)),
+  );
+  let curriculumBusy = $state(false);
+  let curriculumError = $state('');
+  let curriculumNotice = $state('');
+
+  let rowIssues = $derived(checkCourseRows(courseRows));
+  let editedCourses = $derived(
+    rowIssues.length ? [] : rowsToCourses(courseRows),
+  );
+  let editedCredits = $derived(
+    rowsToCourses(courseRows)
+      .map((c) => c.credits)
+      .filter(Number.isFinite)
+      .reduce((sum, credits) => sum + credits, 0),
+  );
+  let parsedGpa = $derived.by(() => {
+    try {
+      return { rules: parseGpaRules(gpaRulesText), error: '' };
+    } catch (e) {
+      return { rules: [], error: msg.errorText(e) };
+    }
+  });
+  let curriculumProblems = $derived.by(() => {
+    const problems: string[] = [];
+    if (!editedCourses.length) return problems;
+    const total = editedCourses.reduce((sum, c) => sum + c.credits, 0);
+    const required = editedCourses
+      .filter((c) => c.category === 'required')
+      .reduce((sum, c) => sum + c.credits, 0);
+    if (typeof graduationCredits === 'number' && total < graduationCredits)
+      problems.push(
+        t('curriculum.grad_too_high', { total, target: graduationCredits }),
+      );
+    if (typeof graduationCredits === 'number' && required > graduationCredits)
+      problems.push(
+        t('start.required_over', { required, target: graduationCredits }),
+      );
+    const max = maxTerms ?? 14;
+    if (editedCourses.some((c) => c.recommended_term > max))
+      problems.push(t('start.term_beyond', { max }));
+    if ((targetTerms ?? 0) > max) problems.push(t('start.target_beyond'));
+    if (currentTerm > max)
+      problems.push(t('start.current_beyond', { current: currentTerm }));
+    const editedCodes = new Set(editedCourses.map((c) => c.code));
+    const storedCompleted = data.workspace?.profile?.completed ?? [];
+    const removedPassed = storedCompleted.filter(
+      (code) => !editedCodes.has(code),
+    );
+    if (removedPassed.length)
+      problems.push(
+        t('profile.courses_removed_passed', {
+          courses: removedPassed.join(', '),
+        }),
+      );
+    else {
+      const broken = checkPassed(editedCourses, storedCompleted);
+      if (broken.length) {
+        problems.push(
+          t('start.passed_issues') +
+            ' ' +
+            broken
+              .map((issue) =>
+                t('error.issue', {
+                  course: issue.course,
+                  missing: issue.missing
+                    .map((m) => (Array.isArray(m) ? m.join(t('list.or')) : m))
+                    .join(', '),
+                }),
+              )
+              .join('; '),
+        );
+      }
+    }
+    if (parsedGpa.error) problems.push(parsedGpa.error);
+    return problems;
+  });
+  let curriculumNumbersOk = $derived(
+    [cap, targetTerms, maxTerms].every(
+      (v) => Number.isInteger(v) && (v as number) >= 1,
+    ) &&
+      cap! <= 24 &&
+      maxTerms! <= 14 &&
+      (graduationCredits === null ||
+        (Number.isInteger(graduationCredits) &&
+          graduationCredits >= 1 &&
+          graduationCredits <= 300)),
+  );
+  let curriculumOk = $derived(
+    editedCourses.length > 0 &&
+      curriculumProblems.length === 0 &&
+      curriculumNumbersOk,
+  );
+
+  async function saveCurriculum() {
+    if (!data.workspace?.curriculum || !curriculumOk) return;
+    curriculumBusy = true;
+    curriculumError = '';
+    curriculumNotice = '';
+    try {
+      const base = data.workspace.curriculum;
+      const updated = await api<Workspace>('curriculum', 'PATCH', {
+        revision,
+        curriculum: {
+          ...base,
+          credit_cap: cap,
+          graduation_credits: graduationCredits,
+          target_terms: targetTerms,
+          max_terms: maxTerms,
+          gpa_credit_rules: parsedGpa.rules,
+          courses: editedCourses,
+        },
+      });
+      if (updated.profile) revision = updated.profile.revision;
+      courseRows = updated.curriculum.courses.map(courseToRow);
+      cap = updated.curriculum.credit_cap;
+      graduationCredits = updated.curriculum.graduation_credits;
+      targetTerms = updated.curriculum.target_terms;
+      maxTerms = updated.curriculum.max_terms;
+      gpaRulesText = formatGpaRules(updated.curriculum);
+      await invalidateAll();
+      curriculumNotice = t('profile.courses_saved');
+    } catch (e) {
+      curriculumError = msg.errorText(e);
+    } finally {
+      curriculumBusy = false;
+    }
+  }
   async function save() {
     if (budgetIssues.length) return;
     busy = true;
@@ -213,7 +372,83 @@
       disabled={busy || budgetIssues.length > 0}
       >{busy ? t('profile.saving') : t('profile.save')}</button
     >
-  </form>{:else}<div class="empty-panel">
+  </form>
+  <details class="panel edit-courses">
+    <summary class="edit-courses-summary">
+      <span>{t('profile.edit_courses')}</span>
+      <span class="tag"
+        >{t('start.total', {
+          count: courseRows.length,
+          credits: editedCredits,
+        })}</span
+      >
+    </summary>
+    <p class="muted small">{t('profile.edit_courses_hint')}</p>
+    {#if rowIssues.length && courseRows.length}<p class="warning-banner small">
+        {t('start.rows_issues', { count: rowIssues.length })}
+      </p>{/if}
+    <CourseRowsEditor bind:rows={courseRows} issues={rowIssues} />
+    <h3>{t('start.rules_heading')}</h3>
+    <div class="form-grid">
+      <label
+        >{t('curriculum.max_credits')}<input
+          type="number"
+          min="1"
+          max="24"
+          bind:value={cap}
+          required
+        /></label
+      ><label
+        >{t('curriculum.grad_credits')}<input
+          type="number"
+          min="1"
+          max="300"
+          bind:value={graduationCredits}
+          placeholder={t('curriculum.grad_placeholder')}
+        /></label
+      ><label
+        >{t('curriculum.on_time')}<input
+          type="number"
+          min="1"
+          max="14"
+          bind:value={targetTerms}
+          required
+        /></label
+      ><label
+        >{t('curriculum.max_period')}<input
+          type="number"
+          min="1"
+          max="14"
+          bind:value={maxTerms}
+          required
+        /></label
+      >
+    </div>
+    <label
+      >{t('curriculum.ips_rules')}<textarea
+        bind:value={gpaRulesText}
+        rows="4"
+        placeholder="3.00 = 24"
+      ></textarea></label
+    >
+    <p class="muted small">{t('curriculum.ips_rules_hint')}</p>
+    {#if curriculumProblems.length}<ul class="finding-list warning-banner">
+        {#each curriculumProblems as problem}<li><p>{problem}</p></li>{/each}
+      </ul>{/if}
+    {#if curriculumError}<p class="error-banner" role="alert">
+        {curriculumError}
+      </p>{/if}{#if curriculumNotice}<p class="success-banner" role="status">
+        {curriculumNotice}
+      </p>{/if}<button
+      type="button"
+      class="button primary"
+      disabled={curriculumBusy || !curriculumOk}
+      onclick={saveCurriculum}
+      >{curriculumBusy
+        ? t('profile.saving_courses')
+        : t('profile.save_courses')}</button
+    >
+  </details>{:else}<div class="empty-panel">
     <h2>{t('profile.none')}</h2>
     <a class="button primary" href="/">{t('profile.open_demo')}</a>
   </div>{/if}
