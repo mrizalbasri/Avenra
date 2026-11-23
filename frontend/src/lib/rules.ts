@@ -1,8 +1,28 @@
 import type { Translate } from '#lib/i18n/index.js';
-import type { Course, Curriculum } from '#lib/types.js';
+import type { Course, Curriculum, Goal, TimeBudget } from '#lib/types.js';
 
 // Display helpers for unsaved drafts. The backend checker stays authoritative;
 // these mirror backend/app/rules.py so the editor shows the same limits.
+
+export function goalHoursInTerm(goals: Goal[] | undefined, term: number) {
+  return (goals ?? [])
+    .filter((goal) => goal.start_term <= term && term <= goal.end_term)
+    .reduce((sum, goal) => sum + goal.weekly_hours, 0);
+}
+
+export function timeBudgetCap(
+  budget: TimeBudget | null | undefined,
+  goals: Goal[] | undefined,
+  term: number,
+) {
+  if (!budget) return null;
+  const remaining = Math.max(
+    0,
+    budget.available_hours - goalHoursInTerm(goals, term),
+  );
+  const minutes = Math.round(remaining * 60 * 1e6) / 1e6;
+  return Math.floor(minutes / budget.minutes_per_credit);
+}
 
 export function gpaCap(curriculum: Curriculum, gpa: number | null) {
   if (gpa === null || !curriculum.gpa_credit_rules?.length) return null;
@@ -20,9 +40,17 @@ export function termCap(
   currentTerm: number,
   planCap: number,
   gpa: number | null,
+  timeBudget?: TimeBudget | null,
+  goals?: Goal[],
 ) {
   const fromGpa = term === currentTerm ? gpaCap(curriculum, gpa) : null;
-  return Math.min(planCap, curriculum.credit_cap, fromGpa ?? Infinity);
+  const fromBudget = timeBudgetCap(timeBudget, goals, term);
+  return Math.min(
+    planCap,
+    curriculum.credit_cap,
+    fromGpa ?? Infinity,
+    fromBudget ?? Infinity,
+  );
 }
 
 export function nextOffered(course: Course, term: number) {

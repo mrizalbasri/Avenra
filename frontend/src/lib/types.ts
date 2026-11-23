@@ -137,7 +137,7 @@ export type Alternative = {
 export type Diagnosis = {
   reasons: (CodedMessage & { rule: string })[];
   suggestions: (CodedMessage & {
-    kind: 'horizon' | 'credit_cap';
+    kind: 'horizon' | 'credit_cap' | 'goal_hours';
     value: number;
   })[];
 };

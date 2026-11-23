@@ -1,3 +1,4 @@
+import math
 from types import SimpleNamespace
 
 from ortools.sat.python import cp_model
@@ -9,6 +10,7 @@ from app.rules import (
     last_term,
     planning_gpa,
     term_caps,
+    time_budget_cap,
 )
 from app.validation import validate_plan
 
@@ -29,6 +31,21 @@ def variant(plan, **changes):
     """A plan-shaped object for what-if solves; the stored plan is never changed."""
     fields = ("assignments", "failed", "horizon", "credit_cap", "revision", "expected_gpa")
     values = {field: getattr(plan, field, None) for field in fields}
+    return SimpleNamespace(**(values | changes))
+
+
+def _profile_variant(profile, **changes):
+    """A profile-shaped object for what-if checks; the stored profile is never changed."""
+    fields = (
+        "current_term",
+        "completed",
+        "last_gpa",
+        "revision",
+        "mission",
+        "time_budget",
+        "goals",
+    )
+    values = {field: getattr(profile, field, None) for field in fields}
     return SimpleNamespace(**(values | changes))
 
 
@@ -149,6 +166,19 @@ def _smallest(low, high, works):
             high = middle
         else:
             low = middle + 1
+    return low
+
+
+def _largest(low, high, works):
+    """Largest integer in [low, high] that works, assuming smaller values never hurt."""
+    if low > high or not works(low):
+        return None
+    while low < high:
+        middle = (low + high + 1) // 2
+        if works(middle):
+            low = middle
+        else:
+            high = middle - 1
     return low
 
 
@@ -275,6 +305,26 @@ def diagnose(curriculum: Curriculum, profile, plan) -> dict:
             )
         )
 
+    budget = getattr(profile, "time_budget", None)
+    budget_terms = [t for t in terms if caps[t]["code"] == "TIME_BUDGET"]
+    if (
+        budget
+        and budget_terms
+        and _feasible(curriculum, _profile_variant(profile, time_budget=None), plan)
+    ):
+        tightest = min(budget_terms, key=lambda t: (caps[t]["cap"], t))
+        reasons.append(
+            _reason(
+                "TIME_BUDGET",
+                f"Your weekly time budget limits semester {tightest} to "
+                f"{caps[tightest]['cap']} credits ({caps[tightest]['params']['hours']} h "
+                "left for courses).",
+                term=tightest,
+                cap=caps[tightest]["cap"],
+                hours=caps[tightest]["params"]["hours"],
+            )
+        )
+
     suggestions = []
     horizon = _smallest(
         end + 1,
@@ -291,9 +341,13 @@ def diagnose(curriculum: Curriculum, profile, plan) -> dict:
                 term=horizon,
             )
         )
+    max_credit_cap = curriculum.credit_cap
+    if budget and terms:
+        max_budget_cap = max((time_budget_cap(profile, term)[0] for term in terms), default=0)
+        max_credit_cap = min(max_credit_cap, max_budget_cap)
     cap = _smallest(
         plan.credit_cap + 1,
-        curriculum.credit_cap,
+        max_credit_cap,
         lambda value: _feasible(curriculum, profile, variant(plan, credit_cap=value)),
     )
     if cap:
@@ -306,6 +360,60 @@ def diagnose(curriculum: Curriculum, profile, plan) -> dict:
                 cap=cap,
             )
         )
+    goals = getattr(profile, "goals", None) or []
+    if budget and goals and terms:
+        for index, goal in enumerate(goals):
+            overlap = [t for t in terms if goal["start_term"] <= t <= goal["end_term"]]
+            if not overlap or goal["weekly_hours"] <= 0:
+                continue
+            max_reduced = math.ceil(goal["weekly_hours"]) - 1
+
+            def with_goal_hours(hours, idx=index):
+                updated = [
+                    item | {"weekly_hours": hours} if i == idx else item
+                    for i, item in enumerate(goals)
+                ]
+                return _profile_variant(profile, goals=updated)
+
+            suggested_hours = _largest(
+                0,
+                max_reduced,
+                lambda h: _feasible(curriculum, with_goal_hours(h), plan),
+            )
+            if suggested_hours is not None and _feasible(
+                curriculum, with_goal_hours(suggested_hours), plan
+            ):
+                if goal["start_term"] == goal["end_term"]:
+                    term = goal["start_term"]
+                    suggestions.append(
+                        _suggestion(
+                            "goal_hours",
+                            "GOAL_HOURS",
+                            suggested_hours,
+                            f"Reduce {goal['title']} hours in semester {term} to "
+                            f"{suggested_hours} h/week.",
+                            goal_id=goal.get("id", ""),
+                            goal=goal["title"],
+                            term=term,
+                            hours=suggested_hours,
+                        )
+                    )
+                else:
+                    suggestions.append(
+                        _suggestion(
+                            "goal_hours",
+                            "GOAL_HOURS_RANGE",
+                            suggested_hours,
+                            f"Reduce {goal['title']} hours in semesters "
+                            f"{goal['start_term']}-{goal['end_term']} to "
+                            f"{suggested_hours} h/week.",
+                            goal_id=goal.get("id", ""),
+                            goal=goal["title"],
+                            start_term=goal["start_term"],
+                            end_term=goal["end_term"],
+                            hours=suggested_hours,
+                        )
+                    )
     if not reasons:
         reasons.append(
             _reason(

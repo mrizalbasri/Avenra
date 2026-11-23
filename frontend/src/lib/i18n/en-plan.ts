@@ -27,6 +27,7 @@ export const enPlan = {
   'rule.PREREQUISITE_CHAIN': 'PREREQUISITE CHAIN',
   'rule.CAPACITY': 'CAPACITY',
   'rule.GPA_CREDIT_LIMIT': 'GPA CREDIT LIMIT',
+  'rule.TIME_BUDGET': 'TIME BUDGET',
   'rule.COMBINED': 'COMBINED',
 
   // Findings
@@ -50,6 +51,7 @@ export const enPlan = {
   'finding.GRADUATION_CREDITS':
     'This plan reaches {reached} of {target} graduation credits. Add {missing} more credits, for example from electives.',
   'cap.IPS_RULE': 'the IPS {gpa} rule',
+  'cap.TIME_BUDGET': 'your weekly time budget ({hours} h left for courses)',
   'cap.CURRICULUM_MAX': 'the curriculum maximum',
   'cap.PLAN_LIMIT': 'your plan limit',
 
@@ -62,10 +64,16 @@ export const enPlan = {
     'You still need {needed} credits, but semesters {from} to {to} allow at most {capacity}.',
   'diag.GPA_CREDIT_LIMIT':
     'The IPS {gpa} limit of {cap} credits in semester {term} is part of the conflict.',
+  'diag.TIME_BUDGET':
+    'Your weekly time budget limits semester {term} to {cap} credits ({hours} h left for courses).',
   'diag.COMBINED':
     'The modeled rules conflict only in combination, for example corequisites, earned-credit thresholds, and credit limits together.',
   'suggest.HORIZON': 'Extend the plan to semester {term}.',
   'suggest.CREDIT_CAP': 'Raise your own credit limit to {cap} credits.',
+  'suggest.GOAL_HOURS':
+    'Reduce {goal} hours in semester {term} to {hours} h/week.',
+  'suggest.GOAL_HOURS_RANGE':
+    'Reduce {goal} hours in semesters {start_term}-{end_term} to {hours} h/week.',
 
   // Solve outcomes and alternatives
   'solve.COMPLETE': 'All modeled requirements are already complete.',
@@ -117,6 +125,8 @@ export const enPlan = {
     'The IPS credit rule uses {gpa} for semester {term} only. Later semesters assume up to {cap} credits.',
   'assume.OFFERINGS':
     'Offerings follow the stated odd/even calendar. Exceptions, transfer credit, and internship conversion are not modeled.',
+  'assume.TIME_BUDGET':
+    'Weekly time budget uses {available} h/week available at {minutes_per_credit} minutes per SKS per week (default 170: 50 class + 60 structured + 60 independent).',
   'disclaimer.synthetic':
     'Demonstration assumptions only. Not an official university curriculum or graduation decision.',
   'disclaimer.user_supplied':

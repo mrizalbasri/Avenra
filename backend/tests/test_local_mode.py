@@ -110,3 +110,38 @@ def test_complete_import_runs_on_migrated_sqlite(local_app):
     plan = workspace["plans"][0]
     outlook = client.get(f"/api/v1/plans/{plan['id']}/outlook", headers=headers).json()
     assert (outlook["status"], outlook["completion_term"]) == ("on_track", 4)
+
+
+def test_time_budget_and_internship_affect_outlook_on_sqlite(local_app):
+    client, _ = local_app
+    workspace = client.post("/api/v1/workspace/bootstrap").json()
+    profile = workspace["profile"]
+    plan = workspace["plans"][0]
+    saved_profile = client.patch(
+        "/api/v1/profile",
+        json={
+            "revision": profile["revision"],
+            "alias": profile["alias"],
+            "current_term": profile["current_term"],
+            "completed": profile["completed"],
+            "last_gpa": profile["last_gpa"],
+            "time_budget": {"available_hours": 45, "minutes_per_credit": 170},
+            "goals": [
+                {
+                    "id": "intern",
+                    "title": "Internship",
+                    "kind": "internship",
+                    "start_term": 6,
+                    "end_term": 6,
+                    "weekly_hours": 20,
+                }
+            ],
+        },
+    )
+    assert saved_profile.status_code == 200, saved_profile.text
+    refreshed = client.get(f"/api/v1/plans/{plan['id']}").json()["plan"]
+    assert refreshed["validation"]["caps"]["6"] == 8
+    assert refreshed["validation"]["cap_details"]["6"]["code"] == "TIME_BUDGET"
+    outlook = client.get(f"/api/v1/plans/{plan['id']}/outlook").json()
+    assert outlook["status"] == "late"
+    assert outlook["completion_term"] > 8

@@ -44,7 +44,18 @@ export function createMessages(locale: () => Locale) {
         out[key] = say(`parity.${value}`) ?? String(value);
       else if (key === 'reason')
         out[key] =
-          say(`cap.${value}`, { gpa: ips(params.gpa) }) ?? String(value);
+          say(`cap.${value}`, {
+            gpa: ips(params.gpa),
+            ...(typeof params.hours === 'number'
+              ? { hours: params.hours }
+              : {}),
+            ...(typeof params.available === 'number'
+              ? { available: params.available }
+              : {}),
+            ...(typeof params.minutes_per_credit === 'number'
+              ? { minutes_per_credit: params.minutes_per_credit }
+              : {}),
+          }) ?? String(value);
       else if (key === 'rules' && Array.isArray(value))
         out.names = value
           .map((rule) => (say(`rule.${rule}`) ?? String(rule)).toLowerCase())
