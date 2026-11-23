@@ -122,6 +122,11 @@ class SolveRequest(Input):
     profile_revision: int = Field(ge=1)
 
 
+class CurriculumEdit(Input):
+    revision: int = Field(ge=1)
+    curriculum: Curriculum
+
+
 class WorkspaceImport(Input):
     alias: str = Field(min_length=1, max_length=80)
     current_term: int = Field(ge=1, le=MAX_TERM)
