@@ -93,3 +93,20 @@ def test_default_data_dir_follows_each_system(monkeypatch, tmp_path):
     monkeypatch.setattr(config.sys, "platform", "win32")
     monkeypatch.setenv("APPDATA", str(tmp_path / "roaming"))
     assert config.default_data_dir() == tmp_path / "roaming" / "Avenra"
+
+
+def test_complete_import_runs_on_migrated_sqlite(local_app):
+    """Passed courses and goals survive the real migrations, not just create_all."""
+    from tests.test_complete_import import GOAL, payload
+
+    client, _ = local_app
+    headers = {"X-Workspace-ID": "local-student"}
+    body = payload(goals=[GOAL], time_budget={"available_hours": 45}, mission="On time")
+    imported = client.post("/api/v1/workspace/import", headers=headers, json=body)
+    assert imported.status_code == 201, imported.text
+    workspace = imported.json()
+    assert workspace["profile"]["completed"] == ["A1", "A2", "B1"]
+    assert workspace["profile"]["goals"][0]["id"]
+    plan = workspace["plans"][0]
+    outlook = client.get(f"/api/v1/plans/{plan['id']}/outlook", headers=headers).json()
+    assert (outlook["status"], outlook["completion_term"]) == ("on_track", 4)

@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.curriculum import MAX_TERM, Course, Curriculum, load_demo_curriculum
 from app.database import get_session
-from app.models import FocusSession, Plan, Profile, StudyTask
+from app.models import FocusSession, Plan, Profile, StudyTask, new_id
 from app.schemas import (
     FocusCreate,
     PlanCreate,
@@ -132,6 +132,24 @@ def issue_text(issue: dict) -> str:
     return f"{issue['course']} needs {missing}"
 
 
+def check_progress(curriculum: Curriculum, completed: list[str]) -> None:
+    issues = progress_issues(curriculum, completed)
+    if issues:
+        fail(
+            422,
+            "PROGRESS_ISSUES",
+            "Some completed courses are missing their prerequisites: "
+            + "; ".join(issue_text(i) for i in issues[:4])
+            + ". Mark the prerequisites as completed, or ask your advisor about an exemption.",
+            issues=issues[:4],
+        )
+
+
+def stored_goals(goals) -> list[dict]:
+    """Goals as saved: every goal gets a stable id so tasks can refer to it."""
+    return [goal.model_dump() | {"id": goal.id or new_id()} for goal in goals]
+
+
 @router.get("/workspace")
 def workspace(db: DB):
     profile = db.get(Profile, workspace_key(db))
@@ -191,20 +209,24 @@ def bootstrap(db: DB):
 @router.patch("/profile")
 def edit_profile(payload: ProfileEdit, db: DB):
     known_codes(db, payload.completed)
-    issues = progress_issues(curriculum_for(profile_or_404(db)), payload.completed)
-    if issues:
-        fail(
-            422,
-            "PROGRESS_ISSUES",
-            "Some completed courses are missing their prerequisites: "
-            + "; ".join(issue_text(i) for i in issues[:4])
-            + ". Mark the prerequisites as completed, or ask your advisor about an exemption.",
-            issues=issues[:4],
-        )
+    curriculum = curriculum_for(profile_or_404(db))
+    check_progress(curriculum, payload.completed)
+    # Fields left out of the request keep their stored values.
+    values = payload.model_dump(exclude={"revision", "goals"}, exclude_unset=True)
+    if payload.goals is not None:
+        if any(goal.end_term > curriculum.max_terms for goal in payload.goals):
+            fail(
+                422,
+                "GOAL_TERM_RANGE",
+                "Goal semesters must be within the maximum study period of "
+                f"{curriculum.max_terms} semesters.",
+                max=curriculum.max_terms,
+            )
+        values["goals"] = stored_goals(payload.goals)
     result = db.execute(
         update(Profile)
         .where(Profile.id == workspace_key(db), Profile.revision == payload.revision)
-        .values(**payload.model_dump(exclude={"revision"}), revision=payload.revision + 1)
+        .values(**values, revision=payload.revision + 1)
     )
     if not result.rowcount:
         db.rollback()
@@ -390,13 +412,17 @@ def import_workspace(payload: WorkspaceImport, db: DB):
             "disclaimer": "User-supplied curriculum. Verify rules with your university.",
         }
     )
+    check_progress(curriculum, payload.completed)
     profile = Profile(
         id=workspace_key(db),
         alias=payload.alias,
         current_term=payload.current_term,
-        completed=[],
+        completed=payload.completed,
         last_gpa=payload.last_gpa,
         curriculum=curriculum.model_dump(),
+        mission=payload.mission,
+        goals=stored_goals(payload.goals),
+        time_budget=payload.time_budget.model_dump() if payload.time_budget else None,
     )
     db.add(profile)
     try:
@@ -410,7 +436,7 @@ def import_workspace(payload: WorkspaceImport, db: DB):
         name="My study plan",
         credit_cap=curriculum.credit_cap,
         horizon=min(curriculum.max_terms, max(8, payload.current_term)),
-        assignments=default_assignments(curriculum, [], payload.current_term),
+        assignments=default_assignments(curriculum, payload.completed, payload.current_term),
     )
     db.add(plan)
     db.commit()
