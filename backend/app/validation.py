@@ -1,5 +1,12 @@
 from app.curriculum import Curriculum
-from app.rules import completed_codes, earliest_retake, last_term, planning_gpa, term_caps
+from app.rules import (
+    clean_hours,
+    completed_codes,
+    earliest_retake,
+    last_term,
+    planning_gpa,
+    term_caps,
+)
 
 
 def validate_plan(curriculum: Curriculum, profile, plan) -> dict:
@@ -222,6 +229,20 @@ def assumption_items(curriculum: Curriculum, profile, gpa) -> list[dict]:
             "internship conversion are not modeled.",
         )
     )
+    budget = getattr(profile, "time_budget", None)
+    if budget:
+        available = clean_hours(float(budget["available_hours"]))
+        minutes_per_credit = int(budget.get("minutes_per_credit", 170))
+        items.append(
+            _item(
+                "TIME_BUDGET",
+                f"Weekly time budget uses {available} h/week available at {minutes_per_credit} "
+                "minutes per SKS per week (default 170: 50 class + 60 structured + "
+                "60 independent).",
+                available=available,
+                minutes_per_credit=minutes_per_credit,
+            )
+        )
     return items
 
 
