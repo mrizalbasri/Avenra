@@ -91,9 +91,18 @@ class PlanEdit(Input):
 
 
 class TaskCreate(Input):
-    course_code: str
+    course_code: str | None = None
+    goal_id: str | None = Field(default=None, pattern=r"^[a-zA-Z0-9-]{1,40}$")
     title: str = Field(min_length=1, max_length=250)
     due_date: date | None = None
+
+    @model_validator(mode="after")
+    def check_target(self):
+        if self.course_code == "":
+            self.course_code = None
+        if not self.course_code and not self.goal_id:
+            raise ValueError("Choose a course or a goal")
+        return self
 
 
 class TaskEdit(Input):
