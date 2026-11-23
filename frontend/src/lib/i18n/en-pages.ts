@@ -181,6 +181,36 @@ export const enPages = {
   'study.minutes_tag': '{minutes} focused minutes recorded',
   'study.open_workspace': 'Open a workspace to start learning.',
   'study.next_target': "What's your next learning target?",
+  'study.mode_manual': 'Manual target',
+  'study.mode_announce': 'Paste announcement',
+  'study.announce_label': 'Class announcement or chat message',
+  'study.announce_placeholder':
+    'Paste a WhatsApp, Telegram, or LMS announcement (course, deadline, format, instructions)…',
+  'study.announce_hint':
+    'Avenra extracts the course/goal, due date, key details, and a tiny first step. Nothing is saved until you confirm.',
+  'study.announce_example': 'Try an example',
+  'study.announce_extract': 'Extract & review',
+  'study.review_heading': 'Confirm task & start plan',
+  'study.review_warn_target':
+    'Could not match a course or goal automatically | choose one below.',
+  'study.review_warn_due':
+    'No due date was detected | add one if this task has a deadline.',
+  'study.start_date': 'Planned start date (optional)',
+  'study.first_step': 'First tiny step (optional)',
+  'study.first_step_placeholder':
+    'e.g. Open template and write 3 outline points (10 min)',
+  'study.details_label': 'Key details & requirements (one per line)',
+  'study.details_placeholder': 'e.g. Format PDF\nSubmit to LMS before 23:59',
+  'study.confirm_add': 'Confirm & add task',
+  'study.back_paste': 'Edit announcement',
+  'study.start_badge': ' | Start {date}',
+  'study.first_step_prefix': 'First step: {step}',
+  'study.start_now': 'Start now',
+  'study.notice.started_task': 'Focus sprint started: {step}',
+  'study.notice.session_active':
+    'Finish or reset your current focus session first before switching tasks.',
+  'study.ics_start_prefix': 'Start',
+  'study.ics_first_step': 'First step: {step}',
   'study.course': 'Course',
   'study.course_or_goal': 'Course or goal',
   'study.group_courses': 'Courses',
@@ -199,7 +229,7 @@ export const enPages = {
   'study.filter.done': 'Done',
   'study.ics': 'Add open targets to my calendar (.ics)',
   'study.ics_hint':
-    'Opens in Google Calendar, Apple Calendar, or Outlook with a reminder at 19:00 the day before each due date.',
+    'Opens in Google Calendar, Apple Calendar, or Outlook with a 09:00 reminder on planned start dates and a 19:00 reminder the day before each due date.',
   'study.ics_course': 'Study target for {course}. Added from Avenra.',
   'study.ics_goal': 'Goal target for {goal}. Added from Avenra.',
   'study.ics_both': 'Target for {course} ({goal}). Added from Avenra.',

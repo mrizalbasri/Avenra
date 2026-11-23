@@ -72,6 +72,8 @@ export const en = {
   'overview.attention.heading': 'Needs your attention',
   'overview.attention.overdue': 'Overdue: {title}',
   'overview.attention.due_soon': 'Due soon: {title}',
+  'overview.attention.start_today': 'Start today: {title}',
+  'overview.attention.start_detail': 'First step: {step}',
   'overview.attention.task_detail': 'Course {course} | due {date}',
   'overview.attention.task_detail_goal': 'Goal {goal} | due {date}',
   'overview.attention.task_detail_both':

@@ -97,7 +97,6 @@
         <a href="/methodology"
           ><Icon name="info" size={16} /> {t('sidebar.methodology')}</a
         >
-        <LanguageSwitcher class="in-sidebar" />
         <div class="identity">
           <span class="avatar"
             >{data.workspace?.profile?.alias?.[0] ?? 'A'}</span
@@ -121,18 +120,20 @@
           id={data.workspace?.profile?.id}
           name={data.workspace?.profile?.alias}
         />
-        <div>
-          <LanguageSwitcher class="in-topbar" />
-          <span class="connection-dot" class:disconnected={!data.workspace}
-          ></span><span
-            >{data.workspace
-              ? t('topbar.connected')
-              : t('topbar.unavailable')}</span
-          >{#if data.workspace?.profile}<span class="tag"
+        <div class="topbar-utilities">
+          <span class="connection-pill"
+            ><span class="connection-dot" class:disconnected={!data.workspace}
+            ></span><span class="connection-label"
+              >{data.workspace
+                ? t('topbar.connected')
+                : t('topbar.unavailable')}</span
+            ></span
+          >{#if data.workspace?.profile}<span class="tag topbar-curriculum-tag"
               >{data.workspace.curriculum.status === 'synthetic'
                 ? t('topbar.curriculum.example')
                 : t('topbar.curriculum.own')}</span
             >{/if}
+          <LanguageSwitcher class="in-topbar" />
         </div>
       </header>
       <main id="main-content" class:landing-main={landing}>

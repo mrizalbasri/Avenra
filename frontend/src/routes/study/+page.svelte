@@ -5,6 +5,10 @@
   import { api } from '#lib/api.js';
   import Icon from '#lib/components/Icon.svelte';
   import { useI18n } from '#lib/i18n/context.js';
+  import {
+    parseAnnouncement,
+    type AnnouncementWarning,
+  } from '#lib/announcement.js';
   import { downloadIcs, tasksToIcs } from '#lib/calendar.js';
   import type { Task } from '#lib/types.js';
   import type { PageProps } from './$types';
@@ -24,6 +28,13 @@
   let focusCourse = $state(initialCourse);
   let title = $state('');
   let due = $state('');
+  let startDate = $state('');
+  let firstStep = $state('');
+  let detailsText = $state('');
+  let inputMode = $state<'manual' | 'announce'>('manual');
+  let rawAnnouncement = $state('');
+  let reviewing = $state(false);
+  let reviewWarnings = $state<AnnouncementWarning[]>([]);
   let filter = $state('all');
   let goalFilter = $state('all');
   let error = $state('');
@@ -235,10 +246,88 @@
       busy = false;
     }
   }
+  function extractAnnouncement() {
+    if (!rawAnnouncement.trim() || !data.workspace) return;
+    const parsed = parseAnnouncement(
+      rawAnnouncement,
+      data.workspace.curriculum.courses,
+      goals,
+      new Date(),
+      locale(),
+    );
+    if (parsed.course_code) {
+      targetRef = `course:${parsed.course_code}`;
+      focusCourse = parsed.course_code;
+    } else if (parsed.goal_id) {
+      targetRef = `goal:${parsed.goal_id}`;
+    }
+    title = parsed.title;
+    due = parsed.due_date ?? '';
+    startDate = parsed.start_date;
+    firstStep = parsed.first_step;
+    detailsText = parsed.details.join('\n');
+    reviewWarnings = parsed.warnings;
+    reviewing = true;
+    error = '';
+  }
+
+  function fillExampleAnnouncement() {
+    const sampleCourse = data.workspace?.curriculum.courses[0];
+    const code = sampleCourse?.code ?? 'IF2101';
+    const name = sampleCourse?.name ?? 'Struktur Data';
+    const d = new Date();
+    d.setDate(d.getDate() + 4);
+    const iso = d.toLocaleDateString('en-CA');
+    rawAnnouncement =
+      locale() === 'id'
+        ? `[Pengumuman] Tugas ${code} ${name}: buat implementasi dan ringkasan materi.\n- Kumpulkan PDF + kode sumber di LMS\n- Dikerjakan secara individu\nDeadline: ${iso} pukul 23:59 WIB`
+        : `[Announcement] ${code} ${name} assignment: complete the implementation and short write-up.\n- Submit PDF + source code on LMS\n- Individual submission\nDue: ${iso} at 23:59`;
+  }
+
+  function startTaskInFocus(task: Task) {
+    if (mode === 'focus' && (running || accumulated > 0)) {
+      notice = t('study.notice.session_active');
+      return;
+    }
+    if (task.course_code) {
+      focusCourse = task.course_code;
+    }
+    const step = task.first_step || task.title;
+    const baseMinutes = Math.min(120, Math.max(1, minutes || 25));
+    const sprintMinutes = task.first_step
+      ? Math.min(baseMinutes, 15)
+      : baseMinutes;
+    mode = 'focus';
+    running = false;
+    accumulated = 0;
+    restored = false;
+    sessionId = crypto.randomUUID();
+    sessionCourse = focusCourse;
+    sessionNote = step;
+    duration = sprintMinutes * 60;
+    startedAt = Date.now();
+    tick = Date.now();
+    running = true;
+    notice = t('study.notice.started_task', { step });
+  }
+
   async function addTask() {
     const isGoal = targetRef.startsWith('goal:');
     const targetId = targetRef.slice(targetRef.indexOf(':') + 1);
     if (!targetId) return;
+    const details =
+      inputMode === 'announce'
+        ? detailsText
+            .split(/\r?\n/)
+            .map((line) =>
+              line
+                .replace(/^[-•*]\s*/, '')
+                .trim()
+                .slice(0, 160),
+            )
+            .filter(Boolean)
+            .slice(0, 8)
+        : [];
     busy = true;
     error = '';
     try {
@@ -247,9 +336,18 @@
         goal_id: isGoal ? targetId : null,
         title,
         due_date: due || null,
+        start_date: startDate || null,
+        first_step: firstStep.trim() || null,
+        details,
       });
       title = '';
       due = '';
+      startDate = '';
+      firstStep = '';
+      detailsText = '';
+      rawAnnouncement = '';
+      reviewing = false;
+      reviewWarnings = [];
       await invalidateAll();
       notice = t('study.notice.added');
     } catch (e) {
@@ -297,54 +395,144 @@
   <div class="study-layout">
     <section>
       <form
-        class="panel"
+        class="panel form-stack"
         onsubmit={(e) => {
           e.preventDefault();
-          addTask();
+          if (inputMode === 'announce' && !reviewing) extractAnnouncement();
+          else addTask();
         }}
       >
-        <h2>{t('study.next_target')}</h2>
-        <label
-          >{goals.length ? t('study.course_or_goal') : t('study.course')}<select
-            value={targetRef}
-            onchange={(e) => {
-              targetRef = e.currentTarget.value;
-              if (targetRef.startsWith('course:')) {
-                focusCourse = targetRef.slice('course:'.length);
-              }
-            }}
-            >{#if goals.length}<optgroup label={t('study.group_courses')}
-                >{#each data.workspace.curriculum.courses as c}<option
-                    value={`course:${c.code}`}>{c.code} | {c.name}</option
-                  >{/each}</optgroup
-              ><optgroup label={t('study.group_goals')}
-                >{#each goals as g}<option value={`goal:${g.id}`}
-                    >{g.title}</option
-                  >{/each}</optgroup
-              >{:else}{#each data.workspace.curriculum.courses as c}<option
-                  value={`course:${c.code}`}>{c.code} | {c.name}</option
-                >{/each}{/if}</select
-          ></label
-        ><label
-          >{t('study.target')}<input
-            bind:value={title}
-            placeholder={t('study.target_placeholder')}
-            maxlength="250"
-            required
-          /></label
-        >
-        <div class="form-grid">
-          <label
-            >{t('study.target_date')}<input
-              type="date"
-              bind:value={due}
-            /></label
-          ><button
-            class="button primary align-end"
-            disabled={busy || !title.trim()}
-            >{t('study.add')}<Icon name="plus" size={15} /></button
-          >
+        <div class="section-heading">
+          <h2>
+            {inputMode === 'announce' && reviewing
+              ? t('study.review_heading')
+              : t('study.next_target')}
+          </h2>
+          <div class="segmented">
+            <button
+              type="button"
+              class:chosen={inputMode === 'manual'}
+              onclick={() => {
+                inputMode = 'manual';
+                reviewing = false;
+                reviewWarnings = [];
+                detailsText = '';
+              }}>{t('study.mode_manual')}</button
+            ><button
+              type="button"
+              class:chosen={inputMode === 'announce'}
+              onclick={() => (inputMode = 'announce')}
+              >{t('study.mode_announce')}</button
+            >
+          </div>
         </div>
+
+        {#if inputMode === 'announce' && !reviewing}
+          <label
+            >{t('study.announce_label')}<textarea
+              bind:value={rawAnnouncement}
+              rows="5"
+              placeholder={t('study.announce_placeholder')}
+            ></textarea></label
+          >
+          <p class="muted small">{t('study.announce_hint')}</p>
+          <div class="toolbar-actions">
+            <button
+              type="button"
+              class="button"
+              onclick={fillExampleAnnouncement}
+              >{t('study.announce_example')}</button
+            ><button
+              type="submit"
+              class="button primary"
+              disabled={!rawAnnouncement.trim()}
+              >{t('study.announce_extract')}</button
+            >
+          </div>
+        {:else}
+          {#if inputMode === 'announce' && reviewWarnings.length}<div
+              class="warning-banner small"
+              role="status"
+            >
+              {#each reviewWarnings as warn}<span>
+                  {warn === 'NO_TARGET'
+                    ? t('study.review_warn_target')
+                    : t('study.review_warn_due')}
+                </span>{/each}
+            </div>{/if}
+          <label
+            >{goals.length
+              ? t('study.course_or_goal')
+              : t('study.course')}<select
+              value={targetRef}
+              onchange={(e) => {
+                targetRef = e.currentTarget.value;
+                if (targetRef.startsWith('course:')) {
+                  focusCourse = targetRef.slice('course:'.length);
+                }
+              }}
+              >{#if goals.length}<optgroup label={t('study.group_courses')}
+                  >{#each data.workspace.curriculum.courses as c}<option
+                      value={`course:${c.code}`}>{c.code} | {c.name}</option
+                    >{/each}</optgroup
+                ><optgroup label={t('study.group_goals')}
+                  >{#each goals as g}<option value={`goal:${g.id}`}
+                      >{g.title}</option
+                    >{/each}</optgroup
+                >{:else}{#each data.workspace.curriculum.courses as c}<option
+                    value={`course:${c.code}`}>{c.code} | {c.name}</option
+                  >{/each}{/if}</select
+            ></label
+          ><label
+            >{t('study.target')}<input
+              bind:value={title}
+              placeholder={t('study.target_placeholder')}
+              maxlength="250"
+              required
+            /></label
+          >
+          <div class="form-grid">
+            <label
+              >{t('study.target_date')}<input
+                type="date"
+                bind:value={due}
+              /></label
+            ><label
+              >{t('study.start_date')}<input
+                type="date"
+                max={due || undefined}
+                bind:value={startDate}
+              /></label
+            >
+          </div>
+          <label
+            >{t('study.first_step')}<input
+              bind:value={firstStep}
+              placeholder={t('study.first_step_placeholder')}
+              maxlength="250"
+            /></label
+          >
+          {#if inputMode === 'announce'}<label
+              >{t('study.details_label')}<textarea
+                bind:value={detailsText}
+                rows="3"
+                placeholder={t('study.details_placeholder')}
+              ></textarea></label
+            >{/if}
+          <div class="toolbar-actions">
+            {#if inputMode === 'announce'}<button
+                type="button"
+                class="button"
+                onclick={() => (reviewing = false)}
+                >{t('study.back_paste')}</button
+              >{/if}
+            <button class="button primary" disabled={busy || !title.trim()}
+              >{inputMode === 'announce'
+                ? t('study.confirm_add')
+                : t('study.add')}<Icon name="plus" size={15} /></button
+            >
+          </div>
+        {/if}
       </form>
       <section class="panel">
         <div class="section-heading">
@@ -375,7 +563,7 @@
             </div>
           </div>
         </div>
-        {#if data.study.tasks.some((task) => task.due_date && !task.done)}<div
+        {#if data.study.tasks.some((task) => (task.due_date || task.start_date) && !task.done)}<div
             class="calendar-export"
           >
             <button
@@ -396,6 +584,9 @@
                       withGoal: (goal) => t('study.ics_goal', { goal }),
                       withBoth: (course, goal) =>
                         t('study.ics_both', { course, goal }),
+                      startPrefix: t('study.ics_start_prefix'),
+                      firstStepLabel: (step) =>
+                        t('study.ics_first_step', { step }),
                       plain: t('study.ics_plain'),
                     },
                     goalNames,
@@ -406,21 +597,37 @@
               {t('study.ics_hint')}
             </p>
           </div>{/if}
-        {#each tasks as task}<div class="study-task">
-            <label
-              ><input
-                type="checkbox"
-                checked={task.done}
-                disabled={busy}
-                onchange={() => toggle(task)}
-              /><span class:completed-task={task.done}
-                ><strong>{task.title}</strong><small
-                  >{taskContext(task)}{task.due_date
-                    ? t('study.due', { date: task.due_date })
-                    : ''}</small
-                ></span
-              ></label
-            >
+        {#each tasks as task (task.id)}<div class="study-task">
+            <div class="study-task-head">
+              <label
+                ><input
+                  type="checkbox"
+                  checked={task.done}
+                  disabled={busy}
+                  onchange={() => toggle(task)}
+                /><span class:completed-task={task.done}
+                  ><strong>{task.title}</strong><small
+                    >{taskContext(task)}{task.start_date
+                      ? t('study.start_badge', { date: task.start_date })
+                      : ''}{task.due_date
+                      ? t('study.due', { date: task.due_date })
+                      : ''}</small
+                  ></span
+                ></label
+              >{#if !task.done}<button
+                  type="button"
+                  class="button subtle small start-step-btn"
+                  disabled={busy}
+                  onclick={() => startTaskInFocus(task)}
+                  >{t('study.start_now')}</button
+                >{/if}
+            </div>
+            {#if task.first_step && !task.done}<p class="task-start-step">
+                {t('study.first_step_prefix', { step: task.first_step })}
+              </p>{/if}
+            {#if task.details?.length && !task.done}<ul class="task-details">
+                {#each task.details as detail}<li>{detail}</li>{/each}
+              </ul>{/if}
           </div>{/each}{#if !tasks.length}<p class="muted">
             {t('study.no_targets')}
           </p>{/if}

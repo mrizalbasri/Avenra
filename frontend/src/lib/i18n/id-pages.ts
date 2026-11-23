@@ -180,6 +180,37 @@ export const idPages: Record<keyof typeof enPages, string> = {
   'study.minutes_tag': '{minutes} menit fokus tercatat',
   'study.open_workspace': 'Buka workspace untuk mulai belajar.',
   'study.next_target': 'Apa target belajar Anda berikutnya?',
+  'study.mode_manual': 'Target manual',
+  'study.mode_announce': 'Tempel pengumuman',
+  'study.announce_label': 'Pengumuman kelas atau pesan grup',
+  'study.announce_placeholder':
+    'Tempel pengumuman dari WhatsApp, Telegram, atau LMS (mata kuliah, tenggat, format, syarat)…',
+  'study.announce_hint':
+    'Avenra mengekstrak mata kuliah/tujuan, tenggat, detail penting, dan langkah mulai kecil. Tidak ada yang disimpan sebelum Anda konfirmasi.',
+  'study.announce_example': 'Coba contoh',
+  'study.announce_extract': 'Ekstrak & tinjau',
+  'study.review_heading': 'Konfirmasi tugas & rencana mulai',
+  'study.review_warn_target':
+    'Mata kuliah atau tujuan belum terdeteksi otomatis | silakan pilih di bawah.',
+  'study.review_warn_due':
+    'Tanggal tenggat belum terdeteksi | tambahkan jika tugas ini punya tenggat.',
+  'study.start_date': 'Rencana tanggal mulai (opsional)',
+  'study.first_step': 'Langkah pertama kecil (opsional)',
+  'study.first_step_placeholder':
+    'mis. Buka templat dan tulis 3 poin kerangka (10 menit)',
+  'study.details_label': 'Detail penting & syarat (satu per baris)',
+  'study.details_placeholder':
+    'mis. Format PDF\nKumpulkan di LMS sebelum 23:59',
+  'study.confirm_add': 'Konfirmasi & tambah tugas',
+  'study.back_paste': 'Ubah pengumuman',
+  'study.start_badge': ' | Mulai {date}',
+  'study.first_step_prefix': 'Langkah pertama: {step}',
+  'study.start_now': 'Mulai sekarang',
+  'study.notice.started_task': 'Sprint fokus dimulai: {step}',
+  'study.notice.session_active':
+    'Selesaikan atau atur ulang sesi fokus saat ini dulu sebelum berpindah tugas.',
+  'study.ics_start_prefix': 'Mulai',
+  'study.ics_first_step': 'Langkah pertama: {step}',
   'study.course': 'Mata kuliah',
   'study.course_or_goal': 'Mata kuliah atau tujuan',
   'study.group_courses': 'Mata kuliah',
@@ -198,7 +229,7 @@ export const idPages: Record<keyof typeof enPages, string> = {
   'study.filter.done': 'Selesai',
   'study.ics': 'Tambahkan target terbuka ke kalender saya (.ics)',
   'study.ics_hint':
-    'Terbuka di Google Calendar, Apple Calendar, atau Outlook dengan pengingat pukul 19.00 sehari sebelum setiap tenggat.',
+    'Terbuka di Google Calendar, Apple Calendar, atau Outlook dengan pengingat pukul 09.00 pada tanggal mulai dan pukul 19.00 sehari sebelum setiap tenggat.',
   'study.ics_course': 'Target belajar untuk {course}. Ditambahkan dari Avenra.',
   'study.ics_goal': 'Target tujuan untuk {goal}. Ditambahkan dari Avenra.',
   'study.ics_both': 'Target untuk {course} ({goal}). Ditambahkan dari Avenra.',

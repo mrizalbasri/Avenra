@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from '#lib/components/Icon.svelte';
   import { useI18n } from '#lib/i18n/context.js';
   import {
     DEFAULT_MINUTES_PER_CREDIT,
@@ -165,8 +166,8 @@
 
   {#if goals.length < MAX_GOALS}<button
       type="button"
-      class="button"
-      onclick={addGoal}>{t('goals.add')}</button
+      class="button add-goal-btn"
+      onclick={addGoal}><Icon name="plus" size={15} />{t('goals.add')}</button
     >{/if}
 
   {#if issues.length}<ul class="finding-list warning-banner">

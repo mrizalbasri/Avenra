@@ -81,24 +81,36 @@ input,
 select,
 textarea {
   color: var(--text-primary);
-  background: var(--surface-raised);
-  border: 1px solid var(--border-strong);
-  border-radius: 9px;
-  padding: 11px 12px;
+  background: #1c1c20;
+  border: 1px solid #35353c;
+  border-radius: 10px;
+  padding: 10px 12px;
+  min-height: 42px;
   width: 100%;
   min-width: 0;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease;
+}
+input:hover:not(:disabled),
+select:hover:not(:disabled),
+textarea:hover:not(:disabled) {
+  border-color: #52525b;
 }
 input[type='checkbox'] {
   width: 17px;
   height: 17px;
+  min-height: 0;
   accent-color: var(--accent);
   flex-shrink: 0;
 }
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 3px;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(245, 245, 247, 0.14);
+  outline: none;
 }
 input::placeholder,
 textarea::placeholder {
@@ -188,21 +200,25 @@ p {
   display: flex;
   align-items: center;
   gap: 11px;
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 500;
   color: var(--text-secondary);
-  border-radius: 9px;
-  padding: 13px 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 11px 12px;
   transition:
     background 0.15s ease,
+    border-color 0.15s ease,
     color 0.15s ease;
 }
 .app-sidebar nav a:hover,
 .sidebar-bottom > a:hover {
-  background: #202023;
+  background: #1c1c20;
   color: var(--text-primary);
 }
 .app-sidebar nav a.active {
   background: var(--accent-soft);
+  border-color: var(--border);
   color: var(--accent);
 }
 .sidebar-bottom {
@@ -211,27 +227,54 @@ p {
 .lang-switcher {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 9px;
+  background: #18181c;
+  border: 1px solid var(--border);
   font-size: 11px;
   color: var(--text-secondary);
 }
 .lang-switcher button {
-  background: none;
+  background: transparent;
   border: 0;
-  padding: 4px 2px;
+  border-radius: 6px;
+  padding: 5px 9px;
+  min-height: 26px;
   font: inherit;
+  font-weight: 500;
+  letter-spacing: 0.03em;
   color: var(--text-secondary);
   cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+.lang-switcher button:hover:not([aria-pressed='true']) {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
 }
 .lang-switcher button[aria-pressed='true'] {
-  color: var(--accent);
-  font-weight: 650;
+  background: var(--surface-selected);
+  color: var(--accent-strong);
+  font-weight: 600;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
-.lang-switcher.in-sidebar {
-  padding: 0 12px 10px;
+.topbar-utilities {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
-.lang-switcher.in-topbar {
-  display: none;
+.connection-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #141417;
+  border: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-secondary);
 }
 .identity {
   display: flex;
@@ -351,6 +394,10 @@ main {
   border-color: transparent;
   color: var(--text-secondary);
 }
+.button.subtle:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+}
 .button.icon-button {
   padding: 9px;
 }
@@ -399,14 +446,16 @@ main {
 .next-panel {
   padding: 24px;
   border: 1px solid var(--border);
-  border-radius: 15px;
+  border-radius: 16px;
   background: var(--surface-panel);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
   margin-bottom: 22px;
 }
 .section-heading {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
   gap: 15px;
   margin-bottom: 20px;
 }
@@ -627,12 +676,46 @@ progress::-moz-progress-bar {
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 15px;
+  gap: 16px;
 }
-.profile-form label,
-.inspector label,
-.study-layout label {
-  margin-top: 18px;
+.form-grid.three-col {
+  grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr) minmax(0, 1fr);
+}
+.form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.form-stack h2,
+.form-stack p {
+  margin-bottom: 0;
+}
+.field-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.char-count {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  margin: 0;
+}
+.ips-summary {
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #101012;
+  border: 1px solid var(--border);
+  margin: 0;
+}
+.workspace-column {
+  max-width: 1040px;
+}
+.inspector label {
+  margin-top: 16px;
+}
+.study-layout .form-stack label {
+  margin-top: 0;
 }
 .course-checklist {
   display: grid;
@@ -744,6 +827,19 @@ td {
   background: var(--accent);
   color: var(--surface-base);
 }
+.step-jump {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+}
+.step-jump:hover {
+  color: var(--text-primary);
+}
 .start-wizard h3 {
   margin-top: 26px;
 }
@@ -753,11 +849,6 @@ td {
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
-}
-.start-language {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
 }
 .wizard-actions {
   display: flex;
@@ -1136,6 +1227,19 @@ td {
   font-weight: 600;
   list-style: none;
 }
+.edit-courses-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.disclosure-caret {
+  display: inline-block;
+  color: var(--text-secondary);
+  transition: transform 0.15s ease;
+}
+.edit-courses[open] .disclosure-caret {
+  transform: rotate(90deg);
+}
 .edit-courses-summary::-webkit-details-marker {
   display: none;
 }
@@ -1146,12 +1250,41 @@ td {
   padding: 15px 0;
   border-top: 1px solid var(--border);
 }
+.study-task-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
 .study-task label {
   display: flex;
   flex-direction: row;
   gap: 12px;
   align-items: center;
   margin: 0;
+  min-width: 0;
+}
+.start-step-btn {
+  flex-shrink: 0;
+  min-height: 32px;
+  padding: 6px 10px;
+}
+.task-start-step {
+  margin: 8px 0 0 29px;
+  padding: 7px 11px;
+  border-radius: 8px;
+  background: #101012;
+  border: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+.task-details {
+  margin: 8px 0 0 46px;
+  padding: 0;
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.65;
 }
 .study-task strong {
   font-size: 12px;
@@ -1325,17 +1458,17 @@ td {
   .sidebar-bottom {
     display: none;
   }
-  .lang-switcher.in-topbar {
-    display: inline-flex;
-  }
   .app-topbar {
     padding: 0 17px;
     min-height: 54px;
     font-size: 10px;
   }
-  .app-topbar .connection-dot,
-  .app-topbar .connection-dot + span {
+  .connection-pill,
+  .topbar-curriculum-tag {
     display: none;
+  }
+  .form-grid.three-col {
+    grid-template-columns: 1fr;
   }
   main {
     padding: 26px 16px;
@@ -1476,8 +1609,8 @@ td {
     font-size: 0;
   }
   .workspace-switcher select {
-    width: 210px;
-    max-width: 60vw;
+    width: 175px;
+    max-width: 54vw;
   }
 }
 
@@ -1560,8 +1693,10 @@ main.landing-main {
   gap: 16px;
   padding: 16px 18px;
   border: 1px solid var(--border);
+  border-left: 3px solid #a1a1aa;
   border-radius: 14px;
   background: var(--surface-panel);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 .attention-list strong {
   font-size: 14px;
@@ -1591,15 +1726,23 @@ main.landing-main {
 .budget-editor {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-top: 10px;
+  gap: 12px;
+  margin-top: 6px;
 }
 .budget-preview {
   margin: 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #101012;
+  border: 1px solid var(--border);
   color: var(--text-primary);
 }
+.add-goal-btn {
+  align-self: flex-start;
+}
 .goals-heading {
-  margin-top: 10px;
+  margin-top: 8px;
+  margin-bottom: 0;
 }
 .goal-rows {
   list-style: none;
@@ -1685,8 +1828,19 @@ html {
   .course-title small,
   .term-heading span,
   .setback-list small,
-  .identity small {
+  .identity small,
+  .study-task small,
+  .task-start-step,
+  .task-details {
     font-size: 13px;
+  }
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .study-task strong,
+  .task-start-step,
+  .task-details {
+    overflow-wrap: anywhere;
   }
   .button {
     font-size: 14px;

@@ -3,7 +3,6 @@
   import { goto, invalidateAll } from '$app/navigation';
   import { api } from '#lib/api.js';
   import Icon from '#lib/components/Icon.svelte';
-  import LanguageSwitcher from '#lib/components/LanguageSwitcher.svelte';
   import GoalsBudgetEditor from '#lib/components/GoalsBudgetEditor.svelte';
   import CourseRowsEditor from '#lib/components/start/CourseRowsEditor.svelte';
   import { useI18n } from '#lib/i18n/context.js';
@@ -429,7 +428,12 @@
         class:done={d.step > step}
         aria-current={d.step === step ? 'step' : undefined}
       >
-        <span>{step}</span>{t(`start.step.${step}`)}
+        {#if step < d.step}<button
+            type="button"
+            class="step-jump"
+            onclick={() => go(step)}
+            ><span>{step}</span>{t(`start.step.${step}`)}</button
+          >{:else}<span>{step}</span>{t(`start.step.${step}`)}{/if}
       </li>{/each}
   </ol>
   {#if restored}<p class="warning-banner start-restored" role="status">
@@ -440,10 +444,15 @@
       >
     </p>{/if}
 
-  {#if d.step === 1}<section class="panel" aria-labelledby="step-heading">
-      <p class="eyebrow">{t('start.step_of', { n: 1 })}</p>
-      <h2 id="step-heading">{t('start.step.1')}</h2>
-      <div class="form-grid">
+  {#if d.step === 1}<section
+      class="panel form-stack"
+      aria-labelledby="step-heading"
+    >
+      <div>
+        <p class="eyebrow">{t('start.step_of', { n: 1 })}</p>
+        <h2 id="step-heading">{t('start.step.1')}</h2>
+      </div>
+      <div class="form-grid three-col">
         <label
           >{t('curriculum.alias')}<input
             bind:value={d.alias}
@@ -469,23 +478,20 @@
             placeholder={t('curriculum.ips_placeholder')}
           /></label
         >
-        <div class="start-language">
-          <span class="small">{t('lang.label')}</span>
-          <LanguageSwitcher />
-          <p class="muted small">{t('start.language_hint')}</p>
-        </div>
       </div>
-      <label
-        >{t('start.mission')}<textarea
-          bind:value={d.mission}
-          maxlength="500"
-          rows="3"
-          placeholder={t('start.mission_placeholder')}
-        ></textarea></label
-      >
-      <p class="muted small">
-        {t('start.mission_count', { count: d.mission.length })}
-      </p>
+      <div class="field-block">
+        <label
+          >{t('start.mission')}<textarea
+            bind:value={d.mission}
+            maxlength="500"
+            rows="3"
+            placeholder={t('start.mission_placeholder')}
+          ></textarea></label
+        >
+        <p class="muted small char-count">
+          {t('start.mission_count', { count: d.mission.length })}
+        </p>
+      </div>
     </section>{/if}
 
   {#if d.step === 2}<section class="panel" aria-labelledby="step-heading">

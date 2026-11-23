@@ -3,7 +3,7 @@ import { tasksToIcs } from './calendar.js';
 import type { Task } from './types.js';
 
 describe('calendar export', () => {
-  it('exports both course tasks and goal-only tasks with reminders', () => {
+  it('exports both course tasks and goal-only tasks with start plans and reminders', () => {
     const tasks: Task[] = [
       {
         id: 't1',
@@ -11,6 +11,9 @@ describe('calendar export', () => {
         goal_id: null,
         title: 'Finish exercises',
         due_date: '2026-12-01',
+        start_date: '2026-11-29',
+        first_step: 'Open sheet and solve #1 (10 min)',
+        details: ['Submit PDF on LMS'],
         done: false,
         revision: 1,
       },
@@ -20,6 +23,9 @@ describe('calendar export', () => {
         goal_id: 'bem',
         title: 'BEM event proposal',
         due_date: '2026-12-03',
+        start_date: null,
+        first_step: null,
+        details: [],
         done: false,
         revision: 1,
       },
@@ -31,10 +37,14 @@ describe('calendar export', () => {
       undefined,
       { bem: 'BEM' },
     );
-    expect(ics).toContain('SUMMARY:IF2101 | Finish exercises');
-    expect(ics).toContain('DESCRIPTION:Study target for Algorithms.');
-    expect(ics).toContain('SUMMARY:BEM | BEM event proposal');
-    expect(ics).toContain('DESCRIPTION:Goal target for BEM.');
-    expect(ics).toContain('DTSTART;VALUE=DATE:20261203');
+    const unfolded = ics.replace(/\r\n /g, '');
+    expect(unfolded).toContain('SUMMARY:Start: IF2101 | Finish exercises');
+    expect(unfolded).toContain('DTSTART;VALUE=DATE:20261129');
+    expect(unfolded).toContain('First step: Open sheet and solve #1');
+    expect(unfolded).toContain('SUMMARY:IF2101 | Finish exercises');
+    expect(unfolded).toContain('DESCRIPTION:Study target for Algorithms.');
+    expect(unfolded).toContain('SUMMARY:BEM | BEM event proposal');
+    expect(unfolded).toContain('DESCRIPTION:Goal target for BEM.');
+    expect(unfolded).toContain('DTSTART;VALUE=DATE:20261203');
   });
 });

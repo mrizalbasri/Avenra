@@ -18,8 +18,7 @@
   role="group"
   aria-label={t('lang.label')}
 >
-  {#each locales as code, index (code)}
-    {#if index > 0}<span aria-hidden="true">|</span>{/if}
+  {#each locales as code (code)}
     <button
       type="button"
       lang={code}
