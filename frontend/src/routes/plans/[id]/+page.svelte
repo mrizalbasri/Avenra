@@ -14,6 +14,7 @@
   import Icon from '#lib/components/Icon.svelte';
   import { useI18n } from '#lib/i18n/context.js';
   import { api } from '#lib/api.js';
+  import { formatHours, semesterHours } from '#lib/goals.js';
   import {
     nextOffered,
     offeringText,
@@ -139,6 +140,19 @@
       ]),
     ),
   );
+  let hoursFor = $derived((term: number) => {
+    const budget = data.profile.time_budget;
+    if (!budget) return null;
+    const h = semesterHours(loads[term] ?? 0, data.profile.goals, term, budget);
+    return {
+      course: formatHours(h.courseHours),
+      goal: formatHours(h.goalHours),
+      total: formatHours(h.totalHours),
+      available: formatHours(h.availableHours),
+      hasGoals: h.goalHours > 0,
+      over: h.over,
+    };
+  });
   let edges = $derived<Edge[]>(
     remaining.flatMap((c) =>
       c.prerequisites
@@ -240,10 +254,10 @@
       id: `term-${t}`,
       type: 'semester',
       position: { x: i * 290, y: 0 },
-      data: { term: t, credits: loads[t], cap: capFor(t) },
+      data: { term: t, credits: loads[t], cap: capFor(t), hours: hoursFor(t) },
       selectable: false,
       draggable: false,
-      style: `width: 266px; height: ${Math.max(470, ...terms.map((term) => remaining.filter((c) => draft.assignments[c.code] === term).length * 126 + 85))}px; z-index: -1;`,
+      style: `width: 266px; height: ${Math.max(470, ...terms.map((term) => remaining.filter((c) => draft.assignments[c.code] === term).length * 126 + 96))}px; z-index: -1;`,
     }));
     const cards: Node[] = remaining
       .filter((c) => terms.includes(draft.assignments[c.code] ?? -1))
@@ -528,7 +542,21 @@
                   load: loads[term],
                   cap: capFor(term),
                 })}</span
-              >
+              >{#if hoursFor(term)}
+                {@const h = hoursFor(term)!}
+                <small class="semester-hours" class:load-over={h.over}
+                  >{h.hasGoals
+                    ? tx('node.semester_hours_split', {
+                        total: h.total,
+                        available: h.available,
+                        course: h.course,
+                        goal: h.goal,
+                      })
+                    : tx('node.semester_hours', {
+                        total: h.total,
+                        available: h.available,
+                      })}</small
+                >{/if}
             </div>
             {#each remaining.filter((c) => draft.assignments[c.code] === term) as c}<div
                 class="board-course"
