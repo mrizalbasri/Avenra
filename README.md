@@ -3,12 +3,15 @@
 An explainable academic planning and recovery workspace, created for STACK 2026,
 Case 1: Smarter Campus and Learning.
 
-**Current status: functional local MVP.** Import a program-specific curriculum,
-maintain academic progress, create independent plans, move courses between semesters
-on a canvas or board, validate rules, generate recovery alternatives, compare plans,
-track learning targets, use a focus/break timer, and print a Decision Passport.
-Plans, layouts, tasks, and finished sessions persist in PostgreSQL. A synthetic
-curriculum remains available for demonstrations.
+**Current status: student-ready local workspace.** Paste a curriculum table from
+Excel, Google Sheets, or a PDF in `/start`, edit courses/prerequisites/IPS rules
+anytime in Profile, track passed courses, set a weekly time budget and up to 3
+goals (internship, work, organisation, graduation, other), create independent plans,
+move courses between semesters on a canvas or board, validate rules, generate
+recovery alternatives, compare plans, track course or goal tasks with `.ics`
+calendar reminders, use a focus/break timer, switch between Indonesian and English,
+and print a Decision Passport. Data persists in PostgreSQL or in local SQLite mode
+(`AVENRA_LOCAL=1`). An example curriculum remains available to try first.
 
 Curricula are not restricted to one university. Imported rules remain
 **user-supplied**, not institutionally verified. This local prototype has no sign-in:
@@ -85,35 +88,47 @@ and `apps/api/.env` to `backend/.env`, rename frontend `API_BASE_URL` to
 
 ## Product walkthrough
 
-1. Import CSV at `/curriculum`, recording university, program, version, rule
-   source, current semester, and credit cap. Download the included template.
-   Each import creates a new workspace. Switch between remembered workspaces
-   using the header selector; previous curricula and plans remain intact.
-2. In **Academic profile**, mark completed courses. In **Study plans**, create
-   or duplicate a plan. Rename, archive, and restore it in its settings.
-3. Drag cards across semester frames or use board/select controls. Same-semester
-   movement changes only visual coordinates. Undo/redo edits, then **Save & validate**.
-   Invalid exploratory drafts remain clearly labeled.
-4. Select failed/postponed courses under **Simulate a setback**. Save, then generate
-   alternatives for earlier completion and lighter peak workload. Each result is
-   independently checked. Save alternatives as separate plans.
-5. Compare saved plans at `/compare`. Open **Passport** from a saved plan and
-   **Print / Save as PDF** for a fresh advisor consultation snapshot.
-6. In **Study & focus**, add course targets, mark tasks complete, and record focus
-   sessions with reflections. Reload restores the timer paused using timestamps.
-   Study completion never changes academic course completion.
+1. Set up a workspace at /start (4 steps): enter your name/alias, current semester,
+   last IPS, language (EN/ID), and optional mission; paste a course table from
+   Excel, Google Sheets, or a PDF (or start from the example curriculum) and fix any
+   row issues inline; tick passed courses (with a shortcut for semesters 1 to N); and
+   optionally enter your weekly time budget (default 170 min/SKS, editable) plus up
+   to 3 goals such as an internship or organisation. Each workspace stays separate.
+2. In **Academic profile**, update passed courses, mission, weekly time budget, and
+   goals, or open **Edit courses** (PATCH /api/v1/curriculum) to add missing
+   prerequisites and IPS rules later.
+3. On **Overview**, check the graduation outlook, active goals for this semester,
+   neutral notices when a semester's weekly hours exceed what is available, due
+   course/goal tasks, and critical courses.
+4. Drag cards across semester frames or use board/select controls. Each semester
+   shows credit caps and weekly course + goal hours against available hours.
+   Undo/redo edits, then **Save & validate**.
+5. Select failed/postponed courses under **Simulate a setback**. Save, then generate
+   alternatives for earlier completion and lighter peak workload. When infeasible,
+   Avenra explains blocking chains, credit shortfalls, or weekly time budget limits
+   and tests the smallest horizon extension, budget-bounded credit cap increase, or
+   goal-hour reduction that fits.
+6. Compare saved plans at /compare. Open **Passport** from a saved plan and
+   **Print / Save as PDF** for a fresh advisor consultation snapshot with all active
+   assumptions (including the weekly minutes-per-SKS assumption).
+7. In **Study & focus**, add targets linked to a course or a goal, filter by status
+   or goal, export open targets with due dates to .ics calendar reminders, and
+   record course focus sessions with reflections. Reload restores the timer paused
+   using timestamps. Study completion never changes academic course completion.
 
-CSV supports 1�100 required courses, prerequisite codes separated with semicolons,
-credits, recommended semesters 1�12, and odd/even/both offerings. Duplicate codes,
-missing references, and cycles are rejected. Elective groups, concurrent prerequisites,
-GPA-dependent caps, credit transfer, and internship conversion require additional
-modeling and advisor review. All imported courses are treated as required.
-Automatic institutional data import is not implemented.
+Table import supports 1-100 courses (required or elective), auto-detected delimiters
+(tab, comma, semicolon, or aligned spaces), English and Indonesian column aliases,
+all-of (;) and any-of (A|B) prerequisites, corequisites, earned-credit
+thresholds, semesters 1-14, odd/even/both offerings, and optional IPS credit tables.
+Duplicate codes, missing references, and cycles are rejected. Exceptions, credit
+transfer, and internship conversion still require advisor review. Automatic
+institutional data import is not implemented.
 
 ## Verification
 
-```powershell
+`powershell
 pnpm check
+pnpm test:unit
 pnpm build
 pnpm format:check
 uv --directory backend run ruff check .
@@ -121,7 +136,8 @@ uv --directory backend run ruff format --check .
 uv --directory backend run pytest
 pnpm --filter @avenra/web exec playwright install chromium
 pnpm test:e2e
-```
+
+````
 
 Playwright starts the API and builds/starts the production frontend automatically
 (ports 18080 and 4173), avoiding development-only HMR and dependency-optimizer races.
@@ -149,7 +165,7 @@ backend/tests/         API and solver runtime tests
 backend/migrations/    Alembic database schema
 docs/                  Designs, implementation plan, verification evidence
 .github/               CI and contribution templates
-```
+````
 
 ## Production build and shutdown
 
