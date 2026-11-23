@@ -120,6 +120,49 @@ export const idPages: Record<keyof typeof enPages, string> = {
     'Profil disimpan. Semua pemeriksaan rencana kini memakai kemajuan terbaru Anda.',
   'profile.none': 'Belum ada profil akademik.',
   'profile.open_demo': 'Buka workspace demo',
+  'profile.mission_section': 'Misi, waktu mingguan & tujuan',
+  'profile.mission_lead':
+    'Tulis tujuan utama Anda dan berapa jam per minggu yang tersedia di luar kuliah. Avenra memakainya untuk menghitung batas SKS semester yang realistis.',
+
+  'goals.available_hours': 'Jam tersedia per minggu (opsional)',
+  'goals.available_placeholder': 'mis. 45',
+  'goals.minutes_per_credit': 'Menit per SKS per minggu',
+  'goals.minutes_hint':
+    'Asumsi 1 SKS = 170 menit/minggu (50 tatap muka + 60 terstruktur + 60 mandiri). Ubah jika beban mata kuliah Anda berbeda.',
+  'goals.implied_cap':
+    '{hours} jam/minggu | hingga {cap} SKS/semester sebelum dikurangi jam tujuan.',
+  'goals.list_heading': 'Tujuan & komitmen',
+  'goals.list_hint':
+    'Tambahkan maksimal 3 kegiatan (seperti magang, kerja, atau organisasi). Tujuan aktif mengurangi batas SKS semester tersebut bila anggaran waktu diisi.',
+  'goals.count': '{count} / {max}',
+  'goals.item_label': 'Tujuan {n}',
+  'goals.remove': 'Hapus',
+  'goals.remove_aria': 'Hapus tujuan {n}',
+  'goals.field_title': 'Nama tujuan',
+  'goals.title_placeholder': 'mis. Magang atau BEM',
+  'goals.field_kind': 'Jenis',
+  'goals.field_start': 'Semester mulai',
+  'goals.field_end': 'Semester selesai',
+  'goals.field_hours': 'Jam / minggu',
+  'goals.field_aria': '{field}, tujuan {n}',
+  'goals.kind_internship': 'Magang',
+  'goals.kind_work': 'Kerja',
+  'goals.kind_organisation': 'Organisasi',
+  'goals.kind_graduation': 'Kelulusan',
+  'goals.kind_other': 'Lainnya',
+  'goals.empty': 'Belum ada tujuan yang ditambahkan.',
+  'goals.add': 'Tambah tujuan',
+  'goals.error.BUDGET_HOURS': 'Jam tersedia per minggu harus antara 0 dan 168.',
+  'goals.error.BUDGET_MINUTES':
+    'Menit per SKS harus bilangan bulat antara 60 dan 300.',
+  'goals.error.GOAL_TITLE':
+    'Tujuan {n}: isi nama tujuan (maksimal 80 karakter).',
+  'goals.error.GOAL_TERM':
+    'Tujuan {n}: semester mulai dan selesai harus antara 1 dan {max}.',
+  'goals.error.GOAL_ORDER':
+    'Tujuan {n}: semester selesai tidak boleh lebih awal dari semester mulai.',
+  'goals.error.GOAL_HOURS':
+    'Tujuan {n}: jam per minggu harus antara 0 dan 168.',
 
   'study.title': 'Avenra | Belajar & fokus',
   'study.heading': 'Beri rencana Anda sedikit fokus.',

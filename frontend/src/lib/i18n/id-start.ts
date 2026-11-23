@@ -5,12 +5,13 @@ export const idStart: Record<keyof typeof enStart, string> = {
   'start.title': 'Avenra | Mulai',
   'start.heading': 'Siapkan workspace Anda.',
   'start.lead':
-    'Tiga langkah singkat: tentang Anda, kurikulum Anda, dan mata kuliah yang sudah lulus.',
+    'Empat langkah singkat: tentang Anda, kurikulum Anda, mata kuliah lulus, serta waktu mingguan dan tujuan (opsional).',
   'start.steps_aria': 'Langkah persiapan',
   'start.step.1': 'Tentang Anda',
   'start.step.2': 'Kurikulum Anda',
   'start.step.3': 'Mata kuliah lulus',
-  'start.step_of': 'Langkah {n} dari 3',
+  'start.step.4': 'Waktu & tujuan',
+  'start.step_of': 'Langkah {n} dari 4',
   'start.back': 'Kembali',
   'start.next': 'Lanjut',
   'start.draft_restored': 'Persiapan yang belum selesai sudah dipulihkan.',
@@ -67,4 +68,8 @@ export const idStart: Record<keyof typeof enStart, string> = {
     'Mata kuliah lulus berikut membutuhkan prasyarat yang belum dicentang:',
   'start.create': 'Buat workspace saya',
   'start.creating': 'Membuat workspace Anda…',
+  'start.skip_create': 'Lewati & buat workspace',
+  'start.budget_heading': 'Waktu mingguan & tujuan (opsional)',
+  'start.budget_lead':
+    'Atur berapa jam per minggu yang tersedia untuk belajar dan tambahkan kegiatan seperti magang, kerja, atau organisasi. Anda bisa melewatinya dan mengisi nanti di Profil.',
 };

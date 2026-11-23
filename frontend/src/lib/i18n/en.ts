@@ -84,12 +84,27 @@ export const en = {
   'overview.attention.findings.other':
     'Your plan has {count} rule checks to review',
   'overview.attention.review_plan': 'Review plan',
+  'overview.attention.overload':
+    'Semester {term} needs {total} h of {available} h available',
+  'overview.attention.overload_goals':
+    '{course} h for {credits} credits + {goal} h for goals. Adjust your plan or weekly hours.',
+  'overview.attention.overload_courses':
+    '{course} h for {credits} credits. Adjust your plan or weekly hours.',
   'overview.attention.empty.ready':
     'Nothing flagged right now. Check again after new grades or deadlines.',
   'overview.attention.empty.loading':
     'Checking for deadlines and critical courses…',
   'overview.attention.empty.unavailable':
     'The outlook is unavailable right now. Your plans are still saved.',
+
+  'overview.mission.heading': 'Your mission & goals',
+  'overview.mission.active': 'Active this semester',
+  'overview.mission.upcoming': 'Other planned goals',
+  'overview.mission.no_active':
+    'No goals are scheduled for semester {term} right now.',
+  'overview.mission.goal_meta': '{kind} | {range} | {hours} h/week',
+  'overview.mission.range_single': 'Semester {term}',
+  'overview.mission.range_multi': 'Semesters {start}-{end}',
 
   'overview.progress.heading': 'Credits toward graduation',
   'overview.progress.edit': 'Edit profile',
