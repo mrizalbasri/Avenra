@@ -125,6 +125,15 @@ export const enPages = {
   'profile.mission_section': 'Mission, weekly time & goals',
   'profile.mission_lead':
     'Share what you are aiming for and how much time you have outside classes. Avenra uses this to suggest realistic semester credit limits.',
+  'profile.edit_courses': 'Edit courses',
+  'profile.edit_courses_hint':
+    'Add missing prerequisites, update IPS rules, or adjust courses anytime. Your plans recheck immediately.',
+  'profile.save_courses': 'Save curriculum',
+  'profile.saving_courses': 'Saving curriculum…',
+  'profile.courses_saved':
+    'Curriculum saved. All plans now use your updated courses and rules.',
+  'profile.courses_removed_passed':
+    'Uncheck these passed courses first before deleting them: {courses}.',
 
   // Goals & weekly time budget editor
   'goals.available_hours': 'Weekly hours available (optional)',

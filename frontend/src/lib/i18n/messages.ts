@@ -40,6 +40,8 @@ export function createMessages(locale: () => Locale) {
         out[key] = orList(value);
       else if (key === 'chain' && Array.isArray(value))
         out[key] = value.join(' | ');
+      else if (key === 'courses' && Array.isArray(value))
+        out[key] = value.map(String).join(', ');
       else if (key === 'parity')
         out[key] = say(`parity.${value}`) ?? String(value);
       else if (key === 'reason')

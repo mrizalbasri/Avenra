@@ -161,6 +161,10 @@ export const idPlan: Record<keyof typeof enPlan, string> = {
   'error.GOAL_TERM_RANGE':
     'Semester tujuan harus berada dalam masa studi maksimum {max} semester.',
   'error.UNKNOWN_GOAL': 'Pilih tujuan dari workspace ini.',
+  'error.COMPLETED_COURSE_REMOVED':
+    'Hapus centang mata kuliah lulus berikut di profil Anda sebelum menghapusnya dari kurikulum: {courses}.',
+  'error.CURRENT_BEYOND_MAX':
+    'Semester saat ini ({current}) melewati masa studi maksimum {max} semester.',
 
   'req.prerequisites': 'Prasyarat: {list}',
   'req.any_of': 'Salah satu: {list}',
