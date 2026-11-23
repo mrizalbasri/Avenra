@@ -56,7 +56,10 @@ export type ParsedTable = {
   delimiter: Delimiter;
   columns: Column[];
   missing: Field[];
+  // Courses from rows without problems.
   courses: ParsedCourse[];
+  // Every course row as text, including rows with problems, for the row editor.
+  rows: CourseRow[];
   issues: Issue[];
 };
 
@@ -296,7 +299,7 @@ export function parseCurriculumTable(
   if (rows.length > 100)
     issues.push(raise('ROW_COUNT', 'Import between 1 and 100 courses.'));
   if (missing.length || !rows.length)
-    return { delimiter, columns, missing, courses: [], issues };
+    return { delimiter, columns, missing, courses: [], rows: [], issues };
 
   const column = (field: Field) =>
     columns.find((c) => c.field === field)?.index;
@@ -304,16 +307,73 @@ export function parseCurriculumTable(
     const index = column(field);
     return index === undefined ? '' : (row[index] ?? '').trim();
   };
+  const courseRows = rows.map((cells): CourseRow => ({
+    code: cell(cells, 'code'),
+    name: cell(cells, 'name'),
+    credits: cell(cells, 'credits'),
+    recommended_term: cell(cells, 'recommended_term'),
+    prerequisites: cell(cells, 'prerequisites'),
+    corequisites: cell(cells, 'corequisites'),
+    min_credits: cell(cells, 'min_credits'),
+    offered_terms: cell(cells, 'offered_terms'),
+    category: cell(cells, 'category'),
+  }));
+  // The header is row 1, so the first course is row 2, as in the spreadsheet.
+  const read = readRows(courseRows, 2);
+  issues.push(...read.issues);
+  issues.sort((a, b) => (a.row ?? 0) - (b.row ?? 0));
+  return {
+    delimiter,
+    columns,
+    missing,
+    courses: read.clean,
+    rows: courseRows,
+    issues,
+  };
+}
 
+// One editable course, as text, so a half-typed value is kept while the user edits.
+export type CourseRow = {
+  code: string;
+  name: string;
+  credits: string;
+  recommended_term: string;
+  // ';' separated; 'A|B' means either course.
+  prerequisites: string;
+  corequisites: string;
+  min_credits: string;
+  // odd, even or both (English or Indonesian), empty for both.
+  offered_terms: string;
+  // required or elective (English or Indonesian), empty for required.
+  category: string;
+};
+
+export const emptyRow = (): CourseRow => ({
+  code: '',
+  name: '',
+  credits: '',
+  recommended_term: '',
+  prerequisites: '',
+  corequisites: '',
+  min_credits: '',
+  offered_terms: '',
+  category: '',
+});
+
+/**
+ * Checks rows and converts them to courses. The table parser and the row editor share
+ * these rules, so a pasted table and an edited one are judged the same way.
+ */
+function readRows(rows: CourseRow[], firstRow: number) {
+  const issues: Issue[] = [];
   const firstSeen = new Map<string, number>();
-  const known = new Set<string>();
-  const parsed: { row: number; course: ParsedCourse; clean: boolean }[] = [];
-  rows.forEach((cells, index) => {
-    const rowNumber = index + 2;
-    const before = issues.length;
-    const code = cell(cells, 'code');
-    const name = cell(cells, 'name');
-    if (code) known.add(code);
+  const known = new Set(rows.map((r) => r.code.trim()).filter(Boolean));
+  const parsed: { row: number; course: ParsedCourse }[] = [];
+  rows.forEach((source, index) => {
+    const rowNumber = index + firstRow;
+    const get = (field: keyof CourseRow) => source[field].trim();
+    const code = get('code');
+    const name = get('name');
     if (!code)
       issues.push(
         raise(
@@ -346,7 +406,7 @@ export function parseCurriculumTable(
         ),
       );
 
-    const creditsText = cell(cells, 'credits');
+    const creditsText = get('credits');
     const credits = Number(CREDITS.exec(creditsText)?.[1]);
     if (!(credits >= 1 && credits <= 24))
       issues.push(
@@ -358,7 +418,7 @@ export function parseCurriculumTable(
           'credits',
         ),
       );
-    const termText = cell(cells, 'recommended_term');
+    const termText = get('recommended_term');
     const term = Number(WHOLE.exec(termText)?.[1]);
     if (!(term >= 1 && term <= 14))
       issues.push(
@@ -370,7 +430,7 @@ export function parseCurriculumTable(
           'recommended_term',
         ),
       );
-    const minText = cell(cells, 'min_credits');
+    const minText = get('min_credits');
     const minCredits = minText ? Number(WHOLE.exec(minText)?.[1]) : 0;
     if (!(minCredits >= 0 && minCredits <= 300))
       issues.push(
@@ -382,7 +442,8 @@ export function parseCurriculumTable(
           'min_credits',
         ),
       );
-    const offering = normalize(cell(cells, 'offered_terms'));
+    const offeringText = get('offered_terms');
+    const offering = normalize(offeringText);
     const offered = ODD.includes(offering)
       ? [1]
       : EVEN.includes(offering)
@@ -394,27 +455,28 @@ export function parseCurriculumTable(
       issues.push(
         raise(
           'BAD_OFFERED',
-          `Row ${rowNumber}: offered_terms must be odd, even, or both (found "${cell(cells, 'offered_terms')}").`,
-          { value: cell(cells, 'offered_terms') },
+          `Row ${rowNumber}: offered_terms must be odd, even, or both (found "${offeringText}").`,
+          { value: offeringText },
           rowNumber,
           'offered_terms',
         ),
       );
-    const kind = normalize(cell(cells, 'category'));
+    const categoryText = get('category');
+    const kind = normalize(categoryText);
     const elective = ELECTIVE.includes(kind);
     if (kind && !elective && !REQUIRED.includes(kind))
       issues.push(
         raise(
           'BAD_CATEGORY',
-          `Row ${rowNumber}: category must be required or elective (found "${cell(cells, 'category')}").`,
-          { value: cell(cells, 'category') },
+          `Row ${rowNumber}: category must be required or elective (found "${categoryText}").`,
+          { value: categoryText },
           rowNumber,
           'category',
         ),
       );
 
     // "A|B" means either course satisfies the requirement.
-    const requirements = readList(cell(cells, 'prerequisites'));
+    const requirements = readList(get('prerequisites'));
     const groups = requirements
       .filter((p) => p.includes('|'))
       .map((p) =>
@@ -423,29 +485,22 @@ export function parseCurriculumTable(
           .map((o) => o.trim())
           .filter(Boolean),
       );
-    parsed.push({
-      row: rowNumber,
-      clean: issues.length === before,
-      course: {
-        code,
-        name,
-        credits,
-        recommended_term: term,
-        category: elective ? 'elective' : 'required',
-        prerequisites: [
-          ...requirements.filter((p) => !p.includes('|')),
-          ...groups.filter((g) => g.length === 1).flat(),
-        ],
-        any_prerequisites: groups.filter((g) => g.length > 1),
-        corequisites: readList(cell(cells, 'corequisites')),
-        min_credits_earned: minCredits,
-        offered_terms: offered ?? [0, 1],
-      },
-    });
-  });
-
-  // References are checked against every code in the table, even rows with other problems.
-  for (const { row, course } of parsed) {
+    const course: ParsedCourse = {
+      code,
+      name,
+      credits,
+      recommended_term: term,
+      category: elective ? 'elective' : 'required',
+      prerequisites: [
+        ...requirements.filter((p) => !p.includes('|')),
+        ...groups.filter((g) => g.length === 1).flat(),
+      ],
+      any_prerequisites: groups.filter((g) => g.length > 1),
+      corequisites: readList(get('corequisites')),
+      min_credits_earned: minCredits,
+      offered_terms: offered ?? [0, 1],
+    };
+    // References are checked against every code, even rows with other problems.
     const refs = [
       ...course.prerequisites,
       ...course.any_prerequisites.flat(),
@@ -455,22 +510,81 @@ export function parseCurriculumTable(
       issues.push(
         raise(
           'UNKNOWN_REFERENCE',
-          `Row ${row}: ${course.code} lists ${ref}, which is not a course in this table.`,
-          { code: course.code, ref },
-          row,
+          `Row ${rowNumber}: ${code} lists ${ref}, which is not a course in this table.`,
+          { code, ref },
+          rowNumber,
           'prerequisites',
         ),
       );
-  }
-  const withIssue = new Set(issues.filter((i) => i.row).map((i) => i.row));
-  issues.sort((a, b) => (a.row ?? 0) - (b.row ?? 0));
+    parsed.push({ row: rowNumber, course });
+  });
+  const withIssue = new Set(issues.map((i) => i.row));
   return {
-    delimiter,
-    columns,
-    missing,
-    courses: parsed.filter((p) => !withIssue.has(p.row)).map((p) => p.course),
     issues,
+    courses: parsed.map((p) => p.course),
+    clean: parsed.filter((p) => !withIssue.has(p.row)).map((p) => p.course),
   };
+}
+
+/** Problems in edited rows, numbered from 1. An empty or oversized list is a problem too. */
+export function checkCourseRows(rows: CourseRow[]): Issue[] {
+  const issues = readRows(rows, 1).issues;
+  if (!rows.length || rows.length > 100)
+    issues.unshift(raise('ROW_COUNT', 'Import between 1 and 100 courses.'));
+  return issues;
+}
+
+/** Courses from rows that passed checkCourseRows. */
+export function rowsToCourses(rows: CourseRow[]): ParsedCourse[] {
+  return readRows(rows, 1).courses;
+}
+
+/** The editable form of a course, for example to fill the editor from a parsed table. */
+export function courseToRow(course: ParsedCourse): CourseRow {
+  return {
+    code: course.code,
+    name: course.name,
+    credits: String(course.credits),
+    recommended_term: String(course.recommended_term),
+    prerequisites: [
+      ...course.prerequisites,
+      ...course.any_prerequisites.map((group) => group.join('|')),
+    ].join('; '),
+    corequisites: course.corequisites.join('; '),
+    min_credits: course.min_credits_earned
+      ? String(course.min_credits_earned)
+      : '',
+    offered_terms:
+      course.offered_terms.length === 2
+        ? ''
+        : course.offered_terms[0] === 1
+          ? 'odd'
+          : 'even',
+    category: course.category === 'elective' ? 'elective' : '',
+  };
+}
+
+/**
+ * Passed courses whose own prerequisites are not passed. Mirrors the API's
+ * progress_issues: a missing either-or group is listed as its options.
+ */
+export function checkPassed(
+  courses: ParsedCourse[],
+  completed: string[],
+): { course: string; missing: (string | string[])[] }[] {
+  const done = new Set(completed);
+  const issues = [];
+  for (const course of courses) {
+    if (!done.has(course.code)) continue;
+    const missing: (string | string[])[] = [
+      ...course.prerequisites,
+      ...course.corequisites,
+    ].filter((code) => !done.has(code));
+    for (const group of course.any_prerequisites)
+      if (!group.some((code) => done.has(code))) missing.push([...group]);
+    if (missing.length) issues.push({ course: course.code, missing });
+  }
+  return issues;
 }
 
 /** Parses lines such as "3.00 = 24" into IPS credit rules. */
