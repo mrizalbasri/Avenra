@@ -178,6 +178,9 @@ export const idPlan: Record<keyof typeof enPlan, string> = {
   'node.review': 'Tinjau temuan aturan',
   'node.planned': 'Mata kuliah terencana',
   'node.semester_credits': '{credits} / {cap} SKS',
+  'node.semester_hours': '{total} / {available} jam',
+  'node.semester_hours_split':
+    '{total} / {available} jam ({course} + {goal} jam)',
 
   'plan.title': 'Avenra | {name}',
   'plan.rev': 'Rev {revision} | {state} | {version}',

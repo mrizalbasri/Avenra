@@ -4,8 +4,18 @@
   import { api } from '#lib/api.js';
   import Icon from '#lib/components/Icon.svelte';
   import LanguageSwitcher from '#lib/components/LanguageSwitcher.svelte';
+  import GoalsBudgetEditor from '#lib/components/GoalsBudgetEditor.svelte';
   import CourseRowsEditor from '#lib/components/start/CourseRowsEditor.svelte';
   import { useI18n } from '#lib/i18n/context.js';
+  import {
+    DEFAULT_MINUTES_PER_CREDIT,
+    GOAL_KINDS,
+    MAX_GOALS,
+    buildGoalsPayload,
+    buildTimeBudget,
+    checkGoalsAndBudget,
+    type GoalDraft,
+  } from '#lib/goals.js';
   import {
     FIELDS,
     checkCourseRows,
@@ -25,7 +35,7 @@
   const DEFAULT_IPS = '3.00 = 24\n2.50 = 21\n2.00 = 18\n0.00 = 15';
 
   type Draft = {
-    step: 1 | 2 | 3;
+    step: 1 | 2 | 3 | 4;
     alias: string;
     currentTerm: number | null;
     lastGpa: number | null;
@@ -44,6 +54,9 @@
     maxTerms: number | null;
     gpaRules: string;
     completed: string[];
+    availableHours: number | null;
+    minutesPerCredit: number | null;
+    goals: GoalDraft[];
   };
   const fresh = (): Draft => ({
     step: 1,
@@ -65,6 +78,9 @@
     maxTerms: 14,
     gpaRules: DEFAULT_IPS,
     completed: [],
+    availableHours: null,
+    minutesPerCredit: DEFAULT_MINUTES_PER_CREDIT,
+    goals: [],
   });
 
   let d = $state<Draft>(fresh());
@@ -85,8 +101,20 @@
       !!row &&
       typeof row === 'object' &&
       ROW_KEYS.every((key) => text((row as Record<string, unknown>)[key]));
+    const goalOk = (goal: unknown) => {
+      if (!goal || typeof goal !== 'object') return false;
+      const g = goal as Record<string, unknown>;
+      return (
+        text(g.title) &&
+        typeof g.kind === 'string' &&
+        (GOAL_KINDS as readonly string[]).includes(g.kind) &&
+        num(g.start_term) &&
+        num(g.end_term) &&
+        num(g.weekly_hours)
+      );
+    };
     const ok =
-      [1, 2, 3].includes(draft.step) &&
+      [1, 2, 3, 4].includes(draft.step) &&
       [
         draft.alias,
         draft.mission,
@@ -104,12 +132,17 @@
         draft.graduationCredits,
         draft.targetTerms,
         draft.maxTerms,
+        draft.availableHours,
+        draft.minutesPerCredit,
       ].every(num) &&
       Array.isArray(draft.rows) &&
       draft.rows.length <= 200 &&
       draft.rows.every(rowOk) &&
       Array.isArray(draft.completed) &&
       draft.completed.every(text) &&
+      Array.isArray(draft.goals) &&
+      draft.goals.length <= MAX_GOALS &&
+      draft.goals.every(goalOk) &&
       typeof draft.columnFields === 'object' &&
       typeof draft.fromExample === 'boolean';
     if (!ok) return null;
@@ -117,6 +150,13 @@
     draft.rows = draft.rows.map((row) =>
       Object.fromEntries(ROW_KEYS.map((key) => [key, row[key]])),
     ) as CourseRow[];
+    draft.goals = draft.goals.map((goal) => ({
+      title: goal.title,
+      kind: goal.kind,
+      start_term: goal.start_term,
+      end_term: goal.end_term,
+      weekly_hours: goal.weekly_hours,
+    }));
     return draft;
   }
 
@@ -314,8 +354,19 @@
         .join(', '),
     });
 
-  async function submit() {
+  // Step 4 (optional)
+  let budgetIssues = $derived(
+    checkGoalsAndBudget(
+      d.availableHours,
+      d.minutesPerCredit,
+      d.goals,
+      d.maxTerms ?? 14,
+    ),
+  );
+
+  async function submit(includeBudget = true) {
     if (!step1Ok || !step2Ok || passedIssues.length) return;
+    if (includeBudget && budgetIssues.length) return;
     busy = true;
     error = '';
     try {
@@ -325,6 +376,10 @@
         last_gpa: d.lastGpa,
         mission: d.mission.trim() || null,
         completed: passed,
+        time_budget: includeBudget
+          ? buildTimeBudget(d.availableHours, d.minutesPerCredit)
+          : null,
+        goals: includeBudget ? buildGoalsPayload(d.goals) : [],
         curriculum: {
           id: crypto.randomUUID(),
           name: `${d.university.trim()} | ${d.program.trim()}`,
@@ -352,8 +407,8 @@
     }
   }
 
-  const steps = [1, 2, 3] as const;
-  const go = (step: 1 | 2 | 3) => {
+  const steps = [1, 2, 3, 4] as const;
+  const go = (step: 1 | 2 | 3 | 4) => {
     d.step = step;
     error = '';
     window.scrollTo({ top: 0 });
@@ -677,12 +732,26 @@
       <p class="footnote">{t('curriculum.footnote')}</p>
     </section>{/if}
 
+  {#if d.step === 4}<section class="panel" aria-labelledby="step-heading">
+      <p class="eyebrow">{t('start.step_of', { n: 4 })}</p>
+      <h2 id="step-heading">{t('start.budget_heading')}</h2>
+      <p class="muted">{t('start.budget_lead')}</p>
+      <GoalsBudgetEditor
+        bind:availableHours={d.availableHours}
+        bind:minutesPerCredit={d.minutesPerCredit}
+        bind:goals={d.goals}
+        maxTerms={d.maxTerms ?? 14}
+        currentTerm={d.currentTerm ?? 1}
+      />
+      <p class="footnote">{t('curriculum.footnote')}</p>
+    </section>{/if}
+
   {#if error}<p class="error-banner" role="alert">{error}</p>{/if}
   <div class="wizard-actions">
     {#if d.step > 1}<button
         type="button"
         class="button"
-        onclick={() => go((d.step - 1) as 1 | 2)}>{t('start.back')}</button
+        onclick={() => go((d.step - 1) as 1 | 2 | 3)}>{t('start.back')}</button
       >{/if}
     {#if d.step < 3}<button
         type="button"
@@ -690,11 +759,32 @@
         disabled={d.step === 1 ? !step1Ok : !step2Ok}
         onclick={() => go((d.step + 1) as 2 | 3)}
         >{t('start.next')}<Icon name="arrow" size={15} /></button
-      >{:else}<button
+      >{:else if d.step === 3}<button
+        type="button"
+        class="button"
+        disabled={busy || !step1Ok || !step2Ok || passedIssues.length > 0}
+        onclick={() => submit(false)}
+        >{busy ? t('start.creating') : t('start.create')}</button
+      ><button
         type="button"
         class="button primary"
         disabled={busy || !step1Ok || !step2Ok || passedIssues.length > 0}
-        onclick={submit}
+        onclick={() => go(4)}
+        >{t('start.next')}<Icon name="arrow" size={15} /></button
+      >{:else}<button
+        type="button"
+        class="button subtle"
+        disabled={busy || !step1Ok || !step2Ok || passedIssues.length > 0}
+        onclick={() => submit(false)}>{t('start.skip_create')}</button
+      ><button
+        type="button"
+        class="button primary"
+        disabled={busy ||
+          !step1Ok ||
+          !step2Ok ||
+          passedIssues.length > 0 ||
+          budgetIssues.length > 0}
+        onclick={() => submit(true)}
         >{busy ? t('start.creating') : t('start.create')}</button
       >{/if}
   </div>

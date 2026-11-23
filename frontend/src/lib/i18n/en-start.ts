@@ -3,12 +3,13 @@ export const enStart = {
   'start.title': 'Avenra | Get started',
   'start.heading': 'Set up your workspace.',
   'start.lead':
-    'Three short steps: about you, your curriculum, and the courses you have passed.',
+    'Four short steps: about you, your curriculum, passed courses, and optional weekly time and goals.',
   'start.steps_aria': 'Setup steps',
   'start.step.1': 'About you',
   'start.step.2': 'Your curriculum',
   'start.step.3': 'Passed courses',
-  'start.step_of': 'Step {n} of 3',
+  'start.step.4': 'Time & goals',
+  'start.step_of': 'Step {n} of 4',
   'start.back': 'Back',
   'start.next': 'Next',
   'start.draft_restored': 'Your unfinished setup was restored.',
@@ -65,4 +66,8 @@ export const enStart = {
     'These passed courses need a prerequisite that is not ticked:',
   'start.create': 'Create my workspace',
   'start.creating': 'Creating your workspace…',
+  'start.skip_create': 'Skip & create workspace',
+  'start.budget_heading': 'Weekly time & goals (optional)',
+  'start.budget_lead':
+    'Set how many hours a week you can study and add activities like internships, work, or organisations. You can skip this and add it later in Profile.',
 } as const;

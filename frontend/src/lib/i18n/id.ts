@@ -87,12 +87,27 @@ export const id: Record<MessageKey, string> = {
   'overview.attention.findings.other':
     'Rencana Anda punya {count} pemeriksaan aturan untuk ditinjau',
   'overview.attention.review_plan': 'Tinjau rencana',
+  'overview.attention.overload':
+    'Semester {term} membutuhkan {total} jam dari {available} jam tersedia',
+  'overview.attention.overload_goals':
+    '{course} jam untuk {credits} SKS + {goal} jam untuk tujuan. Sesuaikan rencana atau jam mingguan Anda.',
+  'overview.attention.overload_courses':
+    '{course} jam untuk {credits} SKS. Sesuaikan rencana atau jam mingguan Anda.',
   'overview.attention.empty.ready':
     'Tidak ada yang ditandai saat ini. Periksa lagi setelah ada nilai atau tenggat baru.',
   'overview.attention.empty.loading':
     'Memeriksa tenggat dan mata kuliah kritis…',
   'overview.attention.empty.unavailable':
     'Prospek belum tersedia saat ini. Rencana Anda tetap tersimpan.',
+
+  'overview.mission.heading': 'Misi & tujuan Anda',
+  'overview.mission.active': 'Aktif semester ini',
+  'overview.mission.upcoming': 'Tujuan lain yang direncanakan',
+  'overview.mission.no_active':
+    'Belum ada tujuan yang terjadwal di semester {term}.',
+  'overview.mission.goal_meta': '{kind} | {range} | {hours} jam/minggu',
+  'overview.mission.range_single': 'Semester {term}',
+  'overview.mission.range_multi': 'Semester {start}-{end}',
 
   'overview.progress.heading': 'SKS menuju kelulusan',
   'overview.progress.edit': 'Ubah profil',

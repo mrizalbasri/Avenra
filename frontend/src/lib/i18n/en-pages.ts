@@ -122,6 +122,48 @@ export const enPages = {
     'Profile saved. All plan checks now use your updated progress.',
   'profile.none': 'No academic profile yet.',
   'profile.open_demo': 'Open the demo workspace',
+  'profile.mission_section': 'Mission, weekly time & goals',
+  'profile.mission_lead':
+    'Share what you are aiming for and how much time you have outside classes. Avenra uses this to suggest realistic semester credit limits.',
+
+  // Goals & weekly time budget editor
+  'goals.available_hours': 'Weekly hours available (optional)',
+  'goals.available_placeholder': 'e.g. 45',
+  'goals.minutes_per_credit': 'Minutes per SKS per week',
+  'goals.minutes_hint':
+    'Assumes 1 SKS = 170 min/week (50 class + 60 structured + 60 independent). Adjust if your courses take more or less time.',
+  'goals.implied_cap':
+    '{hours} h/week | up to {cap} credits/semester before goal hours.',
+  'goals.list_heading': 'Goals & commitments',
+  'goals.list_hint':
+    'Add up to 3 activities (such as an internship, job, or organisation). Active goals lower that semester’s credit cap when a weekly budget is set.',
+  'goals.count': '{count} / {max}',
+  'goals.item_label': 'Goal {n}',
+  'goals.remove': 'Remove',
+  'goals.remove_aria': 'Remove goal {n}',
+  'goals.field_title': 'Goal title',
+  'goals.title_placeholder': 'e.g. Internship or BEM',
+  'goals.field_kind': 'Kind',
+  'goals.field_start': 'Start semester',
+  'goals.field_end': 'End semester',
+  'goals.field_hours': 'Hours / week',
+  'goals.field_aria': '{field}, goal {n}',
+  'goals.kind_internship': 'Internship',
+  'goals.kind_work': 'Work',
+  'goals.kind_organisation': 'Organisation',
+  'goals.kind_graduation': 'Graduation',
+  'goals.kind_other': 'Other',
+  'goals.empty': 'No goals added yet.',
+  'goals.add': 'Add a goal',
+  'goals.error.BUDGET_HOURS':
+    'Weekly hours available must be between 0 and 168.',
+  'goals.error.BUDGET_MINUTES':
+    'Minutes per SKS must be a whole number between 60 and 300.',
+  'goals.error.GOAL_TITLE': 'Goal {n}: enter a title (up to 80 characters).',
+  'goals.error.GOAL_TERM':
+    'Goal {n}: start and end semesters must be between 1 and {max}.',
+  'goals.error.GOAL_ORDER': 'Goal {n}: end semester cannot be before start.',
+  'goals.error.GOAL_HOURS': 'Goal {n}: weekly hours must be between 0 and 168.',
 
   // Study
   'study.title': 'Avenra | Study & focus',

@@ -2,7 +2,17 @@
   import { untrack } from 'svelte';
   import { invalidateAll } from '$app/navigation';
   import { api } from '#lib/api.js';
+  import GoalsBudgetEditor from '#lib/components/GoalsBudgetEditor.svelte';
+  import {
+    DEFAULT_MINUTES_PER_CREDIT,
+    buildGoalsPayload,
+    buildTimeBudget,
+    checkGoalsAndBudget,
+    goalToDraft,
+    type GoalDraft,
+  } from '#lib/goals.js';
   import { useI18n } from '#lib/i18n/context.js';
+  import type { Profile } from '#lib/types.js';
   import type { PageProps } from './$types';
   let { data }: PageProps = $props();
   const { t, msg } = useI18n();
@@ -17,22 +27,55 @@
   let lastGpa = $state<number | null>(
     untrack(() => data.workspace?.profile?.last_gpa ?? null),
   );
+  let mission = $state(untrack(() => data.workspace?.profile?.mission ?? ''));
+  let availableHours = $state<number | null>(
+    untrack(
+      () => data.workspace?.profile?.time_budget?.available_hours ?? null,
+    ),
+  );
+  let minutesPerCredit = $state<number | null>(
+    untrack(
+      () =>
+        data.workspace?.profile?.time_budget?.minutes_per_credit ??
+        DEFAULT_MINUTES_PER_CREDIT,
+    ),
+  );
+  let goals = $state<GoalDraft[]>(
+    untrack(() => (data.workspace?.profile?.goals ?? []).map(goalToDraft)),
+  );
+  let budgetIssues = $derived(
+    checkGoalsAndBudget(
+      availableHours,
+      minutesPerCredit,
+      goals,
+      data.workspace?.curriculum.max_terms ?? 14,
+    ),
+  );
   let notice = $state('');
   let busy = $state(false);
   let error = $state('');
   async function save() {
+    if (budgetIssues.length) return;
     busy = true;
     error = '';
     notice = '';
     try {
-      const profile = await api<{ revision: number }>('profile', 'PATCH', {
+      const profile = await api<Profile>('profile', 'PATCH', {
         alias,
         current_term: currentTerm,
         completed,
         last_gpa: lastGpa,
+        mission: mission.trim() || null,
+        time_budget: buildTimeBudget(availableHours, minutesPerCredit),
+        goals: buildGoalsPayload(goals),
         revision,
       });
       revision = profile.revision;
+      mission = profile.mission ?? '';
+      availableHours = profile.time_budget?.available_hours ?? null;
+      minutesPerCredit =
+        profile.time_budget?.minutes_per_credit ?? DEFAULT_MINUTES_PER_CREDIT;
+      goals = (profile.goals ?? []).map(goalToDraft);
       await invalidateAll();
       notice = t('profile.saved');
     } catch (e) {
@@ -109,6 +152,28 @@
         </p>{/if}
     </section>
     <section class="panel">
+      <h2>{t('profile.mission_section')}</h2>
+      <p class="muted small">{t('profile.mission_lead')}</p>
+      <label
+        >{t('start.mission')}<textarea
+          bind:value={mission}
+          maxlength="500"
+          rows="3"
+          placeholder={t('start.mission_placeholder')}
+        ></textarea></label
+      >
+      <p class="muted small">
+        {t('start.mission_count', { count: mission.length })}
+      </p>
+      <GoalsBudgetEditor
+        bind:availableHours
+        bind:minutesPerCredit
+        bind:goals
+        maxTerms={data.workspace.curriculum.max_terms}
+        {currentTerm}
+      />
+    </section>
+    <section class="panel">
       <div class="section-heading">
         <h2>{t('profile.completed')}</h2>
         <span class="tag"
@@ -143,7 +208,9 @@
         {error}
       </p>{/if}{#if notice}<p class="success-banner" role="status">
         {notice}
-      </p>{/if}<button class="button primary" disabled={busy}
+      </p>{/if}<button
+      class="button primary"
+      disabled={busy || budgetIssues.length > 0}
       >{busy ? t('profile.saving') : t('profile.save')}</button
     >
   </form>{:else}<div class="empty-panel">

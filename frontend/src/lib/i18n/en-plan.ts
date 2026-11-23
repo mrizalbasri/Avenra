@@ -181,6 +181,8 @@ export const enPlan = {
   'node.review': 'Review rule findings',
   'node.planned': 'Planned course',
   'node.semester_credits': '{credits} / {cap} credits',
+  'node.semester_hours': '{total} / {available} h',
+  'node.semester_hours_split': '{total} / {available} h ({course} + {goal} h)',
 
   // Plan editor
   'plan.title': 'Avenra | {name}',

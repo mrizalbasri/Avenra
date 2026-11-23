@@ -5,8 +5,9 @@
   import Hero from '#lib/components/dusk/hero/six/hero.svelte';
   import Icon from '#lib/components/Icon.svelte';
   import { api } from '#lib/api.js';
+  import { formatHours, semesterHours } from '#lib/goals.js';
   import { useI18n } from '#lib/i18n/context.js';
-  import type { Outlook } from '#lib/types.js';
+  import type { Goal, Outlook } from '#lib/types.js';
   import type { PageProps } from './$types';
   let { data }: PageProps = $props();
   let busy = $state(false);
@@ -102,6 +103,28 @@
     href: string;
     action: string;
   };
+  let activeGoals = $derived(
+    (workspace?.profile?.goals ?? []).filter(
+      (g) =>
+        g.start_term <= (workspace?.profile?.current_term ?? 0) &&
+        (workspace?.profile?.current_term ?? 0) <= g.end_term,
+    ),
+  );
+  let otherGoals = $derived(
+    (workspace?.profile?.goals ?? []).filter(
+      (g) => !activeGoals.some((active) => active.id === g.id),
+    ),
+  );
+  const goalRange = (goal: Goal) =>
+    goal.start_term === goal.end_term
+      ? t('overview.mission.range_single', { term: goal.start_term })
+      : t('overview.mission.range_multi', {
+          start: goal.start_term,
+          end: goal.end_term,
+        });
+  const goalKindLabel = (kind: Goal['kind']) =>
+    t(`goals.kind_${kind}` as 'goals.kind_internship');
+
   let attention = $derived.by(() => {
     const items: Attention[] = [];
     const open = data.study?.tasks.filter((t) => !t.done) ?? [];
@@ -122,6 +145,42 @@
         href: '/study',
         action: t('overview.attention.open_study'),
       });
+    }
+    const budget = workspace?.profile?.time_budget;
+    if (primaryPlan && budget) {
+      const entries = Object.entries(primaryPlan.validation.loads)
+        .map(([term, credits]) => [Number(term), credits] as const)
+        .sort((a, b) => a[0] - b[0]);
+      for (const [term, credits] of entries) {
+        const hours = semesterHours(
+          credits,
+          workspace?.profile?.goals,
+          term,
+          budget,
+        );
+        if (!hours.over) continue;
+        items.push({
+          key: `overload-${term}`,
+          title: t('overview.attention.overload', {
+            term,
+            total: formatHours(hours.totalHours),
+            available: formatHours(hours.availableHours),
+          }),
+          detail:
+            hours.goalHours > 0
+              ? t('overview.attention.overload_goals', {
+                  course: formatHours(hours.courseHours),
+                  credits,
+                  goal: formatHours(hours.goalHours),
+                })
+              : t('overview.attention.overload_courses', {
+                  course: formatHours(hours.courseHours),
+                  credits,
+                }),
+          href: `/plans/${primaryPlan.id}`,
+          action: t('overview.attention.review_plan'),
+        });
+      }
     }
     for (const c of outlook?.critical ?? []) {
       if (open.some((task) => task.course_code === c.code)) continue;
@@ -227,6 +286,50 @@
       >
     </div>
   </section>
+  {#if workspace.profile.mission || workspace.profile.goals.length}<section
+      class="panel mission-panel"
+      aria-labelledby="mission-heading"
+    >
+      <div class="section-heading">
+        <h2 id="mission-heading">{t('overview.mission.heading')}</h2>
+        <a href="/profile" class="text-link">{t('overview.progress.edit')}</a>
+      </div>
+      {#if workspace.profile.mission}<p class="mission-text">
+          {workspace.profile.mission}
+        </p>{/if}
+      {#if workspace.profile.goals.length}<div class="mission-goals">
+          <p class="small muted">{t('overview.mission.active')}</p>
+          {#if activeGoals.length}<ul class="goal-list">
+              {#each activeGoals as goal (goal.id)}<li>
+                  <strong>{goal.title}</strong><span class="muted small"
+                    >{t('overview.mission.goal_meta', {
+                      kind: goalKindLabel(goal.kind),
+                      range: goalRange(goal),
+                      hours: formatHours(goal.weekly_hours),
+                    })}</span
+                  >
+                </li>{/each}
+            </ul>{:else}<p class="muted small">
+              {t('overview.mission.no_active', {
+                term: workspace.profile.current_term,
+              })}
+            </p>{/if}
+          {#if otherGoals.length}<p class="small muted upcoming-heading">
+              {t('overview.mission.upcoming')}
+            </p>
+            <ul class="goal-list">
+              {#each otherGoals as goal (goal.id)}<li>
+                  <strong>{goal.title}</strong><span class="muted small"
+                    >{t('overview.mission.goal_meta', {
+                      kind: goalKindLabel(goal.kind),
+                      range: goalRange(goal),
+                      hours: formatHours(goal.weekly_hours),
+                    })}</span
+                  >
+                </li>{/each}
+            </ul>{/if}
+        </div>{/if}
+    </section>{/if}
   <section aria-labelledby="attention-heading">
     <div class="section-heading">
       <h2 id="attention-heading">{t('overview.attention.heading')}</h2>

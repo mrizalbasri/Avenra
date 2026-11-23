@@ -987,6 +987,16 @@ td {
   font-size: 10px;
   color: var(--text-secondary);
 }
+.semester-hours {
+  display: block;
+  margin-top: 4px;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+.semester-hours.load-over {
+  color: #e4e4e7;
+  font-weight: 550;
+}
 .semester-board {
   display: flex;
   gap: 15px;
@@ -1542,6 +1552,61 @@ main.landing-main {
 }
 .calendar-export p {
   margin: 0;
+}
+.budget-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+.budget-preview {
+  margin: 0;
+  color: var(--text-primary);
+}
+.goals-heading {
+  margin-top: 10px;
+}
+.goal-rows {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.mission-panel {
+  margin-bottom: 28px;
+}
+.mission-text {
+  margin: 0 0 14px;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--text-primary);
+}
+.mission-goals .upcoming-heading {
+  margin-top: 14px;
+}
+.goal-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  display: grid;
+  gap: 8px;
+}
+.goal-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #101012;
+}
+.goal-list strong {
+  font-size: 13px;
+  font-weight: 550;
 }
 .label-short {
   display: none;
