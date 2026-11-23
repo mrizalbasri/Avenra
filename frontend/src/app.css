@@ -1107,6 +1107,21 @@ td {
   gap: 24px;
   align-items: start;
 }
+.study-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.study-filters select {
+  width: auto;
+  min-width: 150px;
+  padding: 6px 10px;
+  font-size: 11px;
+}
+.focus-course-picker {
+  margin-top: 10px;
+}
 .study-task {
   padding: 15px 0;
   border-top: 1px solid var(--border);

@@ -363,8 +363,13 @@ def study(db: DB):
 
 @router.post("/study/tasks", status_code=201)
 def add_task(payload: TaskCreate, db: DB):
-    profile_or_404(db)
-    known_codes(db, [payload.course_code])
+    profile = profile_or_404(db)
+    if payload.course_code:
+        known_codes(db, [payload.course_code])
+    if payload.goal_id:
+        goal_ids = {goal.get("id") for goal in (profile.goals or [])}
+        if payload.goal_id not in goal_ids:
+            fail(422, "UNKNOWN_GOAL", "Choose a goal from this workspace.")
     values = payload.model_dump()
     values["due_date"] = payload.due_date.isoformat() if payload.due_date else None
     task = StudyTask(profile_id=workspace_key(db), **values)

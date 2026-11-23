@@ -174,6 +174,13 @@ export const enPages = {
   'study.open_workspace': 'Open a workspace to start learning.',
   'study.next_target': "What's your next learning target?",
   'study.course': 'Course',
+  'study.course_or_goal': 'Course or goal',
+  'study.group_courses': 'Courses',
+  'study.group_goals': 'Goals',
+  'study.filter_goal': 'Filter by goal',
+  'study.filter_goal_all': 'All courses & goals',
+  'study.filter_goal_courses': 'Courses only',
+  'study.focus_course': 'Focus course',
   'study.target': 'Specific target',
   'study.target_placeholder': 'e.g. Solve 5 linked-list exercises',
   'study.target_date': 'Target date (optional)',
@@ -186,6 +193,8 @@ export const enPages = {
   'study.ics_hint':
     'Opens in Google Calendar, Apple Calendar, or Outlook with a reminder at 19:00 the day before each due date.',
   'study.ics_course': 'Study target for {course}. Added from Avenra.',
+  'study.ics_goal': 'Goal target for {goal}. Added from Avenra.',
+  'study.ics_both': 'Target for {course} ({goal}). Added from Avenra.',
   'study.ics_plain': 'Added from Avenra.',
   'study.due': ' | Due {date}',
   'study.no_targets':
