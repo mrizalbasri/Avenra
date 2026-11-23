@@ -85,7 +85,7 @@ test('generates recovery options, saves an independent plan, compares and export
     }),
   ).toBeVisible();
   await expect(
-    page.getByText('Plan revision 1 | Profile revision 1'),
+    page.getByText('Plan version 1 | Profile version 1'),
   ).toBeVisible();
   await expect(page.getByText('Scenario setbacks: IF2101.')).toBeVisible();
   await page.emulateMedia({ media: 'print' });
@@ -279,7 +279,7 @@ test('keeps a failed save recoverable after reload', async ({ page }) => {
   await page.getByRole('button', { name: 'Save & validate' }).click();
   await expect(page.getByRole('alert')).toContainText('Temporary API outage');
   await expect(
-    page.getByText('Rev 1 | Unsaved changes', { exact: false }),
+    page.getByText('Version 1 | Unsaved changes', { exact: false }),
   ).toBeVisible();
   await page.unroute('**/api/v1/plans/*');
   page.once('dialog', (dialog) => dialog.accept());

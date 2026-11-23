@@ -85,7 +85,7 @@ export const idPages: Record<keyof typeof enPages, string> = {
   'plans.count.other': '{count} rencana',
   'plans.needs_review': 'Perlu ditinjau',
   'plans.tile_meta': 'Sisa {remaining} SKS | batas {cap} SKS',
-  'plans.findings_review': '{count} temuan aturan untuk ditinjau',
+  'plans.findings_review': '{count} masalah aturan untuk ditinjau',
   'plans.view_restore': 'Lihat & pulihkan',
   'plans.duplicate': 'Duplikat {name}',
   'plans.copy_name': '{name} salinan',
@@ -101,7 +101,7 @@ export const idPages: Record<keyof typeof enPages, string> = {
   'profile.lead':
     'Atur semester saat ini dan mata kuliah yang sudah selesai. Rencana dibangun di atas dasar bersama ini.',
   'profile.panel': 'Profil akademik',
-  'profile.alias_hint': 'Gunakan alias dan data fiktif pada demo lokal ini.',
+  'profile.alias_hint': 'Gunakan nama atau alias yang mudah Anda kenali.',
   'profile.alias': 'Alias mahasiswa',
   'profile.current': 'Semester saat ini',
   'profile.last_ips': 'IPS semester terakhir',
@@ -228,7 +228,7 @@ export const idPages: Record<keyof typeof enPages, string> = {
   'study.saving': 'Menyimpan…',
   'study.finish': 'Selesai & simpan sesi',
   'study.footnote':
-    'Timer memakai cap waktu, jadi tab di latar belakang tidak kehilangan waktu yang berlalu. Muat ulang memulihkannya dalam keadaan jeda. Sesi disimpan ke PostgreSQL saat Anda selesai.',
+    'Timer memakai cap waktu, jadi tab di latar belakang tidak kehilangan waktu yang berlalu. Muat ulang memulihkannya dalam keadaan jeda. Sesi disimpan saat Anda selesai.',
   'study.notice.no_storage':
     'Pemulihan di browser tidak tersedia. Biarkan halaman ini terbuka sampai Anda menyimpan sesi.',
   'study.notice.no_restore':
@@ -243,7 +243,7 @@ export const idPages: Record<keyof typeof enPages, string> = {
   'study.notice.added': 'Target belajar ditambahkan.',
 
   'curriculum.alias': 'Alias mahasiswa',
-  'curriculum.alias_placeholder': 'Gunakan alias untuk prototipe lokal ini',
+  'curriculum.alias_placeholder': 'Nama atau alias Anda',
   'curriculum.university': 'Universitas',
   'curriculum.university_placeholder': 'Universitas Anda',
   'curriculum.program': 'Program studi',
@@ -275,7 +275,7 @@ export const idPages: Record<keyof typeof enPages, string> = {
   'curriculum.warning':
     'Aturan berasal dari pengguna sampai diverifikasi secara independen. Avenra memeriksa prasyarat (termasuk "salah satu dari A atau B"), korequisit, ambang SKS terkumpul, mata kuliah pilihan terhadap total kelulusan, penawaran ganjil/genap, dan batas SKS berdasarkan IPS untuk semester berikutnya. Pengecualian, mata kuliah setara, dan transfer SKS tetap perlu ditinjau dosen wali.',
   'curriculum.footnote':
-    'Workspace baru tidak mengubah kurikulum dan rencana sebelumnya. Prototipe lokal ini tidak memakai login; gunakan alias dan data yang tidak sensitif.',
+    'Workspace baru tidak mengubah kurikulum dan rencana sebelumnya. Data tersimpan di workspace lokal ini tanpa perlu login.',
 
   'method.title': 'Avenra | Aturan & metodologi',
   'method.heading': 'Ketahui dasar penyusunan rencana Anda.',
@@ -283,11 +283,11 @@ export const idPages: Record<keyof typeof enPages, string> = {
     'Aturan yang jelas, asumsi yang terlihat, dan ruang bagi pertimbangan dosen wali.',
   'method.own.heading': 'Bawa kurikulum Anda sendiri',
   'method.own.p1':
-    'Mahasiswa dari universitas yang berbeda dapat membuat workspace terpisah dengan mengimpor CSV mata kuliah masing-masing. Setiap workspace menyimpan program studi, versi kurikulum, batas SKS, graf prasyarat, rujukan sumber, rencana, dan target belajarnya.',
+    'Mahasiswa dari universitas mana pun dapat menempel tabel mata kuliah dari Excel, Google Sheets, atau PDF saat persiapan, meninjau dan mengubah tiap baris, lalu memperbarui mata kuliah, prasyarat, atau aturan IPS kapan saja di Profil akademik.',
   'method.own.p2':
-    'Aturan yang diimpor diberi label dari pengguna, belum diverifikasi secara independen. CSV yang valid secara struktur tidak membuktikan bahwa isinya mewakili kebijakan institusi dengan benar. Mata kuliah dianggap wajib kecuali CSV menandainya sebagai pilihan; mata kuliah pilihan dihitung ke total SKS kelulusan.',
-  'method.own.link': 'Impor kurikulum',
-  'method.synthetic.heading': 'Kurikulum sintetis',
+    'Aturan yang diimpor diberi label dari pengguna, belum diverifikasi secara independen. Tabel yang valid secara struktur tidak membuktikan bahwa isinya mewakili kebijakan institusi dengan benar. Mata kuliah dianggap wajib kecuali ditandai sebagai pilihan; mata kuliah pilihan dihitung ke total SKS kelulusan.',
+  'method.own.link': 'Siapkan kurikulum',
+  'method.synthetic.heading': 'Kurikulum contoh',
   'method.synthetic.p1':
     'Kurikulum S1 Informatika bawaan bersifat fiktif. Strukturnya mengikuti pola umum di Indonesia: 144 SKS, 8 semester yang disarankan, batas studi 14 semester, mata kuliah yang hanya ditawarkan pada semester ganjil atau genap, dan tabel IPS untuk batas SKS semester berikutnya. Tidak ada kebijakan universitas tertentu yang dipakai atau diverifikasi.',
   'method.synthetic.source_a': 'Sumber: ',
@@ -301,21 +301,26 @@ export const idPages: Record<keyof typeof enPages, string> = {
   'method.checks.3':
     'Mata kuliah seperti magang atau skripsi menunggu sampai SKS yang terkumpul cukup.',
   'method.checks.4':
-    'Setiap semester tetap berada dalam batas Anda, batas maksimum kurikulum, dan, untuk semester berikutnya, batas berdasarkan IPS.',
+    'Setiap semester tetap berada dalam batas Anda, batas maksimum kurikulum, anggaran waktu mingguan bila diisi, dan, untuk semester berikutnya, batas berdasarkan IPS.',
   'method.checks.5':
     'Mata kuliah mengikuti kalender penawaran ganjil/genap dan berada dalam masa studi maksimum. Mata kuliah yang tidak lulus semester ini diulang mulai semester berikutnya.',
   'method.checks.note':
-    'Kode yang tidak dikenal dan input yang rusak ditolak. Draf yang tidak valid tetap bisa disimpan untuk dijelajahi, tetapi diberi label untuk ditinjau.',
+    'Kode yang tidak dikenal dan input yang rusak ditolak. Draf yang masih punya masalah aturan tetap bisa disimpan untuk dijelajahi, dan diberi label jelas untuk ditinjau.',
+  'method.budget.heading': 'Anggaran waktu mingguan, tujuan, dan bahasa',
+  'method.budget.p1':
+    'Saat Anda mengisi jam tersedia per minggu dan hingga 3 tujuan (seperti magang, kerja, atau organisasi), Avenra mengurangi jam tujuan yang aktif di tiap semester lalu menghitung batas SKS dari sisa waktu. Secara bawaan, 1 SKS diasumsikan membutuhkan 170 menit per minggu (50 tatap muka + 60 terstruktur + 60 mandiri), dan asumsi ini bisa diubah di Profil.',
+  'method.budget.p2':
+    'Editor rencana menampilkan total jam kuliah dan tujuan per semester, dan Ringkasan memberi tahu secara netral bila jam suatu semester melebihi waktu tersedia. Avenra hanya alat bantu perencanaan: tidak pernah memberi label burnout, stres, atau risiko kesehatan, dan tidak menjamin kelulusan. Antarmuka dan seluruh penjelasan aturan tersedia dalam bahasa Indonesia dan Inggris.',
   'method.recovery.heading': 'Cara kerja pemulihan',
   'method.recovery.p1':
     'OR-Tools CP-SAT mencari opsi penyelesaian lebih awal dan opsi beban puncak yang lebih ringan. Pemeriksa aturan terpisah memvalidasi setiap hasil, dan setiap opsi menjelaskan perbedaannya. Jika hanya satu opsi berbeda yang ditemukan, Avenra menampilkan satu. Waktu habis dilaporkan terpisah dari ketidaklayakan.',
   'method.recovery.p2':
-    'Ketika tidak ada rencana yang muat, Avenra menyebutkan rantai prasyarat yang menghalangi atau kekurangan SKS, lalu menguji rencana terpanjang terkecil atau batas SKS pribadi yang lebih tinggi yang akan berhasil.',
+    'Ketika tidak ada rencana yang muat, Avenra menyebutkan rantai prasyarat yang menghalangi, kekurangan SKS, atau batas anggaran waktu mingguan, lalu menguji rencana lebih panjang terkecil, batas SKS pribadi yang lebih tinggi (sesuai anggaran waktu), atau pengurangan jam tujuan yang berhasil.',
   'method.recovery.p3':
     'Kemunduran skenario dan nilai IPS skenario hanya berlaku di dalam rencana itu. Keduanya tidak menimpa profil akademik bersama.',
   'method.learning.heading': 'Dukungan belajar',
   'method.learning.p1':
-    'Tugas mata kuliah dan sesi fokus membantu Anda mengubah niat menjadi tindakan. Waktu yang dihabiskan bukan ukuran pemahaman, dan menyelesaikan tugas tidak pernah menandai mata kuliah sebagai lulus.',
+    'Target belajar bisa dihubungkan ke mata kuliah, tujuan, atau keduanya, dan target terbuka yang memiliki tenggat dapat diekspor ke berkas kalender (.ics) beserta pengingat. Sesi fokus mencatat waktu belajar per mata kuliah; waktu yang dihabiskan bukan ukuran pemahaman, dan menyelesaikan tugas tidak pernah menandai mata kuliah sebagai lulus.',
   'method.privacy.heading': 'Privasi dan batasan',
   'method.privacy.p1':
     'Workspace dibatasi oleh pengenal yang disimpan di browser. Prototipe ini tidak memakai login atau identitas terverifikasi: pemisahan workspace bukan autentikasi. Gunakan alias dan contoh yang tidak sensitif. Penerapan publik untuk banyak pengguna membutuhkan autentikasi, otorisasi, dan tinjauan privasi lebih lanjut. Menghapus penyimpanan browser dapat menghilangkan pemilih workspace; catatan di database tidak ikut terhapus.',

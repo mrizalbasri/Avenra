@@ -87,7 +87,7 @@ export const enPages = {
   'plans.count.other': '{count} plans',
   'plans.needs_review': 'Needs review',
   'plans.tile_meta': '{remaining} remaining credits | {cap} credit cap',
-  'plans.findings_review': '{count} rule findings to review',
+  'plans.findings_review': '{count} rule issues to review',
   'plans.view_restore': 'View & restore',
   'plans.duplicate': 'Duplicate {name}',
   'plans.copy_name': '{name} copy',
@@ -102,8 +102,7 @@ export const enPages = {
   'profile.lead':
     'Set your current semester and completed courses. Plans build on this shared baseline.',
   'profile.panel': 'Academic profile',
-  'profile.alias_hint':
-    'Use an alias and fictional records in this local demo.',
+  'profile.alias_hint': 'Use a name or alias you recognize.',
   'profile.alias': 'Student alias',
   'profile.current': 'Current semester',
   'profile.last_ips': 'Last semester IPS',
@@ -229,7 +228,7 @@ export const enPages = {
   'study.saving': 'Saving…',
   'study.finish': 'Finish & save session',
   'study.footnote':
-    'The timer uses timestamps, so background tabs do not lose elapsed time. Reload restores it paused. Sessions are saved to PostgreSQL when you finish.',
+    'The timer uses timestamps, so background tabs do not lose elapsed time. Reload restores it paused. Sessions are saved when you finish.',
   'study.notice.no_storage':
     'Browser recovery is unavailable. Keep this page open until you save the session.',
   'study.notice.no_restore':
@@ -244,7 +243,7 @@ export const enPages = {
 
   // Curriculum import
   'curriculum.alias': 'Student alias',
-  'curriculum.alias_placeholder': 'Use an alias for this local prototype',
+  'curriculum.alias_placeholder': 'Your name or alias',
   'curriculum.university': 'University',
   'curriculum.university_placeholder': 'Your university',
   'curriculum.program': 'Study program',
@@ -276,7 +275,7 @@ export const enPages = {
   'curriculum.warning':
     'Rules are user-supplied until independently verified. Avenra checks prerequisites (including "either A or B"), corequisites, earned-credit thresholds, electives toward a graduation total, odd/even offerings, and an IPS-based credit limit for next semester. Exceptions, equivalent courses, and credit transfer still need advisor review.',
   'curriculum.footnote':
-    'A new workspace keeps any previous curriculum and plans intact. This local prototype has no sign-in; use aliases and non-sensitive data.',
+    'A new workspace keeps any previous curriculum and plans intact. Data stays in this local workspace without a sign-in.',
 
   // Methodology
   'method.title': 'Avenra | Rules & methodology',
@@ -285,11 +284,11 @@ export const enPages = {
     "Clear rules, visible assumptions, and room for an advisor's judgment.",
   'method.own.heading': 'Bring your own curriculum',
   'method.own.p1':
-    'Students from different universities can create separate workspaces by importing their own course CSV. Each workspace retains its program, curriculum version, credit cap, prerequisite graph, source reference, plans, and study targets.',
+    'Students from different universities can paste a course table from Excel, Google Sheets, or a PDF during setup, review and edit each row, and update courses, prerequisites, or IPS rules later from Academic profile.',
   'method.own.p2':
-    'Imported rules are labeled user-supplied, not independently verified. A structurally valid CSV does not establish that it accurately represents institutional policy. Courses are required unless the CSV marks them as electives; electives count toward the graduation credit total.',
-  'method.own.link': 'Import a curriculum',
-  'method.synthetic.heading': 'Synthetic curriculum',
+    'Imported rules are labeled user-supplied, not independently verified. A valid course table does not establish that it accurately represents institutional policy. Courses are required unless marked as elective; electives count toward the graduation credit total.',
+  'method.own.link': 'Set up a curriculum',
+  'method.synthetic.heading': 'Example curriculum',
   'method.synthetic.p1':
     "The bundled S1 Informatika curriculum is fictional. It follows a common Indonesian structure: 144 credits, 8 recommended semesters, a 14-semester study limit, courses offered only in odd or even semesters, and an IPS table for next semester's credit limit. No specific university's policy has been used or verified.",
   'method.synthetic.source_a': 'Source: ',
@@ -303,21 +302,26 @@ export const enPages = {
   'method.checks.3':
     'Courses such as an internship or thesis wait until enough credits are earned.',
   'method.checks.4':
-    'Each semester stays within your limit, the curriculum maximum, and, for next semester, the IPS-based limit.',
+    'Each semester stays within your limit, the curriculum maximum, your weekly time budget when set, and, for next semester, the IPS-based limit.',
   'method.checks.5':
     'Courses follow the odd/even offering calendar and stay within the maximum study period. A course failed this semester is retaken from next semester.',
   'method.checks.note':
-    'Unknown codes and malformed input are rejected. Invalid drafts can be saved for exploration, but they are labeled for review.',
+    'Unknown codes and malformed input are rejected. Drafts with rule issues can still be saved for exploration, and stay clearly labeled for review.',
+  'method.budget.heading': 'Weekly time budget, goals, and languages',
+  'method.budget.p1':
+    'When you enter available weekly hours and up to 3 goals (such as an internship, job, or student organisation), Avenra subtracts active goal hours in each semester and converts remaining time into a semester credit cap. By default, 1 SKS is assumed to take 170 minutes per week (50 face-to-face + 60 structured + 60 independent), and you can edit that assumption in Profile.',
+  'method.budget.p2':
+    'The plan editor shows weekly course and goal hours per semester, and the Overview flags semesters whose hours exceed what you have available in neutral wording. Avenra supports planning only: it never labels burnout, stress, or health risk, and never guarantees graduation. The interface and all rule explanations are available in Indonesian and English.',
   'method.recovery.heading': 'How recovery works',
   'method.recovery.p1':
     'OR-Tools CP-SAT searches for an earlier-completion option and a lighter-peak-workload option. A separate rule checker validates each result, and each option explains how it differs. If only one distinct option is found, Avenra shows one. A timeout is reported separately from infeasibility.',
   'method.recovery.p2':
-    'When no plan fits, Avenra names the blocking prerequisite chain or credit shortfall and tests the smallest longer plan or higher personal credit limit that would work.',
+    'When no plan fits, Avenra names the blocking prerequisite chain, credit shortfall, or weekly time budget limit, and tests the smallest longer plan, higher personal credit limit (within your time budget), or reduced goal hours that would work.',
   'method.recovery.p3':
     'Scenario setbacks and scenario IPS values apply only inside that plan. They do not overwrite the shared academic profile.',
   'method.learning.heading': 'Learning support',
   'method.learning.p1':
-    'Course tasks and focus sessions help you turn intentions into action. Time spent is not a measure of comprehension, and completing a task never marks an academic course as passed.',
+    'Study targets can be linked to a course, a goal, or both, and open targets with due dates export to a calendar file (.ics) with reminders. Focus sessions track time spent on a course; time spent is not a measure of comprehension, and completing a task never marks an academic course as passed.',
   'method.privacy.heading': 'Privacy and boundaries',
   'method.privacy.p1':
     'Workspaces are scoped by a browser-held identifier. This prototype has no sign-in or verified identity: workspace separation is not authentication. Use aliases and non-sensitive examples. Public multi-user deployment requires authentication, authorization, and further privacy review. Clearing browser storage may remove the workspace selector; it does not delete database records.',
