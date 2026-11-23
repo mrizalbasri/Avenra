@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { apiOrigin } from './services';
+import { aboutYou, next, pasteTable, programRules } from './wizard';
 
 async function openDemo(page: Page) {
   await page.goto('/');
@@ -149,33 +150,31 @@ test('imports a personal curriculum and keeps the original workspace separate', 
   page,
 }) => {
   const originalId = await openDemo(page);
-  await page.goto('/curriculum');
-  await page.getByLabel('Student alias').fill('Student B');
+  // The switcher's "import another curriculum" opens the wizard.
+  await page.goto('/');
   await page
-    .getByLabel('University', { exact: true })
-    .fill('Example Indonesian University');
-  await page.getByLabel('Study program').fill('Informatika');
-  await page
-    .getByLabel('Rule source or curriculum reference')
-    .fill('Example faculty handbook');
-  await page
-    .getByLabel('Or paste CSV content')
-    .fill(
-      'code,name,credits,recommended_term,prerequisites,offered_terms\nIF001,Introduction,3,1,,both\nIF002,Advanced topic,3,2,IF001,both',
-    );
+    .getByRole('combobox', { name: 'Switch workspace' })
+    .selectOption({ label: '+ Import another curriculum' });
+  await expect(page).toHaveURL(/\/start$/);
+  await aboutYou(page, 'Student B', '1');
+  await pasteTable(
+    page,
+    'code,name,credits,recommended_term,prerequisites,offered_terms\nIF001,Introduction,3,1,,both\nIF002,Advanced topic,3,2,IF001,both',
+  );
+  await programRules(page, false);
   // Two courses cannot reach the 144-credit default, so the form warns until it is cleared.
-  const create = page.getByRole('button', {
-    name: 'Create my academic workspace',
-  });
   await expect(
     page.getByText('add up to 6 credits, fewer than the 144 graduation', {
       exact: false,
     }),
   ).toBeVisible();
-  await expect(create).toBeDisabled();
+  await expect(next(page)).toBeDisabled();
   await page.getByLabel('Credits needed to graduate (optional)').fill('');
-  await create.click();
-  await expect(page).toHaveURL(/\/profile$/);
+  await next(page).click();
+  await page.getByRole('button', { name: 'Create my workspace' }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.locator('.identity strong')).toHaveText('Student B');
+  await page.goto('/profile');
   await expect(
     page.getByText('IF001 | 3 credits | Semester 1', { exact: true }),
   ).toBeVisible();

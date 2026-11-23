@@ -181,11 +181,6 @@ export const idPages: Record<keyof typeof enPages, string> = {
     'Sesi fokus disimpan. Waktu yang dihabiskan tidak berarti penguasaan materi.',
   'study.notice.added': 'Target belajar ditambahkan.',
 
-  'curriculum.title': 'Avenra | Bawa kurikulum Anda',
-  'curriculum.heading': 'Kampus Anda. Kurikulum Anda.',
-  'curriculum.lead':
-    'Bangun workspace untuk program studi Anda sendiri. Avenra memakai aturan yang Anda berikan, tanpa menganggap semua universitas sama.',
-  'curriculum.context': 'Konteks akademik',
   'curriculum.alias': 'Alias mahasiswa',
   'curriculum.alias_placeholder': 'Gunakan alias untuk prototipe lokal ini',
   'curriculum.university': 'Universitas',
@@ -209,7 +204,6 @@ export const idPages: Record<keyof typeof enPages, string> = {
   'curriculum.source': 'Sumber aturan atau rujukan kurikulum',
   'curriculum.source_placeholder':
     'URL pedoman resmi, judul dokumen, atau rujukan aturan',
-  'curriculum.import': 'Impor mata kuliah Anda',
   'curriculum.template': 'Unduh templat CSV',
   'curriculum.csv_hint_a':
     'Ekspor daftar mata kuliah dari pedoman kurikulum Anda ke templat. Gunakan kode mata kuliah untuk prasyarat, dipisahkan titik koma; tulis ',
@@ -217,18 +211,8 @@ export const idPages: Record<keyof typeof enPages, string> = {
     ' bila salah satu mata kuliah sudah cukup. Penawaran: odd, even, atau both. Kategori: required atau elective. Korequisit boleh diambil di semester yang sama. min_credits adalah SKS yang dibutuhkan sebelum mengambil mata kuliah, misalnya magang atau skripsi.',
   'curriculum.choose_file': 'Pilih berkas CSV',
   'curriculum.paste': 'Atau tempel isi CSV',
-  'curriculum.ready.one': '{count} mata kuliah siap divalidasi{from}.',
-  'curriculum.ready.other': '{count} mata kuliah siap divalidasi{from}.',
-  'curriculum.from_file': ' dari {filename}',
-  'curriculum.col.code': 'Kode',
-  'curriculum.col.course': 'Mata kuliah',
-  'curriculum.col.credits': 'SKS',
-  'curriculum.col.prereq': 'Prasyarat',
-  'curriculum.none': 'Tidak ada',
   'curriculum.warning':
     'Aturan berasal dari pengguna sampai diverifikasi secara independen. Avenra memeriksa prasyarat (termasuk "salah satu dari A atau B"), korequisit, ambang SKS terkumpul, mata kuliah pilihan terhadap total kelulusan, penawaran ganjil/genap, dan batas SKS berdasarkan IPS untuk semester berikutnya. Pengecualian, mata kuliah setara, dan transfer SKS tetap perlu ditinjau dosen wali.',
-  'curriculum.validating': 'Memvalidasi kurikulum…',
-  'curriculum.create': 'Buat workspace akademik saya',
   'curriculum.footnote':
     'Workspace baru tidak mengubah kurikulum dan rencana sebelumnya. Prototipe lokal ini tidak memakai login; gunakan alias dan data yang tidak sensitif.',
 

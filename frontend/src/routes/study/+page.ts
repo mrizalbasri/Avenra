@@ -1,4 +1,5 @@
 import { requestApi } from '#lib/api.js';
+import { requireProfile } from '#lib/onboarding.js';
 import type { Study } from '#lib/types.js';
 import type { PageLoad } from './$types';
 
@@ -10,6 +11,7 @@ type LoadError = {
 
 export const load: PageLoad = async ({ fetch, parent }) => {
   const { workspace, workspaceId } = await parent();
+  requireProfile(workspace);
   if (!workspace?.profile)
     return {
       study: { tasks: [], sessions: [] } as Study,

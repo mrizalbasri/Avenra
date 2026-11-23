@@ -1,11 +1,13 @@
 import { enPages } from './en-pages.js';
 import { enPlan } from './en-plan.js';
+import { enStart } from './en-start.js';
 
 // English is the source of truth for message keys. id.ts must define the same keys.
 // Plural messages use `key.one` and `key.other` and are selected with a `count` param.
 export const en = {
   ...enPlan,
   ...enPages,
+  ...enStart,
   'lang.label': 'Language',
 
   'nav.main': 'Main navigation',

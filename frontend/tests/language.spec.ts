@@ -245,7 +245,7 @@ test.describe('every page in Indonesian', () => {
         'Ketahui dasar penyusunan rencana Anda.',
         'Apa yang diperiksa',
       ],
-      ['/curriculum', 'Kampus Anda. Kurikulum Anda.', 'Impor mata kuliah Anda'],
+      ['/start', 'Siapkan workspace Anda.', 'Tentang Anda'],
     ];
     for (const [path, heading, other] of pages) {
       await page.goto(path);
@@ -311,21 +311,15 @@ test.describe('every page in Indonesian', () => {
   });
 
   test('reports a CSV import problem in Indonesian', async ({ page }) => {
-    await page.goto('/curriculum');
+    await page.goto('/start');
     await page.getByLabel('Alias mahasiswa').fill('Budi');
-    await page
-      .getByLabel('Universitas', { exact: true })
-      .fill('Universitas Uji');
-    await page.getByLabel('Program studi').fill('Informatika');
-    await page
-      .getByLabel('Sumber aturan atau rujukan kurikulum')
-      .fill('Pedoman uji');
+    await page.getByRole('button', { name: 'Lanjut' }).click();
     await page.getByLabel('Atau tempel isi CSV').fill('code,name\nIF1,Dasar');
     await expect(
       page.getByText('Kolom "SKS" tidak ditemukan', { exact: false }),
     ).toBeVisible();
     await expect(
-      page.getByRole('button', { name: 'Buat workspace akademik saya' }),
+      page.getByRole('button', { name: 'Gunakan tabel ini' }),
     ).toBeDisabled();
   });
 });

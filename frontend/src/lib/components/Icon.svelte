@@ -15,6 +15,7 @@
     copy: 'M8 8h13v13H8zM16 8V3H3v13h5',
     alert: 'm12 3 10 18H2Zm0 6v5m0 3v.1',
     print: 'M6 9V3h12v6M6 17H3V9h18v8h-3M6 14h12v7H6z',
+    close: 'M6 6l12 12M18 6 6 18',
   };
 </script>
 
