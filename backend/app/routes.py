@@ -163,6 +163,12 @@ def workspace(db: DB):
     }
 
 
+@router.get("/curriculum/example")
+def example_curriculum():
+    """The synthetic curriculum, so a new student can start from an example table."""
+    return load_demo_curriculum().model_dump()
+
+
 @router.post("/workspace/bootstrap")
 def bootstrap(db: DB):
     # The fixed ID makes opening the local synthetic workspace repeatable.
