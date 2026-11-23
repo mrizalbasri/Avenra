@@ -128,7 +128,11 @@
             >{data.workspace
               ? t('topbar.connected')
               : t('topbar.unavailable')}</span
-          ><span class="tag">{t('topbar.demo')}</span>
+          >{#if data.workspace?.profile}<span class="tag"
+              >{data.workspace.curriculum.status === 'synthetic'
+                ? t('topbar.curriculum.example')
+                : t('topbar.curriculum.own')}</span
+            >{/if}
         </div>
       </header>
       <main id="main-content" class:landing-main={landing}>

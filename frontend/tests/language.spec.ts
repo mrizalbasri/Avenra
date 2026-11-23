@@ -206,7 +206,7 @@ test.describe('plan editor in Indonesian', () => {
       }),
     ).toBeVisible();
     await expect(
-      page.getByText('Revisi rencana 1 | Revisi profil 1'),
+      page.getByText('Versi rencana 1 | Versi profil 1'),
     ).toBeVisible();
     await expect(
       page.getByText('Pertanyaan untuk dosen wali', { exact: true }),

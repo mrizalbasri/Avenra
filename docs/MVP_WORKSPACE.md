@@ -6,14 +6,26 @@ This extends the foundation plan with operational local workflows.
 
 ## Implemented boundaries
 
-- Each browser workspace has a distinct profile, curriculum, plans, study targets,
-  and focus-session history. Users can remember and switch workspaces in the header.
-- CSV import creates a new workspace without overwriting earlier records. Course
-  references and cycles are checked, and imported rules remain user-supplied.
+- Each browser workspace has a distinct profile, curriculum, plans, mission, goals,
+  weekly time budget, study targets, and focus-session history. Users can remember
+  and switch workspaces in the header.
+- Onboarding at `/start` accepts pasted tables from Excel, Google Sheets, or PDFs
+  (auto-detecting tab/comma/semicolon/spaces with EN & ID column aliases), lets users
+  edit rows inline, marks passed courses in one request (`POST /workspace/import`),
+  and optionally captures weekly hours and up to 3 goals. Drafts recover from
+  `localStorage`. Curricula can be edited later via `PATCH /curriculum` under
+  "Edit courses" on Profile.
 - Modeled rules: prerequisites (all-of and "A or B"), corequisites, earned-credit
-  thresholds, required versus elective courses toward a graduation credit total,
-  odd/even offerings, a maximum study period, and an IPS-based credit limit for the
-  next semester. Exceptions, equivalent courses, and transfer credit need advisor review.
+  thresholds, required versus elective courses toward a graduation credit total
+  (default 144), odd/even offerings, a maximum study period, an IPS-based credit
+  limit for the next semester, and an optional weekly time budget (`available_hours`
+  minus active goal hours divided by `minutes_per_credit`, default 170 min/SKS).
+  Exceptions, equivalent courses, and transfer credit need advisor review.
+- Bilingual UI and backend messages: every backend finding, cap reason, diagnosis
+  reason/suggestion, assumption, advisor question, and HTTP error includes a stable
+  `code` and `params`, rendered in Indonesian or English from a persistent cookie.
+- Study tasks can be linked to a course, a workspace goal, or both; focus sessions
+  keep requiring a course. Open course and goal tasks export to `.ics` with reminders.
 - The bundled S1 Informatika fixture (demo-3, 144 credits) is synthetic. Demo
   workspaces created before demo-3 keep the original 12-course fixture.
 - Plans persist assignments and presentation coordinates separately. Cross-semester
@@ -36,8 +48,10 @@ This extends the foundation plan with operational local workflows.
 ## Storage and migration
 
 The existing `postgres-local` instance on port 5434 hosts database `avenra`.
-Revisions 0002–0005 add profiles/plans/tasks/sessions, personal curriculum JSON,
-independent canvas coordinates, and profile/scenario IPS values. Existing tables in other databases are untouched.
+Revisions 0002–0006 add profiles/plans/tasks/sessions, personal curriculum JSON,
+independent canvas coordinates, profile/scenario IPS values, and profile mission,
+goals, weekly time budget, and goal-linked study tasks (using `batch_alter_table`
+for SQLite compatibility). Existing tables in other databases are untouched.
 Apply migrations before opening the app; with PostgreSQL no schema is auto-created
 at API startup.
 

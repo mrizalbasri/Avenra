@@ -25,12 +25,13 @@ export const id: Record<MessageKey, string> = {
   'sidebar.about': 'Tentang Avenra',
   'sidebar.methodology': 'Aturan & metodologi',
   'sidebar.workspace': 'Workspace Anda',
-  'sidebar.identity.synthetic': 'Prototipe lokal | Data sintetis',
-  'sidebar.identity.own': 'Prototipe lokal | Kurikulum Anda',
+  'sidebar.identity.synthetic': 'Kurikulum contoh',
+  'sidebar.identity.own': 'Kurikulum Anda',
 
   'topbar.connected': 'Workspace terhubung',
   'topbar.unavailable': 'Workspace tidak tersedia',
-  'topbar.demo': 'DEMO',
+  'topbar.curriculum.example': 'Kurikulum contoh',
+  'topbar.curriculum.own': 'Kurikulum Anda',
   'layout.retry': 'Coba sambungkan lagi',
 
   'overview.title': 'Avenra | Ruang akademik Anda',
@@ -125,7 +126,7 @@ export const id: Record<MessageKey, string> = {
   'overview.plans.all': 'Semua rencana',
   'overview.plans.checks.one': '{count} pemeriksaan untuk ditinjau',
   'overview.plans.checks.other': '{count} pemeriksaan untuk ditinjau',
-  'overview.plans.valid': 'Valid menurut asumsi',
+  'overview.plans.valid': 'Memenuhi aturan',
   'overview.plans.summary':
     '{credits} SKS direncanakan | Hingga semester {horizon}',
   'overview.plans.open': 'Buka rencana',

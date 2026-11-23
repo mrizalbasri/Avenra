@@ -41,6 +41,11 @@
     <p>{t('method.checks.note')}</p>
   </section>
   <section class="panel">
+    <h2>{t('method.budget.heading')}</h2>
+    <p>{t('method.budget.p1')}</p>
+    <p>{t('method.budget.p2')}</p>
+  </section>
+  <section class="panel">
     <h2>{t('method.recovery.heading')}</h2>
     <p>{t('method.recovery.p1')}</p>
     <p>{t('method.recovery.p2')}</p>

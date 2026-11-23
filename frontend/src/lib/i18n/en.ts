@@ -25,12 +25,13 @@ export const en = {
   'sidebar.about': 'About Avenra',
   'sidebar.methodology': 'Rules & methodology',
   'sidebar.workspace': 'Your workspace',
-  'sidebar.identity.synthetic': 'Local prototype | Synthetic data',
-  'sidebar.identity.own': 'Local prototype | Your curriculum',
+  'sidebar.identity.synthetic': 'Example curriculum',
+  'sidebar.identity.own': 'Your curriculum',
 
   'topbar.connected': 'Workspace connected',
   'topbar.unavailable': 'Workspace unavailable',
-  'topbar.demo': 'DEMO',
+  'topbar.curriculum.example': 'Example curriculum',
+  'topbar.curriculum.own': 'Your curriculum',
   'layout.retry': 'Retry connection',
 
   'overview.title': 'Avenra | Your academic workspace',
@@ -122,7 +123,7 @@ export const en = {
   'overview.plans.all': 'All plans',
   'overview.plans.checks.one': '{count} check to review',
   'overview.plans.checks.other': '{count} checks to review',
-  'overview.plans.valid': 'Valid under assumptions',
+  'overview.plans.valid': 'Meets listed rules',
   'overview.plans.summary':
     '{credits} credits planned | Up to semester {horizon}',
   'overview.plans.open': 'Open plan',

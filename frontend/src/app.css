@@ -761,6 +761,7 @@ td {
 }
 .wizard-actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 10px;
   margin: 20px 0 40px;
