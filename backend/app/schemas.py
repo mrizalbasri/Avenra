@@ -90,18 +90,28 @@ class PlanEdit(Input):
     archived: bool = False
 
 
+TaskDetail = Annotated[str, Field(min_length=1, max_length=160)]
+
+
 class TaskCreate(Input):
     course_code: str | None = None
     goal_id: str | None = Field(default=None, pattern=r"^[a-zA-Z0-9-]{1,40}$")
     title: str = Field(min_length=1, max_length=250)
     due_date: date | None = None
+    start_date: date | None = None
+    first_step: str | None = Field(default=None, max_length=250)
+    details: list[TaskDetail] = Field(default_factory=list, max_length=8)
 
     @model_validator(mode="after")
     def check_target(self):
         if self.course_code == "":
             self.course_code = None
+        if self.first_step == "":
+            self.first_step = None
         if not self.course_code and not self.goal_id:
             raise ValueError("Choose a course or a goal")
+        if self.start_date and self.due_date and self.start_date > self.due_date:
+            raise ValueError("Start date cannot be after due date")
         return self
 
 

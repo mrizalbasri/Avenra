@@ -133,8 +133,10 @@
     const goalNames = Object.fromEntries(
       (workspace?.profile?.goals ?? []).map((goal) => [goal.id, goal.title]),
     );
+    const dueListed = new Set<string>();
     for (const task of open) {
       if (!task.due_date || task.due_date > soon) continue;
+      dueListed.add(task.id);
       const goalTitle = task.goal_id
         ? (goalNames[task.goal_id] ?? task.goal_id)
         : null;
@@ -164,6 +166,28 @@
           task.due_date < today
             ? t('overview.attention.overdue', { title: task.title })
             : t('overview.attention.due_soon', { title: task.title }),
+        detail: task.first_step
+          ? `${detail} | ${t('overview.attention.start_detail', { step: task.first_step })}`
+          : detail,
+        href: '/study',
+        action: t('overview.attention.open_study'),
+      });
+    }
+    for (const task of open) {
+      if (dueListed.has(task.id)) continue;
+      if (!task.start_date || task.start_date > today) continue;
+      const goalTitle = task.goal_id
+        ? (goalNames[task.goal_id] ?? task.goal_id)
+        : null;
+      const context = [task.course_code, goalTitle].filter(Boolean).join(' | ');
+      const detail = task.first_step
+        ? `${context ? `${context} | ` : ''}${t('overview.attention.start_detail', { step: task.first_step })}`
+        : task.due_date
+          ? t('overview.attention.task_detail_plain', { date: task.due_date })
+          : context;
+      items.push({
+        key: `start-${task.id}`,
+        title: t('overview.attention.start_today', { title: task.title }),
         detail,
         href: '/study',
         action: t('overview.attention.open_study'),
@@ -264,183 +288,185 @@
     disabled={!workspace || !hydrated}
     onOpen={openDemo}
   />{:else}
-  <section
-    class="today-card"
-    data-status={outlookLoading ? 'loading' : (outlook?.status ?? 'none')}
-    aria-busy={outlookLoading}
-  >
-    <p class="eyebrow">{t('overview.eyebrow')}</p>
-    <h1>{headline}</h1>
-    <p class="today-sub">{subline}</p>
-    {#if !outlookLoading && outlook?.completion_term && outlook.status !== 'unknown'}<div
-        class="today-meta"
-      >
-        <div>
-          <small>{t('overview.meta.finish')}</small><strong
-            >{t('overview.meta.semester', {
-              term: outlook.completion_term,
-            })}</strong
-          >
-        </div>
-        <div>
-          <small>{t('overview.meta.target')}</small><strong
-            >{t('overview.meta.semester', {
-              term: outlook.target_term,
-            })}</strong
-          >
-        </div>
-        <div>
-          <small>{t('overview.meta.status')}</small><strong
-            >{outlook.delay
-              ? t('overview.meta.late', { delay: semesters(outlook.delay) })
-              : t('overview.meta.ontime')}</strong
-          >
-        </div>
-      </div>{/if}
-    <div class="today-actions">
-      <a
-        class="button primary"
-        href={primaryPlan ? `/plans/${primaryPlan.id}` : '/plans'}
-        >{outlook && outlook.status !== 'on_track'
-          ? t('overview.action.recovery')
-          : t('overview.action.open_plan')}<Icon name="arrow" size={16} /></a
-      ><a class="button" href="/study"
-        ><Icon name="clock" size={16} />{t('overview.action.study_space')}</a
-      >
-    </div>
-  </section>
-  {#if workspace.profile.mission || workspace.profile.goals.length}<section
-      class="panel mission-panel"
-      aria-labelledby="mission-heading"
+  <div class="workspace-column">
+    <section
+      class="today-card"
+      data-status={outlookLoading ? 'loading' : (outlook?.status ?? 'none')}
+      aria-busy={outlookLoading}
     >
-      <div class="section-heading">
-        <h2 id="mission-heading">{t('overview.mission.heading')}</h2>
-        <a href="/profile" class="text-link">{t('overview.progress.edit')}</a>
-      </div>
-      {#if workspace.profile.mission}<p class="mission-text">
-          {workspace.profile.mission}
-        </p>{/if}
-      {#if workspace.profile.goals.length}<div class="mission-goals">
-          <p class="small muted">{t('overview.mission.active')}</p>
-          {#if activeGoals.length}<ul class="goal-list">
-              {#each activeGoals as goal (goal.id)}<li>
-                  <strong>{goal.title}</strong><span class="muted small"
-                    >{t('overview.mission.goal_meta', {
-                      kind: goalKindLabel(goal.kind),
-                      range: goalRange(goal),
-                      hours: formatHours(goal.weekly_hours),
-                    })}</span
-                  >
-                </li>{/each}
-            </ul>{:else}<p class="muted small">
-              {t('overview.mission.no_active', {
-                term: workspace.profile.current_term,
-              })}
-            </p>{/if}
-          {#if otherGoals.length}<p class="small muted upcoming-heading">
-              {t('overview.mission.upcoming')}
-            </p>
-            <ul class="goal-list">
-              {#each otherGoals as goal (goal.id)}<li>
-                  <strong>{goal.title}</strong><span class="muted small"
-                    >{t('overview.mission.goal_meta', {
-                      kind: goalKindLabel(goal.kind),
-                      range: goalRange(goal),
-                      hours: formatHours(goal.weekly_hours),
-                    })}</span
-                  >
-                </li>{/each}
-            </ul>{/if}
-        </div>{/if}
-    </section>{/if}
-  <section aria-labelledby="attention-heading">
-    <div class="section-heading">
-      <h2 id="attention-heading">{t('overview.attention.heading')}</h2>
-      {#if attention.length}<span class="tag warning">{attention.length}</span
-        >{/if}
-    </div>
-    {#if attention.length}<ul class="attention-list">
-        {#each attention as item (item.key)}<li>
-            <div>
-              <strong>{item.title}</strong>
-              <p>{item.detail}</p>
-            </div>
-            <a class="button" href={item.href}
-              >{item.action}<Icon name="arrow" size={15} /></a
-            >
-          </li>{/each}
-      </ul>{:else}<p class="muted attention-empty">
-        {outlook
-          ? t('overview.attention.empty.ready')
-          : outlookLoading
-            ? t('overview.attention.empty.loading')
-            : t('overview.attention.empty.unavailable')}
-      </p>{/if}
-  </section>
-  <section class="progress-panel">
-    <div class="section-heading">
-      <h2>{t('overview.progress.heading')}</h2>
-      <a href="/profile" class="text-link">{t('overview.progress.edit')}</a>
-    </div>
-    <div class="progress-number">
-      {completed}<span>{t('overview.progress.credits', { total })}</span>
-    </div>
-    <progress
-      value={completed}
-      max={total}
-      aria-label={t('overview.progress.aria')}
-    ></progress>
-    <div class="meta-row">
-      <span
-        >{t('overview.progress.courses', {
-          count: workspace.profile.completed.length,
-        })}</span
-      ><span
-        >{t('overview.progress.now', {
-          term: workspace.profile.current_term,
-        })}</span
-      >
-    </div>
-  </section>
-  <section>
-    <div class="section-heading">
-      <h2>{t('overview.plans.heading')}</h2>
-      <a href="/plans" class="text-link">{t('overview.plans.all')}</a>
-    </div>
-    <div class="plan-grid">
-      {#each plans.slice(0, 3) as plan}<a
-          class="plan-tile"
-          href={`/plans/${plan.id}`}
-          ><div class="tile-top">
-            <Icon name="plans" /><span
-              class="tag"
-              class:warning={plan.validation.findings.length > 0}
-              >{plan.validation.findings.length
-                ? t('overview.plans.checks', {
-                    count: plan.validation.findings.length,
-                  })
-                : t('overview.plans.valid')}</span
+      <p class="eyebrow">{t('overview.eyebrow')}</p>
+      <h1>{headline}</h1>
+      <p class="today-sub">{subline}</p>
+      {#if !outlookLoading && outlook?.completion_term && outlook.status !== 'unknown'}<div
+          class="today-meta"
+        >
+          <div>
+            <small>{t('overview.meta.finish')}</small><strong
+              >{t('overview.meta.semester', {
+                term: outlook.completion_term,
+              })}</strong
             >
           </div>
-          <h3>{plan.name}</h3>
-          <p>
-            {t('overview.plans.summary', {
-              credits: plan.validation.planned_credits,
-              horizon: plan.horizon,
-            })}
-          </p>
-          <span class="text-link"
-            >{t('overview.plans.open')} <Icon name="arrow" size={15} /></span
-          ></a
-        >{/each}
-    </div>
-  </section>
-{/if}
-{#if workspace?.profile && !page.url.searchParams.has('intro')}<p
-    class="footnote"
-  >
-    {workspace?.curriculum
-      ? msg.disclaimer(workspace.curriculum)
-      : t('overview.footnote')}
-  </p>
+          <div>
+            <small>{t('overview.meta.target')}</small><strong
+              >{t('overview.meta.semester', {
+                term: outlook.target_term,
+              })}</strong
+            >
+          </div>
+          <div>
+            <small>{t('overview.meta.status')}</small><strong
+              >{outlook.delay
+                ? t('overview.meta.late', { delay: semesters(outlook.delay) })
+                : t('overview.meta.ontime')}</strong
+            >
+          </div>
+        </div>{/if}
+      <div class="today-actions">
+        <a
+          class="button primary"
+          href={primaryPlan ? `/plans/${primaryPlan.id}` : '/plans'}
+          >{outlook && outlook.status !== 'on_track'
+            ? t('overview.action.recovery')
+            : t('overview.action.open_plan')}<Icon name="arrow" size={16} /></a
+        ><a class="button" href="/study"
+          ><Icon name="clock" size={16} />{t('overview.action.study_space')}</a
+        >
+      </div>
+    </section>
+    {#if workspace.profile.mission || workspace.profile.goals.length}<section
+        class="panel mission-panel"
+        aria-labelledby="mission-heading"
+      >
+        <div class="section-heading">
+          <h2 id="mission-heading">{t('overview.mission.heading')}</h2>
+          <a href="/profile" class="text-link">{t('overview.progress.edit')}</a>
+        </div>
+        {#if workspace.profile.mission}<p class="mission-text">
+            {workspace.profile.mission}
+          </p>{/if}
+        {#if workspace.profile.goals.length}<div class="mission-goals">
+            <p class="small muted">{t('overview.mission.active')}</p>
+            {#if activeGoals.length}<ul class="goal-list">
+                {#each activeGoals as goal (goal.id)}<li>
+                    <strong>{goal.title}</strong><span class="muted small"
+                      >{t('overview.mission.goal_meta', {
+                        kind: goalKindLabel(goal.kind),
+                        range: goalRange(goal),
+                        hours: formatHours(goal.weekly_hours),
+                      })}</span
+                    >
+                  </li>{/each}
+              </ul>{:else}<p class="muted small">
+                {t('overview.mission.no_active', {
+                  term: workspace.profile.current_term,
+                })}
+              </p>{/if}
+            {#if otherGoals.length}<p class="small muted upcoming-heading">
+                {t('overview.mission.upcoming')}
+              </p>
+              <ul class="goal-list">
+                {#each otherGoals as goal (goal.id)}<li>
+                    <strong>{goal.title}</strong><span class="muted small"
+                      >{t('overview.mission.goal_meta', {
+                        kind: goalKindLabel(goal.kind),
+                        range: goalRange(goal),
+                        hours: formatHours(goal.weekly_hours),
+                      })}</span
+                    >
+                  </li>{/each}
+              </ul>{/if}
+          </div>{/if}
+      </section>{/if}
+    <section aria-labelledby="attention-heading">
+      <div class="section-heading">
+        <h2 id="attention-heading">{t('overview.attention.heading')}</h2>
+        {#if attention.length}<span class="tag warning">{attention.length}</span
+          >{/if}
+      </div>
+      {#if attention.length}<ul class="attention-list">
+          {#each attention as item (item.key)}<li>
+              <div>
+                <strong>{item.title}</strong>
+                <p>{item.detail}</p>
+              </div>
+              <a class="button" href={item.href}
+                >{item.action}<Icon name="arrow" size={15} /></a
+              >
+            </li>{/each}
+        </ul>{:else}<p class="muted attention-empty">
+          {outlook
+            ? t('overview.attention.empty.ready')
+            : outlookLoading
+              ? t('overview.attention.empty.loading')
+              : t('overview.attention.empty.unavailable')}
+        </p>{/if}
+    </section>
+    <section class="progress-panel">
+      <div class="section-heading">
+        <h2>{t('overview.progress.heading')}</h2>
+        <a href="/profile" class="text-link">{t('overview.progress.edit')}</a>
+      </div>
+      <div class="progress-number">
+        {completed}<span>{t('overview.progress.credits', { total })}</span>
+      </div>
+      <progress
+        value={completed}
+        max={total}
+        aria-label={t('overview.progress.aria')}
+      ></progress>
+      <div class="meta-row">
+        <span
+          >{t('overview.progress.courses', {
+            count: workspace.profile.completed.length,
+          })}</span
+        ><span
+          >{t('overview.progress.now', {
+            term: workspace.profile.current_term,
+          })}</span
+        >
+      </div>
+    </section>
+    <section>
+      <div class="section-heading">
+        <h2>{t('overview.plans.heading')}</h2>
+        <a href="/plans" class="text-link">{t('overview.plans.all')}</a>
+      </div>
+      <div class="plan-grid">
+        {#each plans.slice(0, 3) as plan}<a
+            class="plan-tile"
+            href={`/plans/${plan.id}`}
+            ><div class="tile-top">
+              <Icon name="plans" /><span
+                class="tag"
+                class:warning={plan.validation.findings.length > 0}
+                >{plan.validation.findings.length
+                  ? t('overview.plans.checks', {
+                      count: plan.validation.findings.length,
+                    })
+                  : t('overview.plans.valid')}</span
+              >
+            </div>
+            <h3>{plan.name}</h3>
+            <p>
+              {t('overview.plans.summary', {
+                credits: plan.validation.planned_credits,
+                horizon: plan.horizon,
+              })}
+            </p>
+            <span class="text-link"
+              >{t('overview.plans.open')} <Icon name="arrow" size={15} /></span
+            ></a
+          >{/each}
+      </div>
+    </section>
+    {#if workspace?.profile && !page.url.searchParams.has('intro')}<p
+        class="footnote"
+      >
+        {workspace?.curriculum
+          ? msg.disclaimer(workspace.curriculum)
+          : t('overview.footnote')}
+      </p>
+    {/if}
+  </div>
 {/if}

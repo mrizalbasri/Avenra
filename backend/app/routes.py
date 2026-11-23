@@ -431,6 +431,7 @@ def add_task(payload: TaskCreate, db: DB):
             fail(422, "UNKNOWN_GOAL", "Choose a goal from this workspace.")
     values = payload.model_dump()
     values["due_date"] = payload.due_date.isoformat() if payload.due_date else None
+    values["start_date"] = payload.start_date.isoformat() if payload.start_date else None
     task = StudyTask(profile_id=workspace_key(db), **values)
     db.add(task)
     db.commit()

@@ -35,10 +35,12 @@ export type CalendarText = {
   withCourse: (course: string) => string;
   withGoal?: (goal: string) => string;
   withBoth?: (course: string, goal: string) => string;
+  startPrefix?: string;
+  firstStepLabel?: (step: string) => string;
   plain: string;
 };
 
-/** Builds an all-day calendar event per open target, with a reminder at 19:00 the day before. */
+/** Builds all-day calendar events per open target (due date + optional planned start date). */
 export function tasksToIcs(
   tasks: Task[],
   courseNames: Record<string, string>,
@@ -49,6 +51,8 @@ export function tasksToIcs(
     withGoal: (goal: string) => `Goal target for ${goal}. Added from Avenra.`,
     withBoth: (course: string, goal: string) =>
       `Target for ${course} (${goal}). Added from Avenra.`,
+    startPrefix: 'Start',
+    firstStepLabel: (step: string) => `First step: ${step}`,
     plain: 'Added from Avenra.',
   },
   goalNames: Record<string, string> = {},
@@ -64,12 +68,12 @@ export function tasksToIcs(
     'CALSCALE:GREGORIAN',
   ];
   for (const task of tasks) {
-    if (!task.due_date || task.done) continue;
+    if (task.done || (!task.due_date && !task.start_date)) continue;
     const course = task.course_code ? courseNames[task.course_code] : undefined;
     const goal = task.goal_id ? goalNames[task.goal_id] : undefined;
     const label = [task.course_code, goal].filter(Boolean).join(' | ');
     const summary = label ? `${label} | ${task.title}` : task.title;
-    const description =
+    const baseDescription =
       course && goal && text.withBoth
         ? text.withBoth(course, goal)
         : course
@@ -77,22 +81,56 @@ export function tasksToIcs(
           : goal && text.withGoal
             ? text.withGoal(goal)
             : text.plain;
-    lines.push(
-      'BEGIN:VEVENT',
-      `UID:${task.id}@avenra`,
-      `DTSTAMP:${stamp}`,
-      `DTSTART;VALUE=DATE:${compactDate(task.due_date)}`,
-      `DTEND;VALUE=DATE:${compactDate(nextDay(task.due_date))}`,
-      `SUMMARY:${escapeText(summary)}`,
-      `DESCRIPTION:${escapeText(description)}`,
-      'BEGIN:VALARM',
-      'ACTION:DISPLAY',
-      `DESCRIPTION:${escapeText(task.title)}`,
-      // Relative to local midnight of the all-day due date.
-      'TRIGGER:-PT5H',
-      'END:VALARM',
-      'END:VEVENT',
-    );
+    const extraParts: string[] = [];
+    if (task.first_step) {
+      extraParts.push(
+        text.firstStepLabel
+          ? text.firstStepLabel(task.first_step)
+          : `First step: ${task.first_step}`,
+      );
+    }
+    if (task.details?.length) {
+      extraParts.push(task.details.map((d) => `- ${d}`).join('\n'));
+    }
+    const description = [baseDescription, ...extraParts].join('\n');
+
+    if (task.start_date && task.start_date !== task.due_date) {
+      const startSummary = `${text.startPrefix ?? 'Start'}: ${summary}`;
+      lines.push(
+        'BEGIN:VEVENT',
+        `UID:${task.id}-start@avenra`,
+        `DTSTAMP:${stamp}`,
+        `DTSTART;VALUE=DATE:${compactDate(task.start_date)}`,
+        `DTEND;VALUE=DATE:${compactDate(nextDay(task.start_date))}`,
+        `SUMMARY:${escapeText(startSummary)}`,
+        `DESCRIPTION:${escapeText(description)}`,
+        'BEGIN:VALARM',
+        'ACTION:DISPLAY',
+        `DESCRIPTION:${escapeText(task.first_step || task.title)}`,
+        'TRIGGER:PT9H',
+        'END:VALARM',
+        'END:VEVENT',
+      );
+    }
+
+    if (task.due_date) {
+      lines.push(
+        'BEGIN:VEVENT',
+        `UID:${task.id}@avenra`,
+        `DTSTAMP:${stamp}`,
+        `DTSTART;VALUE=DATE:${compactDate(task.due_date)}`,
+        `DTEND;VALUE=DATE:${compactDate(nextDay(task.due_date))}`,
+        `SUMMARY:${escapeText(summary)}`,
+        `DESCRIPTION:${escapeText(description)}`,
+        'BEGIN:VALARM',
+        'ACTION:DISPLAY',
+        `DESCRIPTION:${escapeText(task.title)}`,
+        // Relative to local midnight of the all-day due date.
+        'TRIGGER:-PT5H',
+        'END:VALARM',
+        'END:VEVENT',
+      );
+    }
   }
   lines.push('END:VCALENDAR');
   return lines.map(fold).join('\r\n') + '\r\n';
@@ -106,5 +144,5 @@ export function downloadIcs(content: string, filename = 'avenra-study.ics') {
   link.href = url;
   link.download = filename;
   link.click();
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

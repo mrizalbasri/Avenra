@@ -108,6 +108,9 @@ export type Task = {
   goal_id: string | null;
   title: string;
   due_date: string | null;
+  start_date: string | null;
+  first_step: string | null;
+  details: string[];
   done: boolean;
   revision: number;
 };

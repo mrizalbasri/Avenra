@@ -252,203 +252,217 @@
     <p>{t('profile.lead')}</p>
   </div>
 </div>
-{#if data.workspace?.profile}<form
-    onsubmit={(e) => {
-      e.preventDefault();
-      save();
-    }}
-  >
-    <section class="panel profile-form">
-      <h2>{t('profile.panel')}</h2>
-      <p class="muted">{t('profile.alias_hint')}</p>
+{#if data.workspace?.profile}<div class="reading-column">
+    <form
+      onsubmit={(e) => {
+        e.preventDefault();
+        save();
+      }}
+    >
+      <section class="panel profile-form form-stack">
+        <div>
+          <h2>{t('profile.panel')}</h2>
+          <p class="muted small">{t('profile.alias_hint')}</p>
+        </div>
+        <div class="form-grid three-col">
+          <label
+            >{t('profile.alias')}<input
+              bind:value={alias}
+              maxlength="80"
+              required
+            /></label
+          ><label
+            >{t('profile.current')}<input
+              type="number"
+              min="1"
+              max={data.workspace.curriculum.max_terms}
+              bind:value={currentTerm}
+              required
+            /></label
+          ><label
+            >{t('profile.last_ips')}<input
+              type="number"
+              min="0"
+              max="4"
+              step="0.01"
+              placeholder={t('profile.ips_placeholder')}
+              value={lastGpa ?? ''}
+              onchange={(e) => {
+                const value = e.currentTarget.value;
+                lastGpa =
+                  value === ''
+                    ? null
+                    : Math.max(0, Math.min(4, Math.round(+value * 100) / 100));
+              }}
+            /></label
+          >
+        </div>
+        {#if data.workspace.curriculum.gpa_credit_rules.length}<p
+            class="muted small ips-summary"
+          >
+            {t('profile.ips_limits', {
+              list: [...data.workspace.curriculum.gpa_credit_rules]
+                .sort((a, b) => b.min_gpa - a.min_gpa)
+                .map((r) =>
+                  t('profile.ips_limit_item', {
+                    gpa: r.min_gpa.toFixed(2),
+                    credits: r.max_credits,
+                  }),
+                )
+                .join('; '),
+            })}
+          </p>{/if}
+      </section>
+      <section class="panel form-stack">
+        <div>
+          <h2>{t('profile.mission_section')}</h2>
+          <p class="muted small">{t('profile.mission_lead')}</p>
+        </div>
+        <div class="field-block">
+          <label
+            >{t('start.mission')}<textarea
+              bind:value={mission}
+              maxlength="500"
+              rows="3"
+              placeholder={t('start.mission_placeholder')}
+            ></textarea></label
+          >
+          <p class="muted small char-count">
+            {t('start.mission_count', { count: mission.length })}
+          </p>
+        </div>
+        <GoalsBudgetEditor
+          bind:availableHours
+          bind:minutesPerCredit
+          bind:goals
+          maxTerms={data.workspace.curriculum.max_terms}
+          {currentTerm}
+        />
+      </section>
+      <section class="panel">
+        <div class="section-heading">
+          <h2>{t('profile.completed')}</h2>
+          <span class="tag"
+            >{t('profile.selected', { count: completed.length })}</span
+          >
+        </div>
+        <p class="muted small">{t('profile.completed_hint')}</p>
+        <div class="course-checklist">
+          {#each data.workspace.curriculum.courses as course}<label
+              ><input
+                type="checkbox"
+                bind:group={completed}
+                value={course.code}
+              />
+              <div>
+                <strong>{course.name}</strong><small
+                  >{t('profile.course_line', {
+                    code: course.code,
+                    credits: course.credits,
+                    term: course.recommended_term,
+                    extra:
+                      course.category === 'elective'
+                        ? t('profile.elective_extra')
+                        : '',
+                  })}</small
+                >
+              </div></label
+            >{/each}
+        </div>
+      </section>
+      {#if error}<p class="error-banner" role="alert">
+          {error}
+        </p>{/if}{#if notice}<p class="success-banner" role="status">
+          {notice}
+        </p>{/if}<button
+        class="button primary"
+        disabled={busy || budgetIssues.length > 0}
+        >{busy ? t('profile.saving') : t('profile.save')}</button
+      >
+    </form>
+    <details class="panel edit-courses">
+      <summary class="edit-courses-summary">
+        <span class="edit-courses-title"
+          ><span class="disclosure-caret" aria-hidden="true">▸</span>{t(
+            'profile.edit_courses',
+          )}</span
+        >
+        <span class="tag"
+          >{t('start.total', {
+            count: courseRows.length,
+            credits: editedCredits,
+          })}</span
+        >
+      </summary>
+      <p class="muted small">{t('profile.edit_courses_hint')}</p>
+      {#if rowIssues.length && courseRows.length}<p
+          class="warning-banner small"
+        >
+          {t('start.rows_issues', { count: rowIssues.length })}
+        </p>{/if}
+      <CourseRowsEditor bind:rows={courseRows} issues={rowIssues} />
+      <h3>{t('start.rules_heading')}</h3>
       <div class="form-grid">
         <label
-          >{t('profile.alias')}<input
-            bind:value={alias}
-            maxlength="80"
-            required
-          /></label
-        ><label
-          >{t('profile.current')}<input
+          >{t('curriculum.max_credits')}<input
             type="number"
             min="1"
-            max={data.workspace.curriculum.max_terms}
-            bind:value={currentTerm}
+            max="24"
+            bind:value={cap}
             required
           /></label
         ><label
-          >{t('profile.last_ips')}<input
+          >{t('curriculum.grad_credits')}<input
             type="number"
-            min="0"
-            max="4"
-            step="0.01"
-            placeholder={t('profile.ips_placeholder')}
-            value={lastGpa ?? ''}
-            onchange={(e) => {
-              const value = e.currentTarget.value;
-              lastGpa =
-                value === ''
-                  ? null
-                  : Math.max(0, Math.min(4, Math.round(+value * 100) / 100));
-            }}
+            min="1"
+            max="300"
+            bind:value={graduationCredits}
+            placeholder={t('curriculum.grad_placeholder')}
+          /></label
+        ><label
+          >{t('curriculum.on_time')}<input
+            type="number"
+            min="1"
+            max="14"
+            bind:value={targetTerms}
+            required
+          /></label
+        ><label
+          >{t('curriculum.max_period')}<input
+            type="number"
+            min="1"
+            max="14"
+            bind:value={maxTerms}
+            required
           /></label
         >
       </div>
-      {#if data.workspace.curriculum.gpa_credit_rules.length}<p
-          class="muted small"
-        >
-          {t('profile.ips_limits', {
-            list: [...data.workspace.curriculum.gpa_credit_rules]
-              .sort((a, b) => b.min_gpa - a.min_gpa)
-              .map((r) =>
-                t('profile.ips_limit_item', {
-                  gpa: r.min_gpa.toFixed(2),
-                  credits: r.max_credits,
-                }),
-              )
-              .join('; '),
-          })}
-        </p>{/if}
-    </section>
-    <section class="panel">
-      <h2>{t('profile.mission_section')}</h2>
-      <p class="muted small">{t('profile.mission_lead')}</p>
       <label
-        >{t('start.mission')}<textarea
-          bind:value={mission}
-          maxlength="500"
-          rows="3"
-          placeholder={t('start.mission_placeholder')}
+        >{t('curriculum.ips_rules')}<textarea
+          bind:value={gpaRulesText}
+          rows="4"
+          placeholder="3.00 = 24"
         ></textarea></label
       >
-      <p class="muted small">
-        {t('start.mission_count', { count: mission.length })}
-      </p>
-      <GoalsBudgetEditor
-        bind:availableHours
-        bind:minutesPerCredit
-        bind:goals
-        maxTerms={data.workspace.curriculum.max_terms}
-        {currentTerm}
-      />
-    </section>
-    <section class="panel">
-      <div class="section-heading">
-        <h2>{t('profile.completed')}</h2>
-        <span class="tag"
-          >{t('profile.selected', { count: completed.length })}</span
-        >
-      </div>
-      <p class="muted small">{t('profile.completed_hint')}</p>
-      <div class="course-checklist">
-        {#each data.workspace.curriculum.courses as course}<label
-            ><input
-              type="checkbox"
-              bind:group={completed}
-              value={course.code}
-            />
-            <div>
-              <strong>{course.name}</strong><small
-                >{t('profile.course_line', {
-                  code: course.code,
-                  credits: course.credits,
-                  term: course.recommended_term,
-                  extra:
-                    course.category === 'elective'
-                      ? t('profile.elective_extra')
-                      : '',
-                })}</small
-              >
-            </div></label
-          >{/each}
-      </div>
-    </section>
-    {#if error}<p class="error-banner" role="alert">
-        {error}
-      </p>{/if}{#if notice}<p class="success-banner" role="status">
-        {notice}
-      </p>{/if}<button
-      class="button primary"
-      disabled={busy || budgetIssues.length > 0}
-      >{busy ? t('profile.saving') : t('profile.save')}</button
-    >
-  </form>
-  <details class="panel edit-courses">
-    <summary class="edit-courses-summary">
-      <span>{t('profile.edit_courses')}</span>
-      <span class="tag"
-        >{t('start.total', {
-          count: courseRows.length,
-          credits: editedCredits,
-        })}</span
+      <p class="muted small">{t('curriculum.ips_rules_hint')}</p>
+      {#if curriculumProblems.length}<ul class="finding-list warning-banner">
+          {#each curriculumProblems as problem}<li><p>{problem}</p></li>{/each}
+        </ul>{/if}
+      {#if curriculumError}<p class="error-banner" role="alert">
+          {curriculumError}
+        </p>{/if}{#if curriculumNotice}<p class="success-banner" role="status">
+          {curriculumNotice}
+        </p>{/if}<button
+        type="button"
+        class="button primary"
+        disabled={curriculumBusy || !curriculumOk}
+        onclick={saveCurriculum}
+        >{curriculumBusy
+          ? t('profile.saving_courses')
+          : t('profile.save_courses')}</button
       >
-    </summary>
-    <p class="muted small">{t('profile.edit_courses_hint')}</p>
-    {#if rowIssues.length && courseRows.length}<p class="warning-banner small">
-        {t('start.rows_issues', { count: rowIssues.length })}
-      </p>{/if}
-    <CourseRowsEditor bind:rows={courseRows} issues={rowIssues} />
-    <h3>{t('start.rules_heading')}</h3>
-    <div class="form-grid">
-      <label
-        >{t('curriculum.max_credits')}<input
-          type="number"
-          min="1"
-          max="24"
-          bind:value={cap}
-          required
-        /></label
-      ><label
-        >{t('curriculum.grad_credits')}<input
-          type="number"
-          min="1"
-          max="300"
-          bind:value={graduationCredits}
-          placeholder={t('curriculum.grad_placeholder')}
-        /></label
-      ><label
-        >{t('curriculum.on_time')}<input
-          type="number"
-          min="1"
-          max="14"
-          bind:value={targetTerms}
-          required
-        /></label
-      ><label
-        >{t('curriculum.max_period')}<input
-          type="number"
-          min="1"
-          max="14"
-          bind:value={maxTerms}
-          required
-        /></label
-      >
-    </div>
-    <label
-      >{t('curriculum.ips_rules')}<textarea
-        bind:value={gpaRulesText}
-        rows="4"
-        placeholder="3.00 = 24"
-      ></textarea></label
-    >
-    <p class="muted small">{t('curriculum.ips_rules_hint')}</p>
-    {#if curriculumProblems.length}<ul class="finding-list warning-banner">
-        {#each curriculumProblems as problem}<li><p>{problem}</p></li>{/each}
-      </ul>{/if}
-    {#if curriculumError}<p class="error-banner" role="alert">
-        {curriculumError}
-      </p>{/if}{#if curriculumNotice}<p class="success-banner" role="status">
-        {curriculumNotice}
-      </p>{/if}<button
-      type="button"
-      class="button primary"
-      disabled={curriculumBusy || !curriculumOk}
-      onclick={saveCurriculum}
-      >{curriculumBusy
-        ? t('profile.saving_courses')
-        : t('profile.save_courses')}</button
-    >
-  </details>{:else}<div class="empty-panel">
+    </details>
+  </div>{:else}<div class="empty-panel">
     <h2>{t('profile.none')}</h2>
     <a class="button primary" href="/">{t('profile.open_demo')}</a>
   </div>{/if}

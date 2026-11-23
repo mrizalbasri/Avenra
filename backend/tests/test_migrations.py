@@ -48,3 +48,12 @@ def test_0006_adds_goal_columns_and_downgrades_cleanly(sqlite_db):
 
     command.upgrade(config, "head")
     assert "goals" in columns(url, "profiles")
+    tasks = columns(url, "study_tasks")
+    assert {"start_date", "first_step", "details"} <= set(tasks)
+
+    command.downgrade(config, "0006")
+    tasks = columns(url, "study_tasks")
+    assert not {"start_date", "first_step", "details"} & set(tasks)
+
+    command.upgrade(config, "head")
+    assert {"start_date", "first_step", "details"} <= set(columns(url, "study_tasks"))
