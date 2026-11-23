@@ -88,6 +88,8 @@
       data.profile.current_term,
       draft.credit_cap,
       gpa,
+      data.profile.time_budget,
+      data.profile.goals,
     ),
   );
   let completedCredits = $derived(
@@ -223,7 +225,11 @@
         ),
       };
   }
-  function applySuggestion(kind: 'horizon' | 'credit_cap', value: number) {
+  function applySuggestion(
+    kind: 'horizon' | 'credit_cap' | 'goal_hours',
+    value: number,
+  ) {
+    if (kind === 'goal_hours') return;
     remember();
     if (kind === 'horizon') draft.horizon = value;
     else draft.credit_cap = value;
@@ -776,12 +782,15 @@
             {tx('plan.smallest')}
           </h3>
           <div class="toolbar-actions">
-            {#each results.diagnosis.suggestions as suggestion}<button
-                class="button"
-                onclick={() =>
-                  applySuggestion(suggestion.kind, suggestion.value)}
-                >{msg.describe('suggest', suggestion)}</button
-              >{/each}
+            {#each results.diagnosis.suggestions as suggestion}{#if suggestion.kind === 'goal_hours'}<a
+                  href="/profile"
+                  class="button">{msg.describe('suggest', suggestion)}</a
+                >{:else}<button
+                  class="button"
+                  onclick={() =>
+                    applySuggestion(suggestion.kind, suggestion.value)}
+                  >{msg.describe('suggest', suggestion)}</button
+                >{/if}{/each}
           </div>{:else}<p class="muted small">
             {tx('plan.no_suggestion')}
           </p>{/if}

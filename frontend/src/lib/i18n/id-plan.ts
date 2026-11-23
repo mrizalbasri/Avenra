@@ -26,6 +26,7 @@ export const idPlan: Record<keyof typeof enPlan, string> = {
   'rule.PREREQUISITE_CHAIN': 'RANTAI PRASYARAT',
   'rule.CAPACITY': 'KAPASITAS',
   'rule.GPA_CREDIT_LIMIT': 'BATAS SKS DARI IPS',
+  'rule.TIME_BUDGET': 'ANGGARAN WAKTU',
   'rule.COMBINED': 'GABUNGAN',
 
   'finding.UNSCHEDULED': '{course} {name} belum dijadwalkan.',
@@ -50,6 +51,8 @@ export const idPlan: Record<keyof typeof enPlan, string> = {
   'finding.GRADUATION_CREDITS':
     'Rencana ini mencapai {reached} dari {target} SKS kelulusan. Tambahkan {missing} SKS lagi, misalnya dari mata kuliah pilihan.',
   'cap.IPS_RULE': 'aturan IPS {gpa}',
+  'cap.TIME_BUDGET':
+    'anggaran waktu mingguan Anda (tersisa {hours} jam untuk kuliah)',
   'cap.CURRICULUM_MAX': 'batas maksimum kurikulum',
   'cap.PLAN_LIMIT': 'batas rencana Anda',
 
@@ -61,10 +64,16 @@ export const idPlan: Record<keyof typeof enPlan, string> = {
     'Anda masih membutuhkan {needed} SKS, tetapi semester {from} sampai {to} hanya menampung paling banyak {capacity}.',
   'diag.GPA_CREDIT_LIMIT':
     'Batas IPS {gpa} sebesar {cap} SKS di semester {term} ikut menjadi bagian dari konflik.',
+  'diag.TIME_BUDGET':
+    'Anggaran waktu mingguan Anda membatasi semester {term} menjadi {cap} SKS (tersisa {hours} jam untuk kuliah).',
   'diag.COMBINED':
     'Aturan dalam model bentrok hanya bila digabungkan, misalnya korequisit, ambang SKS terkumpul, dan batas SKS sekaligus.',
   'suggest.HORIZON': 'Perpanjang rencana sampai semester {term}.',
   'suggest.CREDIT_CAP': 'Naikkan batas SKS Anda sendiri menjadi {cap} SKS.',
+  'suggest.GOAL_HOURS':
+    'Kurangi jam {goal} di semester {term} menjadi {hours} jam/minggu.',
+  'suggest.GOAL_HOURS_RANGE':
+    'Kurangi jam {goal} di semester {start_term}-{end_term} menjadi {hours} jam/minggu.',
 
   'solve.COMPLETE': 'Semua persyaratan dalam model sudah selesai.',
   'solve.PLAN_ENDS_EARLY':
@@ -116,6 +125,8 @@ export const idPlan: Record<keyof typeof enPlan, string> = {
     'Aturan SKS berdasarkan IPS memakai {gpa} hanya untuk semester {term}. Semester berikutnya diasumsikan boleh sampai {cap} SKS.',
   'assume.OFFERINGS':
     'Penawaran mata kuliah mengikuti kalender ganjil/genap yang tercantum. Pengecualian, transfer SKS, dan konversi magang tidak dimodelkan.',
+  'assume.TIME_BUDGET':
+    'Anggaran waktu mingguan memakai {available} jam/minggu yang tersedia dengan {minutes_per_credit} menit per SKS per minggu (bawaan 170: 50 tatap muka + 60 terstruktur + 60 mandiri).',
   'disclaimer.synthetic':
     'Hanya asumsi demonstrasi. Bukan kurikulum resmi universitas atau keputusan kelulusan.',
   'disclaimer.user_supplied':
