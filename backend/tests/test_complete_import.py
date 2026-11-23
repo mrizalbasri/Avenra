@@ -215,3 +215,16 @@ def test_profile_edit_with_a_stale_revision_conflicts(client):
     stale = client.patch("/api/v1/profile", headers=HEADERS, json=body)
     assert stale.status_code == 409
     assert stale.json()["detail"]["code"] == "PROFILE_CONFLICT"
+
+
+def test_example_curriculum_is_served_without_a_workspace(client):
+    response = client.get("/api/v1/curriculum/example", headers={"X-Workspace-ID": "nobody"})
+    assert response.status_code == 200
+    example = response.json()
+    assert example["status"] == "synthetic"
+    assert example["courses"]
+    # Reading the example creates nothing.
+    assert (
+        client.get("/api/v1/workspace", headers={"X-Workspace-ID": "nobody"}).json()["profile"]
+        is None
+    )

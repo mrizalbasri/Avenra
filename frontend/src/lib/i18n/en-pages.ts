@@ -183,11 +183,6 @@ export const enPages = {
   'study.notice.added': 'Study target added.',
 
   // Curriculum import
-  'curriculum.title': 'Avenra | Bring your curriculum',
-  'curriculum.heading': 'Your campus. Your curriculum.',
-  'curriculum.lead':
-    'Build a workspace for your own program. Avenra uses the rules you provide, without assuming every university is the same.',
-  'curriculum.context': 'Academic context',
   'curriculum.alias': 'Student alias',
   'curriculum.alias_placeholder': 'Use an alias for this local prototype',
   'curriculum.university': 'University',
@@ -211,7 +206,6 @@ export const enPages = {
   'curriculum.source': 'Rule source or curriculum reference',
   'curriculum.source_placeholder':
     'Official handbook URL, document title, or rule reference',
-  'curriculum.import': 'Import your courses',
   'curriculum.template': 'Download CSV template',
   'curriculum.csv_hint_a':
     'Export a course list from your curriculum handbook into the template. Use course codes for prerequisites, separated by semicolons; write ',
@@ -219,18 +213,8 @@ export const enPages = {
     ' when either course is enough. Offering: odd, even, or both. Category: required or elective. Corequisites may be taken in the same semester. min_credits is the credits needed before taking the course, for example an internship or thesis.',
   'curriculum.choose_file': 'Choose a CSV file',
   'curriculum.paste': 'Or paste CSV content',
-  'curriculum.ready.one': '{count} course ready to validate{from}.',
-  'curriculum.ready.other': '{count} courses ready to validate{from}.',
-  'curriculum.from_file': ' from {filename}',
-  'curriculum.col.code': 'Code',
-  'curriculum.col.course': 'Course',
-  'curriculum.col.credits': 'Credits',
-  'curriculum.col.prereq': 'Prerequisites',
-  'curriculum.none': 'None',
   'curriculum.warning':
     'Rules are user-supplied until independently verified. Avenra checks prerequisites (including "either A or B"), corequisites, earned-credit thresholds, electives toward a graduation total, odd/even offerings, and an IPS-based credit limit for next semester. Exceptions, equivalent courses, and credit transfer still need advisor review.',
-  'curriculum.validating': 'Validating curriculum…',
-  'curriculum.create': 'Create my academic workspace',
   'curriculum.footnote':
     'A new workspace keeps any previous curriculum and plans intact. This local prototype has no sign-in; use aliases and non-sensitive data.',
 

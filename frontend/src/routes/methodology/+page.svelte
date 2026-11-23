@@ -22,7 +22,7 @@
     <h2>{t('method.own.heading')}</h2>
     <p>{t('method.own.p1')}</p>
     <p>{t('method.own.p2')}</p>
-    <a href="/curriculum" class="button">{t('method.own.link')}</a>
+    <a href="/start" class="button">{t('method.own.link')}</a>
   </section>
   <section class="panel">
     <h2>{t('method.synthetic.heading')}</h2>

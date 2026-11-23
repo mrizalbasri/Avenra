@@ -707,6 +707,123 @@ td {
 .reading-column {
   max-width: 850px;
 }
+/* Onboarding wizard at /start */
+.steps {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0;
+  margin: 0 0 22px;
+}
+.steps li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.steps li span {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #27272a;
+  font-size: 11px;
+}
+.steps li.current {
+  color: var(--text-primary);
+  border-color: var(--accent);
+}
+.steps li.current span,
+.steps li.done span {
+  background: var(--accent);
+  color: var(--surface-base);
+}
+.start-wizard h3 {
+  margin-top: 26px;
+}
+.start-restored {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.start-language {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.wizard-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin: 20px 0 40px;
+}
+.course-rows {
+  list-style: none;
+  padding: 0;
+  margin: 14px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.course-row {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  min-width: 0;
+}
+.course-row.has-issue {
+  border-color: #a1a1aa;
+}
+.course-row-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+.course-row-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.row-field {
+  flex: 1 1 110px;
+  min-width: 0;
+  font-size: 11px;
+}
+.row-field input,
+.row-field select {
+  width: 100%;
+  min-width: 0;
+}
+.row-name,
+.row-prerequisites {
+  flex: 2 1 200px;
+}
+.row-issues {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+.passed-group {
+  border: 0;
+  padding: 0;
+  margin: 18px 0 0;
+  min-width: 0;
+}
+.passed-group legend {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
 .reading-column p,
 .reading-column li {
   color: var(--text-secondary);
@@ -1243,6 +1360,16 @@ td {
   }
   .session-row {
     flex-wrap: wrap;
+  }
+  .wizard-actions .button {
+    flex: 1;
+  }
+  .row-field {
+    flex-basis: calc(50% - 4px);
+  }
+  .row-name,
+  .row-prerequisites {
+    flex-basis: 100%;
   }
 }
 @media print {

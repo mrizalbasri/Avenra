@@ -39,7 +39,7 @@
   });
   async function switchTo(next: string) {
     if (next === 'new') {
-      await goto('/curriculum');
+      await goto('/start');
       return;
     }
     error = '';
