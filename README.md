@@ -111,10 +111,13 @@ and `apps/api/.env` to `backend/.env`, rename frontend `API_BASE_URL` to
 6. Compare saved plans at /compare. Open **Passport** from a saved plan and
    **Print / Save as PDF** for a fresh advisor consultation snapshot with all active
    assumptions (including the weekly minutes-per-SKS assumption).
-7. In **Study & focus**, add targets linked to a course or a goal, filter by status
-   or goal, export open targets with due dates to .ics calendar reminders, and
-   record course focus sessions with reflections. Reload restores the timer paused
-   using timestamps. Study completion never changes academic course completion.
+7. In **Study & focus**, add manual targets or paste a class announcement (WhatsApp,
+   Telegram, or LMS) to review and confirm extracted details, a planned start date,
+   and a 10-minute first step before saving. Launch any task straight into the
+   focus/break timer, filter by status or goal, and export open targets to `.ics`
+   with both 09:00 planned-start reminders and 19:00 day-before due-date reminders.
+   Reload restores the timer paused using timestamps. Study completion never changes
+   academic course completion.
 
 Table import supports 1-100 courses (required or elective), auto-detected delimiters
 (tab, comma, semicolon, or aligned spaces), English and Indonesian column aliases,
@@ -126,7 +129,7 @@ institutional data import is not implemented.
 
 ## Verification
 
-`powershell
+```powershell
 pnpm check
 pnpm test:unit
 pnpm build
@@ -136,8 +139,7 @@ uv --directory backend run ruff format --check .
 uv --directory backend run pytest
 pnpm --filter @avenra/web exec playwright install chromium
 pnpm test:e2e
-
-````
+```
 
 Playwright starts the API and builds/starts the production frontend automatically
 (ports 18080 and 4173), avoiding development-only HMR and dependency-optimizer races.
@@ -165,7 +167,7 @@ backend/tests/         API and solver runtime tests
 backend/migrations/    Alembic database schema
 docs/                  Designs, implementation plan, verification evidence
 .github/               CI and contribution templates
-````
+```
 
 ## Production build and shutdown
 

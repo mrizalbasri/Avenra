@@ -24,8 +24,12 @@ This extends the foundation plan with operational local workflows.
 - Bilingual UI and backend messages: every backend finding, cap reason, diagnosis
   reason/suggestion, assumption, advisor question, and HTTP error includes a stable
   `code` and `params`, rendered in Indonesian or English from a persistent cookie.
-- Study tasks can be linked to a course, a workspace goal, or both; focus sessions
-  keep requiring a course. Open course and goal tasks export to `.ics` with reminders.
+- Study tasks can be linked to a course, a workspace goal, or both, either entered
+  manually or extracted offline from a pasted class announcement and confirmed by the
+  student with a planned `start_date`, a 10-minute `first_step`, and extracted
+  requirement `details`. Focus sessions keep requiring a course; tasks can launch a
+  focus sprint directly with one click. Open tasks export to `.ics` with both a 09:00
+  planned start-date event and a 19:00 day-before due-date reminder.
 - The bundled S1 Informatika fixture (demo-3, 144 credits) is synthetic. Demo
   workspaces created before demo-3 keep the original 12-course fixture.
 - Plans persist assignments and presentation coordinates separately. Cross-semester
@@ -48,10 +52,11 @@ This extends the foundation plan with operational local workflows.
 ## Storage and migration
 
 The existing `postgres-local` instance on port 5434 hosts database `avenra`.
-Revisions 0002–0006 add profiles/plans/tasks/sessions, personal curriculum JSON,
-independent canvas coordinates, profile/scenario IPS values, and profile mission,
-goals, weekly time budget, and goal-linked study tasks (using `batch_alter_table`
-for SQLite compatibility). Existing tables in other databases are untouched.
+Revisions 0002–0007 add profiles/plans/tasks/sessions, personal curriculum JSON,
+independent canvas coordinates, profile/scenario IPS values, profile mission,
+goals, weekly time budget, goal-linked study tasks, and task start plans (`start_date`,
+`first_step`, `details`) using `batch_alter_table` for SQLite compatibility.
+Existing tables in other databases are untouched.
 Apply migrations before opening the app; with PostgreSQL no schema is auto-created
 at API startup.
 
@@ -70,10 +75,13 @@ Windows or `~/Library/Application Support/Avenra/avenra.db` on macOS
   semesters. Only optimal solves count; a time-limited answer is reported as unknown
   and never flags a course. The Overview renders first and fills the outlook in.
 - The Overview shows that outlook, the credits toward graduation, and a "Needs your
-  attention" list: targets due within two days or overdue, critical courses without
-  a study target, and rule findings in the first active plan.
-- Study targets with a due date export to an `.ics` file with a reminder the evening
-  before. Reminders inside Avenra appear only while it is open.
+  attention" list: targets due within two days or overdue, open tasks whose planned
+  `start_date` is today or earlier ("Start today" with their first step), critical
+  courses without a study target, semester weekly-hour overloads, and rule checks in
+  the first active plan.
+- Study targets export to an `.ics` file with a 09:00 reminder on planned start dates
+  and a 19:00 reminder the evening before due dates. Reminders inside Avenra appear
+  only while it is open.
 - Phones get a bottom tab bar, 44 px touch targets, 16 px inputs, and the semester
   board with the setback tools before it.
 

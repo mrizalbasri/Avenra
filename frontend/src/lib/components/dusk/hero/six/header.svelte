@@ -1,25 +1,35 @@
 <script lang="ts">
   import logo from '#lib/assets/avenra.svg';
+  import LanguageSwitcher from '#lib/components/LanguageSwitcher.svelte';
+  import { useI18n } from '#lib/i18n/context.js';
+
+  const { t } = useI18n();
   let menuOpen = $state(false);
 </script>
 
 <header class="hero-nav">
-  <a class="brand" href="/" aria-label="Avenra home"
+  <a class="brand" href="/" aria-label={t('landing.nav.home_aria')}
     ><img src={logo} alt="" width="34" height="28" /><span>avenra.</span></a
   >
-  <nav aria-label="Introduction navigation" class:expanded={menuOpen}>
+  <nav aria-label={t('landing.nav.aria')} class:expanded={menuOpen}>
     <a href="#getting-started" onclick={() => (menuOpen = false)}
-      >How it works</a
+      >{t('landing.nav.how')}</a
     >
-    <a href="/methodology">Rules & methodology</a>
-    <a href="/curriculum" class="nav-action">Bring your curriculum ↗</a>
+    <a href="/methodology">{t('landing.nav.methodology')}</a>
+    <a href="/start" class="nav-action">{t('landing.nav.bring')} ↗</a>
   </nav>
-  <button
-    class="menu-toggle"
-    aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-    aria-expanded={menuOpen}
-    onclick={() => (menuOpen = !menuOpen)}>Menu {menuOpen ? '−' : '+'}</button
-  >
+  <div class="header-controls">
+    <LanguageSwitcher />
+    <button
+      class="menu-toggle"
+      aria-label={menuOpen
+        ? t('landing.nav.close_menu')
+        : t('landing.nav.open_menu')}
+      aria-expanded={menuOpen}
+      onclick={() => (menuOpen = !menuOpen)}
+      >{t('landing.nav.menu')} {menuOpen ? '−' : '+'}</button
+    >
+  </div>
 </header>
 
 <style>
@@ -50,6 +60,7 @@
     align-items: center;
     font-size: 13px;
     color: #b4b4bd;
+    margin-left: auto;
   }
   nav a {
     text-decoration: none;
@@ -63,6 +74,11 @@
     padding: 11px 18px;
     color: #f5f5f7;
   }
+  .header-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
   .menu-toggle {
     display: none;
     background: transparent;
@@ -73,15 +89,22 @@
   }
   @media (max-width: 720px) {
     .hero-nav {
-      padding: 22px 24px;
+      padding: 22px 16px;
       flex-wrap: wrap;
+      gap: 12px;
+    }
+    .brand {
+      font-size: 24px;
     }
     .menu-toggle {
       display: block;
+      padding: 8px 14px;
+      font-size: 13px;
     }
     nav {
       display: none;
       width: 100%;
+      margin-left: 0;
       order: 3;
       flex-direction: column;
       align-items: stretch;
