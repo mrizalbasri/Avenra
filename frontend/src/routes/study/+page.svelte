@@ -37,6 +37,14 @@
   let reviewWarnings = $state<AnnouncementWarning[]>([]);
   let filter = $state('all');
   let goalFilter = $state('all');
+  let editingId = $state<string | null>(null);
+  let editTargetRef = $state('');
+  let editTitle = $state('');
+  let editDue = $state('');
+  let editStartDate = $state('');
+  let editFirstStep = $state('');
+  let editDetailsText = $state('');
+  let focusPanel: HTMLElement | undefined = $state();
   let error = $state('');
   let notice = $state('');
   let busy = $state(false);
@@ -284,11 +292,26 @@
         : `[Announcement] ${code} ${name} assignment: complete the implementation and short write-up.\n- Submit PDF + source code on LMS\n- Individual submission\nDue: ${iso} at 23:59`;
   }
 
+  function parseDetailsLines(raw: string): string[] {
+    return raw
+      .split(/\r?\n/)
+      .map((line) =>
+        line
+          .replace(/^[-•*]\s*/, '')
+          .trim()
+          .slice(0, 160),
+      )
+      .filter(Boolean)
+      .slice(0, 8);
+  }
+
   function startTaskInFocus(task: Task) {
     if (mode === 'focus' && (running || accumulated > 0)) {
       notice = t('study.notice.session_active');
+      focusPanel?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       return;
     }
+    const isGoalOnly = !task.course_code;
     if (task.course_code) {
       focusCourse = task.course_code;
     }
@@ -308,26 +331,80 @@
     startedAt = Date.now();
     tick = Date.now();
     running = true;
-    notice = t('study.notice.started_task', { step });
+    notice = isGoalOnly
+      ? t('study.notice.started_goal_task', { course: focusCourse, step })
+      : t('study.notice.started_task', { step });
+    focusPanel?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function beginEdit(task: Task) {
+    editingId = task.id;
+    editTargetRef = task.course_code
+      ? `course:${task.course_code}`
+      : task.goal_id
+        ? `goal:${task.goal_id}`
+        : '';
+    editTitle = task.title;
+    editDue = task.due_date ?? '';
+    editStartDate = task.start_date ?? '';
+    editFirstStep = task.first_step ?? '';
+    editDetailsText = (task.details ?? []).join('\n');
+    error = '';
+  }
+
+  function cancelEdit() {
+    editingId = null;
+  }
+
+  async function saveEdit(task: Task) {
+    const isGoal = editTargetRef.startsWith('goal:');
+    const targetId = editTargetRef.slice(editTargetRef.indexOf(':') + 1);
+    if (!targetId || !editTitle.trim()) return;
+    busy = true;
+    error = '';
+    try {
+      await api(`study/tasks/${task.id}`, 'PATCH', {
+        revision: task.revision,
+        course_code: isGoal ? null : targetId,
+        goal_id: isGoal ? targetId : null,
+        title: editTitle,
+        due_date: editDue || null,
+        start_date: editStartDate || null,
+        first_step: editFirstStep.trim() || null,
+        details: parseDetailsLines(editDetailsText),
+      });
+      editingId = null;
+      await invalidateAll();
+      notice = t('study.notice.updated');
+    } catch (e) {
+      error = msg.errorText(e);
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function removeTask(task: Task) {
+    if (!window.confirm(t('study.delete_confirm', { title: task.title })))
+      return;
+    busy = true;
+    error = '';
+    try {
+      await api(`study/tasks/${task.id}`, 'DELETE');
+      if (editingId === task.id) editingId = null;
+      await invalidateAll();
+      notice = t('study.notice.deleted');
+    } catch (e) {
+      error = msg.errorText(e);
+    } finally {
+      busy = false;
+    }
   }
 
   async function addTask() {
     const isGoal = targetRef.startsWith('goal:');
     const targetId = targetRef.slice(targetRef.indexOf(':') + 1);
     if (!targetId) return;
-    const details =
-      inputMode === 'announce'
-        ? detailsText
-            .split(/\r?\n/)
-            .map((line) =>
-              line
-                .replace(/^[-•*]\s*/, '')
-                .trim()
-                .slice(0, 160),
-            )
-            .filter(Boolean)
-            .slice(0, 8)
-        : [];
+    const details = parseDetailsLines(detailsText);
     busy = true;
     error = '';
     try {
@@ -518,7 +595,18 @@
                 rows="3"
                 placeholder={t('study.details_placeholder')}
               ></textarea></label
-            >{/if}
+            >{:else}<details class="manual-details">
+              <summary class="small muted"
+                >{t('study.manual_details_toggle')}</summary
+              >
+              <label
+                >{t('study.details_label')}<textarea
+                  bind:value={detailsText}
+                  rows="3"
+                  placeholder={t('study.details_placeholder')}
+                ></textarea></label
+              >
+            </details>{/if}
           <div class="toolbar-actions">
             {#if inputMode === 'announce'}<button
                 type="button"
@@ -598,36 +686,132 @@
             </p>
           </div>{/if}
         {#each tasks as task (task.id)}<div class="study-task">
-            <div class="study-task-head">
-              <label
-                ><input
-                  type="checkbox"
-                  checked={task.done}
-                  disabled={busy}
-                  onchange={() => toggle(task)}
-                /><span class:completed-task={task.done}
-                  ><strong>{task.title}</strong><small
-                    >{taskContext(task)}{task.start_date
-                      ? t('study.start_badge', { date: task.start_date })
-                      : ''}{task.due_date
-                      ? t('study.due', { date: task.due_date })
-                      : ''}</small
-                  ></span
-                ></label
-              >{#if !task.done}<button
-                  type="button"
-                  class="button subtle small start-step-btn"
-                  disabled={busy}
-                  onclick={() => startTaskInFocus(task)}
-                  >{t('study.start_now')}</button
-                >{/if}
-            </div>
-            {#if task.first_step && !task.done}<p class="task-start-step">
-                {t('study.first_step_prefix', { step: task.first_step })}
-              </p>{/if}
-            {#if task.details?.length && !task.done}<ul class="task-details">
-                {#each task.details as detail}<li>{detail}</li>{/each}
-              </ul>{/if}
+            {#if editingId === task.id}
+              <form
+                class="form-stack task-edit-form"
+                onsubmit={(e) => {
+                  e.preventDefault();
+                  saveEdit(task);
+                }}
+              >
+                <label
+                  >{goals.length
+                    ? t('study.course_or_goal')
+                    : t('study.course')}<select bind:value={editTargetRef}
+                    >{#if goals.length}<optgroup
+                        label={t('study.group_courses')}
+                        >{#each data.workspace.curriculum.courses as c}<option
+                            value={`course:${c.code}`}
+                            >{c.code} | {c.name}</option
+                          >{/each}</optgroup
+                      ><optgroup label={t('study.group_goals')}
+                        >{#each goals as g}<option value={`goal:${g.id}`}
+                            >{g.title}</option
+                          >{/each}</optgroup
+                      >{:else}{#each data.workspace.curriculum.courses as c}<option
+                          value={`course:${c.code}`}>{c.code} | {c.name}</option
+                        >{/each}{/if}</select
+                  ></label
+                >
+                <label
+                  >{t('study.target')}<input
+                    bind:value={editTitle}
+                    maxlength="250"
+                    required
+                  /></label
+                >
+                <div class="form-grid">
+                  <label
+                    >{t('study.target_date')}<input
+                      type="date"
+                      bind:value={editDue}
+                    /></label
+                  ><label
+                    >{t('study.start_date')}<input
+                      type="date"
+                      max={editDue || undefined}
+                      bind:value={editStartDate}
+                    /></label
+                  >
+                </div>
+                <label
+                  >{t('study.first_step')}<input
+                    bind:value={editFirstStep}
+                    maxlength="250"
+                  /></label
+                >
+                <label
+                  >{t('study.details_label')}<textarea
+                    bind:value={editDetailsText}
+                    rows="3"
+                    placeholder={t('study.details_placeholder')}
+                  ></textarea></label
+                >
+                <div class="toolbar-actions">
+                  <button
+                    type="submit"
+                    class="button primary"
+                    disabled={busy || !editTitle.trim()}
+                    >{t('study.save_edit')}</button
+                  ><button
+                    type="button"
+                    class="button"
+                    disabled={busy}
+                    onclick={cancelEdit}>{t('study.cancel_edit')}</button
+                  >
+                </div>
+              </form>
+            {:else}
+              <div class="study-task-head">
+                <label
+                  ><input
+                    type="checkbox"
+                    checked={task.done}
+                    disabled={busy}
+                    onchange={() => toggle(task)}
+                  /><span class:completed-task={task.done}
+                    ><strong>{task.title}</strong><small
+                      >{taskContext(task)}{task.start_date
+                        ? t('study.start_badge', { date: task.start_date })
+                        : ''}{task.due_date
+                        ? t('study.due', { date: task.due_date })
+                        : ''}</small
+                    ></span
+                  ></label
+                >
+                <div class="task-actions">
+                  {#if !task.done}<button
+                      type="button"
+                      class="button subtle small start-step-btn"
+                      disabled={busy}
+                      onclick={() => startTaskInFocus(task)}
+                      >{t('study.start_now')}</button
+                    >{/if}<button
+                    type="button"
+                    class="button subtle small"
+                    aria-label={t('study.edit_target_aria', {
+                      title: task.title,
+                    })}
+                    disabled={busy}
+                    onclick={() => beginEdit(task)}>{t('study.edit')}</button
+                  ><button
+                    type="button"
+                    class="button subtle small"
+                    aria-label={t('study.delete_target_aria', {
+                      title: task.title,
+                    })}
+                    disabled={busy}
+                    onclick={() => removeTask(task)}>{t('study.delete')}</button
+                  >
+                </div>
+              </div>
+              {#if task.first_step && !task.done}<p class="task-start-step">
+                  {t('study.first_step_prefix', { step: task.first_step })}
+                </p>{/if}
+              {#if task.details?.length && !task.done}<ul class="task-details">
+                  {#each task.details as detail}<li>{detail}</li>{/each}
+                </ul>{/if}
+            {/if}
           </div>{/each}{#if !tasks.length}<p class="muted">
             {t('study.no_targets')}
           </p>{/if}
@@ -654,7 +838,7 @@
           </p>{/if}
       </section>
     </section>
-    <aside class="panel focus-panel">
+    <aside class="panel focus-panel" bind:this={focusPanel}>
       <div class="section-heading">
         <h2>{t('study.focus_space')}</h2>
         <Icon name="clock" />

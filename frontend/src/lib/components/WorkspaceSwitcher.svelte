@@ -3,7 +3,12 @@
   import { goto } from '$app/navigation';
   import { requestApi } from '#lib/api.js';
   import { useI18n } from '#lib/i18n/context.js';
-  import { selectWorkspace, validWorkspaceId } from '#lib/workspace.js';
+  import {
+    rememberedWorkspacesKey,
+    removeRememberedWorkspace,
+    selectWorkspace,
+    validWorkspaceId,
+  } from '#lib/workspace.js';
   import type { Workspace } from '#lib/types.js';
   let { id, name }: { id?: string; name?: string } = $props();
   const { t, msg } = useI18n();
@@ -14,7 +19,7 @@
   onMount(() => {
     try {
       const stored = JSON.parse(
-        localStorage.getItem('avenra-workspaces') ?? '[]',
+        localStorage.getItem(rememberedWorkspacesKey) ?? '[]',
       );
       if (Array.isArray(stored))
         workspaces = stored.filter(
@@ -31,7 +36,7 @@
       if (JSON.stringify(next) !== JSON.stringify(workspaces))
         workspaces = next;
       try {
-        localStorage.setItem('avenra-workspaces', JSON.stringify(next));
+        localStorage.setItem(rememberedWorkspacesKey, JSON.stringify(next));
       } catch {
         /* The selector is session-local if storage is blocked. */
       }
@@ -47,7 +52,11 @@
     try {
       if (!validWorkspaceId(next)) throw new Error(t('ws.invalid'));
       const workspace = await requestApi<Workspace>(fetch, 'workspace', next);
-      if (!workspace.profile) throw new Error(t('ws.not_found'));
+      if (!workspace.profile) {
+        removeRememberedWorkspace(next);
+        workspaces = workspaces.filter((w) => w.id !== next);
+        throw new Error(t('ws.not_found'));
+      }
       selectWorkspace(next);
       window.location.assign('/');
     } catch (e) {

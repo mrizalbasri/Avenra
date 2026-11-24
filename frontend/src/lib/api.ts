@@ -60,9 +60,12 @@ export async function api<T>(
   method = 'GET',
   body?: unknown,
 ): Promise<T> {
-  const workspaceId =
-    path === 'workspace/import' ? crypto.randomUUID() : currentWorkspaceId();
+  const createsWorkspace =
+    path === 'workspace/import' || path === 'workspace/restore';
+  const workspaceId = createsWorkspace
+    ? crypto.randomUUID()
+    : currentWorkspaceId();
   const data = await requestApi<T>(fetch, path, workspaceId, method, body);
-  if (path === 'workspace/import') selectWorkspace(workspaceId);
+  if (createsWorkspace) selectWorkspace(workspaceId);
   return data;
 }

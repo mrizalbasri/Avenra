@@ -132,6 +132,31 @@ export const idPages: Record<keyof typeof enPages, string> = {
     'Kurikulum disimpan. Semua rencana kini memakai mata kuliah dan aturan terbaru.',
   'profile.courses_removed_passed':
     'Hapus centang mata kuliah lulus ini dulu sebelum menghapusnya: {courses}.',
+  'profile.search_courses': 'Cari mata kuliah berdasarkan kode atau nama',
+  'profile.search_placeholder': 'mis. IF2101 atau Struktur Data',
+  'profile.mark_earlier': 'Tandai semester 1 sampai {term} sebagai lulus',
+  'profile.semester_group': 'Semester {term}',
+  'profile.semester_count': '{done} / {total}',
+  'profile.no_course_match':
+    'Tidak ada mata kuliah yang cocok dengan "{query}".',
+  'profile.data_section': 'Cadangan workspace & data lokal',
+  'profile.data_lead':
+    'Ekspor cadangan JSON lengkap untuk berpindah perangkat, pulihkan cadangan ke workspace baru, atau bersihkan data browser.',
+  'profile.export_json': 'Ekspor workspace (.json)',
+  'profile.restore_json': 'Pulihkan dari cadangan (.json)',
+  'profile.restoring': 'Memulihkan…',
+  'profile.exported': 'Cadangan workspace telah diunduh.',
+  'profile.restored': 'Cadangan dipulihkan ke workspace baru.',
+  'profile.restore_invalid': 'Pilih berkas cadangan JSON Avenra yang valid.',
+  'profile.clear_browser': 'Bersihkan daftar workspace & draf di browser',
+  'profile.clear_browser_confirm':
+    'Hapus daftar workspace tersimpan, draf belum disimpan, dan timer jeda dari browser ini? Data di database tidak dihapus.',
+  'profile.browser_cleared':
+    'Daftar workspace dan draf lokal di browser telah dibersihkan. Data di database tetap utuh.',
+  'profile.delete_workspace': 'Hapus workspace ini',
+  'profile.delete_workspace_confirm':
+    'Hapus permanen workspace ini beserta semua rencana, target belajar, dan sesi fokusnya dari database lokal?',
+  'profile.deleting': 'Menghapus…',
 
   'goals.available_hours': 'Jam tersedia per minggu (opsional)',
   'goals.available_placeholder': 'mis. 45',
@@ -272,6 +297,19 @@ export const idPages: Record<keyof typeof enPages, string> = {
   'study.notice.saved':
     'Sesi fokus disimpan. Waktu yang dihabiskan tidak berarti penguasaan materi.',
   'study.notice.added': 'Target belajar ditambahkan.',
+  'study.notice.updated': 'Target belajar diperbarui.',
+  'study.notice.deleted': 'Target belajar dihapus.',
+  'study.notice.started_goal_task':
+    'Sprint fokus dimulai di {course} (tugas tujuan): {step}',
+  'study.edit': 'Ubah',
+  'study.delete': 'Hapus',
+  'study.delete_confirm': 'Hapus "{title}"?',
+  'study.save_edit': 'Simpan perubahan',
+  'study.cancel_edit': 'Batal',
+  'study.manual_details_toggle':
+    'Tambah detail penting & daftar periksa (opsional)',
+  'study.edit_target_aria': 'Ubah target {title}',
+  'study.delete_target_aria': 'Hapus target {title}',
 
   'curriculum.alias': 'Alias mahasiswa',
   'curriculum.alias_placeholder': 'Nama atau alias Anda',

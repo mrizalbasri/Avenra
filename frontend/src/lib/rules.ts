@@ -82,3 +82,79 @@ export function offeringText(course: Course, t: Translate) {
       ? t('offer.odd')
       : t('offer.even');
 }
+
+/**
+ * Lightweight client-side preview of course-level issues while editing an unsaved draft.
+ * Keeps visual feedback on canvas cards before the authoritative backend validation runs.
+ */
+export function draftCourseIssues(
+  curriculum: Curriculum,
+  completed: string[],
+  currentTerm: number,
+  assignments: Record<string, number | null>,
+  failed: string[],
+  horizon: number,
+): Set<string> {
+  const flagged = new Set<string>();
+  const failedSet = new Set(failed);
+  const doneSet = new Set(completed.filter((code) => !failedSet.has(code)));
+  const maxTerm = Math.min(horizon, curriculum.max_terms);
+
+  const termOf = (code: string): number | null => {
+    if (doneSet.has(code)) return 0;
+    const assigned = assignments[code];
+    return typeof assigned === 'number' ? assigned : null;
+  };
+
+  for (const course of curriculum.courses) {
+    if (doneSet.has(course.code)) continue;
+    const term = assignments[course.code];
+    if (typeof term !== 'number') {
+      if (course.category === 'required') flagged.add(course.code);
+      continue;
+    }
+    if (term < currentTerm || term > maxTerm) {
+      flagged.add(course.code);
+      continue;
+    }
+    if (
+      failedSet.has(course.code) &&
+      !completed.includes(course.code) &&
+      term <= currentTerm
+    ) {
+      flagged.add(course.code);
+      continue;
+    }
+    if (!course.offered_terms.includes(term % 2)) {
+      flagged.add(course.code);
+      continue;
+    }
+    for (const prereq of course.prerequisites) {
+      const pt = termOf(prereq);
+      if (pt === null || pt >= term) {
+        flagged.add(course.code);
+        break;
+      }
+    }
+    if (flagged.has(course.code)) continue;
+    for (const group of course.any_prerequisites ?? []) {
+      const ok = group.some((opt) => {
+        const pt = termOf(opt);
+        return pt !== null && pt < term;
+      });
+      if (!ok) {
+        flagged.add(course.code);
+        break;
+      }
+    }
+    if (flagged.has(course.code)) continue;
+    for (const coreq of course.corequisites ?? []) {
+      const ct = termOf(coreq);
+      if (ct === null || ct > term) {
+        flagged.add(course.code);
+        break;
+      }
+    }
+  }
+  return flagged;
+}

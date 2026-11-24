@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { goalHoursInTerm, termCap, timeBudgetCap } from './rules.js';
+import {
+  draftCourseIssues,
+  goalHoursInTerm,
+  termCap,
+  timeBudgetCap,
+} from './rules.js';
 import type { Curriculum, Goal } from './types.js';
 
 const curriculum: Curriculum = {
@@ -64,5 +69,69 @@ describe('weekly time budget caps', () => {
     expect(termCap(curriculum, 3, 3, 24, 1.5, budget, goals)).toBe(15);
     expect(termCap(curriculum, 4, 3, 10, 3.5, budget, goals)).toBe(10);
     expect(termCap(curriculum, 6, 3, 24, 3.5, null, goals)).toBe(24);
+  });
+});
+
+describe('draftCourseIssues', () => {
+  const sampleCurriculum: Curriculum = {
+    ...curriculum,
+    courses: [
+      {
+        code: 'IF101',
+        name: 'Intro',
+        credits: 3,
+        recommended_term: 1,
+        prerequisites: [],
+        any_prerequisites: [],
+        corequisites: [],
+        min_credits_earned: 0,
+        offered_terms: [1],
+        category: 'required',
+      },
+      {
+        code: 'IF201',
+        name: 'Data Structures',
+        credits: 3,
+        recommended_term: 2,
+        prerequisites: ['IF101'],
+        any_prerequisites: [],
+        corequisites: [],
+        min_credits_earned: 0,
+        offered_terms: [0],
+        category: 'required',
+      },
+    ],
+  };
+
+  it('flags prerequisite order and odd/even offering issues on unsaved drafts', () => {
+    const clean = draftCourseIssues(
+      sampleCurriculum,
+      ['IF101'],
+      2,
+      { IF201: 2 },
+      [],
+      8,
+    );
+    expect(clean.size).toBe(0);
+
+    const wrongParity = draftCourseIssues(
+      sampleCurriculum,
+      ['IF101'],
+      2,
+      { IF201: 3 },
+      [],
+      8,
+    );
+    expect(wrongParity.has('IF201')).toBe(true);
+
+    const prereqConflict = draftCourseIssues(
+      sampleCurriculum,
+      [],
+      1,
+      { IF101: 3, IF201: 2 },
+      [],
+      8,
+    );
+    expect(prereqConflict.has('IF201')).toBe(true);
   });
 });
