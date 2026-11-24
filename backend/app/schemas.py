@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -126,6 +126,13 @@ class TaskEdit(Input):
     first_step: str | None = Field(default=None, max_length=250)
     details: list[TaskDetail] | None = Field(default=None, max_length=8)
 
+    @model_validator(mode="after")
+    def check_non_nullable_fields(self):
+        for field in ("done", "title", "details"):
+            if field in self.model_fields_set and getattr(self, field) is None:
+                raise ValueError(f"{field} cannot be null")
+        return self
+
 
 class FocusCreate(Input):
     id: str = Field(pattern=r"^[a-zA-Z0-9-]{8,40}$")
@@ -186,6 +193,7 @@ class BackupSession(Input):
     course_code: str = Field(min_length=1, max_length=20)
     seconds: int = Field(ge=1, le=43200)
     note: str = Field(max_length=500, default="")
+    created_at: datetime | None = None
 
 
 class WorkspaceBackup(Input):

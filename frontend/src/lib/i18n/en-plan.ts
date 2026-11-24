@@ -159,6 +159,7 @@ export const enPlan = {
   'error.TASK_NOT_FOUND': 'Task not found.',
   'error.TASK_TARGET_REQUIRED': 'Choose a course or a goal.',
   'error.START_AFTER_DUE': 'Start date cannot be after due date.',
+  'error.INVALID_WORKSPACE_ID': 'Invalid workspace identifier.',
   'error.SESSION_NOT_FOUND': 'Session not found',
   'error.WORKSPACE_EXISTS':
     'Choose a new workspace for a different curriculum.',
@@ -373,6 +374,7 @@ export const enPlan = {
   'compare.workload_heading': 'Semester workload comparison',
   'compare.semester': 'Semester',
   'compare.delta': 'Difference',
+  'compare.delta_credits': '{sign}{count} cr',
   'compare.same_load': 'Same',
   'compare.diff_only': 'Show differences only',
   'compare.diff_count.one': '{count} course differs',

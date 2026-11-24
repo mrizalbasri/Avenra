@@ -158,6 +158,7 @@ export const idPlan: Record<keyof typeof enPlan, string> = {
   'error.TASK_NOT_FOUND': 'Target tidak ditemukan.',
   'error.TASK_TARGET_REQUIRED': 'Pilih mata kuliah atau tujuan.',
   'error.START_AFTER_DUE': 'Tanggal mulai tidak boleh setelah tanggal tenggat.',
+  'error.INVALID_WORKSPACE_ID': 'Pengenal workspace tidak valid.',
   'error.SESSION_NOT_FOUND': 'Sesi tidak ditemukan',
   'error.WORKSPACE_EXISTS':
     'Pilih workspace baru untuk kurikulum yang berbeda.',
@@ -301,7 +302,7 @@ export const idPlan: Record<keyof typeof enPlan, string> = {
   'passport.lead':
     'Cuplikan rencana tersimpan untuk diskusi yang terinformasi dengan dosen wali Anda.',
   'passport.print': 'Cetak / Simpan sebagai PDF',
-  'passport.copy_summary': 'Salin ringkasan dosen PA',
+  'passport.copy_summary': 'Salin ringkasan dosen wali',
   'passport.copied':
     'Ringkasan tersalin. Siap ditempel ke WhatsApp atau email.',
   'passport.copy_failed':
@@ -373,6 +374,7 @@ export const idPlan: Record<keyof typeof enPlan, string> = {
   'compare.workload_heading': 'Perbandingan beban per semester',
   'compare.semester': 'Semester',
   'compare.delta': 'Selisih',
+  'compare.delta_credits': '{sign}{count} SKS',
   'compare.same_load': 'Sama',
   'compare.diff_only': 'Hanya yang berbeda',
   'compare.diff_count.one': '{count} mata kuliah berbeda',

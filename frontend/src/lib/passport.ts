@@ -70,7 +70,11 @@ export function buildAdvisorSummary(
               end: goal.end_term,
             });
       lines.push(
-        `- ${goal.title} (${t(`goals.kind_${goal.kind}` as 'goals.kind_internship')} | ${range} | ${formatHours(goal.weekly_hours)} h/w)`,
+        `- ${goal.title} (${t('overview.mission.goal_meta', {
+          kind: t(`goals.kind_${goal.kind}` as 'goals.kind_internship'),
+          range,
+          hours: formatHours(goal.weekly_hours),
+        })})`,
       );
     }
   }
@@ -95,11 +99,30 @@ export function buildAdvisorSummary(
         term,
         profile.time_budget,
       );
-      hoursSuffix = ` | ${formatHours(h.totalHours)}/${formatHours(h.availableHours)} h`;
+      hoursSuffix = ` | ${
+        h.over
+          ? t('passport.hours_over', {
+              total: formatHours(h.totalHours),
+              available: formatHours(h.availableHours),
+            })
+          : t('passport.hours_cell', {
+              total: formatHours(h.totalHours),
+              available: formatHours(h.availableHours),
+            })
+      }`;
     }
+    const loadText = t('plan.load', { load: credits, cap: v.caps[termKey] });
     lines.push(
-      `- ${t('common.semester', { term })} (${credits}/${v.caps[termKey]} SKS${hoursSuffix}): ${list || t('passport.no_courses')}`,
+      `- ${t('common.semester', { term })} (${loadText}${hoursSuffix}): ${list || t('passport.no_courses')}`,
     );
+  }
+
+  if (plan.bottlenecks.length) {
+    lines.push('');
+    lines.push(`${t('passport.affected')}:`);
+    for (const blocker of plan.bottlenecks) {
+      lines.push(`- ${blocker.path.join(' → ')}`);
+    }
   }
 
   if (v.findings.length) {

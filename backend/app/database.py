@@ -1,16 +1,18 @@
+import re
 from collections.abc import Iterator
 from functools import lru_cache
 from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
-from fastapi import Request
+from fastapi import HTTPException, Request
 from sqlalchemy import Engine, create_engine, event, text
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
 
 MIGRATIONS = Path(__file__).resolve().parent.parent / "migrations"
+WORKSPACE_ID_RE = re.compile(r"^[a-zA-Z0-9-]{1,40}$")
 
 
 @lru_cache
@@ -46,6 +48,16 @@ def check_database() -> None:
 
 
 def get_session(request: Request) -> Iterator[Session]:
+    workspace_id = request.headers.get("X-Workspace-ID", "local-demo")
+    if not WORKSPACE_ID_RE.fullmatch(workspace_id):
+        raise HTTPException(
+            400,
+            {
+                "code": "INVALID_WORKSPACE_ID",
+                "message": "Invalid workspace identifier.",
+                "params": {},
+            },
+        )
     with Session(get_engine()) as session:
-        session.info["workspace_id"] = request.headers.get("X-Workspace-ID", "local-demo")
+        session.info["workspace_id"] = workspace_id
         yield session

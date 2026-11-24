@@ -103,7 +103,34 @@ export function draftCourseIssues(
   const termOf = (code: string): number | null => {
     if (doneSet.has(code)) return 0;
     const assigned = assignments[code];
-    return typeof assigned === 'number' ? assigned : null;
+    if (
+      typeof assigned !== 'number' ||
+      assigned < currentTerm ||
+      assigned > maxTerm
+    )
+      return null;
+    return assigned;
+  };
+
+  const completedCredits = curriculum.courses
+    .filter((c) => doneSet.has(c.code))
+    .reduce((sum, c) => sum + c.credits, 0);
+
+  const creditsByTerm = new Map<number, number>();
+  for (const course of curriculum.courses) {
+    if (doneSet.has(course.code)) continue;
+    const t = termOf(course.code);
+    if (t !== null) {
+      creditsByTerm.set(t, (creditsByTerm.get(t) ?? 0) + course.credits);
+    }
+  }
+
+  const earnedBefore = (term: number): number => {
+    let total = completedCredits;
+    for (const [t, cr] of creditsByTerm.entries()) {
+      if (t < term) total += cr;
+    }
+    return total;
   };
 
   for (const course of curriculum.courses) {
@@ -126,6 +153,13 @@ export function draftCourseIssues(
       continue;
     }
     if (!course.offered_terms.includes(term % 2)) {
+      flagged.add(course.code);
+      continue;
+    }
+    if (
+      course.min_credits_earned > 0 &&
+      earnedBefore(term) < course.min_credits_earned
+    ) {
       flagged.add(course.code);
       continue;
     }

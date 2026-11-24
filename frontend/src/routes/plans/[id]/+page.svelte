@@ -391,6 +391,7 @@
     }
     solving = true;
     error = '';
+    notice = '';
     results = null;
     try {
       results = await api<SolveResult>(`plans/${saved.id}/solve`, 'POST', {
@@ -404,13 +405,19 @@
     }
   }
   function handleKeydown(e: KeyboardEvent) {
-    if (!(e.ctrlKey || e.metaKey)) return;
+    if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
     const key = e.key.toLowerCase();
     if (key === 's') {
       e.preventDefault();
-      if (dirty && !busy && !solving) void save();
+      if (busy || solving) return;
+      // Commit any pending numeric input change (onchange fires on blur) before saving.
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      if (dirty) void save();
       return;
     }
+    if (busy || solving) return;
     const target = e.target as HTMLElement | null;
     if (
       target &&

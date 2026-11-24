@@ -86,6 +86,15 @@ def test_edit_and_delete_study_task(client):
     assert bad_dates.status_code == 422
     assert bad_dates.json()["detail"]["code"] == "START_AFTER_DUE"
 
+    # Explicit null on non-nullable fields returns 422 instead of 503.
+    for field in ("done", "title", "details"):
+        bad_null = client.patch(
+            f"/api/v1/study/tasks/{created['id']}",
+            headers=headers,
+            json={"revision": 2, field: None},
+        )
+        assert bad_null.status_code == 422
+
     # Stale revision returns 409.
     stale = client.patch(
         f"/api/v1/study/tasks/{created['id']}",
@@ -190,4 +199,78 @@ def test_workspace_export_restore_and_delete(client):
     assert removed.status_code == 200
     assert removed.json() == {"deleted": "backup-source"}
     assert client.get("/api/v1/workspace", headers=source).json()["profile"] is None
+    assert client.delete("/api/v1/workspace", headers=source).status_code == 404
     assert client.get("/api/v1/workspace", headers=restored).json()["profile"]["alias"] == "Nadia"
+
+
+def test_restore_blocks_forged_synthetic_and_cleans_orphans(client):
+    src = {"X-Workspace-ID": "backup-forged-src"}
+    forged_ws = {"X-Workspace-ID": "backup-forged-dst"}
+    orphan_dst = {"X-Workspace-ID": "backup-orphan-dst"}
+    client.post("/api/v1/workspace/bootstrap", headers=src)
+
+    # Add a goal, attach a task to it, then delete the goal from profile.
+    ws = client.get("/api/v1/workspace", headers=src).json()
+    profile = client.patch(
+        "/api/v1/profile",
+        headers=src,
+        json={
+            "revision": ws["profile"]["revision"],
+            "alias": "Orphan Test",
+            "current_term": 3,
+            "completed": ws["profile"]["completed"],
+            "goals": [
+                {
+                    "title": "Temp Goal",
+                    "kind": "other",
+                    "start_term": 3,
+                    "end_term": 3,
+                    "weekly_hours": 4,
+                }
+            ],
+        },
+    ).json()
+    goal_id = profile["goals"][0]["id"]
+    client.post(
+        "/api/v1/study/tasks",
+        headers=src,
+        json={"goal_id": goal_id, "title": "Orphaned goal task"},
+    )
+    client.patch(
+        "/api/v1/profile",
+        headers=src,
+        json={
+            "revision": profile["revision"],
+            "alias": "Orphan Test",
+            "current_term": 3,
+            "completed": profile["completed"],
+            "goals": [],
+        },
+    )
+
+    # Export skips the orphaned task cleanly so restore succeeds.
+    exported = client.get("/api/v1/workspace/export", headers=src).json()
+    assert exported["tasks"] == []
+    orphan_res = client.post("/api/v1/workspace/restore", headers=orphan_dst, json=exported)
+    assert orphan_res.status_code == 201
+
+    # Forging a custom disclaimer while claiming status="synthetic" is overwritten to user_supplied.
+    forged = dict(exported)
+    forged_profile = dict(exported["profile"])
+    forged_curr = dict(forged_profile["curriculum"])
+    forged_curr["status"] = "synthetic"
+    forged_curr["disclaimer"] = "Officially approved for graduation."
+    forged_profile["curriculum"] = forged_curr
+    forged["profile"] = forged_profile
+
+    res = client.post("/api/v1/workspace/restore", headers=forged_ws, json=forged)
+    assert res.status_code == 201
+    restored_curr = res.json()["curriculum"]
+    assert restored_curr["status"] == "user_supplied"
+    assert "Verify rules with your university" in restored_curr["disclaimer"]
+
+
+def test_invalid_workspace_id_header_rejected(client):
+    bad = client.get("/api/v1/workspace", headers={"X-Workspace-ID": "a" * 50})
+    assert bad.status_code == 400
+    assert bad.json()["detail"]["code"] == "INVALID_WORKSPACE_ID"

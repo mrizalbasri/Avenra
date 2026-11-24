@@ -124,12 +124,42 @@ describe('buildAdvisorSummary', () => {
     expect(summary).toContain('Academic Decision Passport | Recovery plan');
     expect(summary).toContain('Plan version 3 | Profile version 2');
     expect(summary).toContain('Graduate on time with an internship.');
-    expect(summary).toContain('BEM (Organisation | Semesters 2-3 | 8 h/w)');
+    expect(summary).toContain('BEM (Organisation | Semesters 2-3 | 8 h/week)');
     expect(summary).toContain('IF201 Algorithms');
-    expect(summary).toContain('16.5/40 h');
+    expect(summary).toContain('3 / 11 cr | 16.5 / 40 h');
     expect(summary).toContain(
       '1. Are the prerequisites and offerings used here accurate',
     );
     expect(summary).toContain('Demonstration assumptions only.');
+  });
+
+  it('localizes units, overload marker, and bottlenecks in Indonesian', () => {
+    const t = (
+      key: Parameters<typeof translate>[1],
+      params?: Parameters<typeof translate>[2],
+    ) => translate('id', key, params);
+    const msg = createMessages(() => 'id');
+    const tightProfile: Profile = {
+      ...profile,
+      time_budget: { available_hours: 10, minutes_per_credit: 170 },
+    };
+    const blockedPlan: Plan = {
+      ...plan,
+      bottlenecks: [
+        { root: 'IF101', course: 'IF201', path: ['IF101', 'IF201'] },
+      ],
+    };
+    const summary = buildAdvisorSummary(
+      blockedPlan,
+      tightProfile,
+      curriculum,
+      t,
+      msg,
+    );
+
+    expect(summary).toContain('BEM (Organisasi | Semester 2-3 | 8 jam/minggu)');
+    expect(summary).toContain('3 / 11 SKS | 16.5 / 10 jam (lebih)');
+    expect(summary).toContain('Mata kuliah yang terdampak kemunduran:');
+    expect(summary).toContain('- IF101 → IF201');
   });
 });

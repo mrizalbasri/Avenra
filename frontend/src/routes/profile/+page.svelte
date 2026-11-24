@@ -5,7 +5,7 @@
   import {
     clearLocalBrowserData,
     clearWorkspaceCookie,
-    removeRememberedWorkspace,
+    removeWorkspaceLocalData,
   } from '#lib/workspace.js';
   import GoalsBudgetEditor from '#lib/components/GoalsBudgetEditor.svelte';
   import CourseRowsEditor from '#lib/components/start/CourseRowsEditor.svelte';
@@ -69,7 +69,8 @@
   let busy = $state(false);
   let error = $state('');
   let courseQuery = $state('');
-  let dataBusy = $state(false);
+  let dataAction = $state<'export' | 'restore' | 'delete' | null>(null);
+  let dataBusy = $derived(dataAction !== null);
   let dataNotice = $state('');
   let dataError = $state('');
 
@@ -101,7 +102,7 @@
   }
 
   async function exportWorkspaceJson() {
-    dataBusy = true;
+    dataAction = 'export';
     dataError = '';
     dataNotice = '';
     try {
@@ -119,18 +120,24 @@
       link.href = url;
       link.download = `avenra-${slug}.json`;
       link.click();
-      URL.revokeObjectURL(url);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
       dataNotice = t('profile.exported');
     } catch (e) {
       dataError = msg.errorText(e);
     } finally {
-      dataBusy = false;
+      dataAction = null;
     }
   }
 
+  const MAX_BACKUP_BYTES = 2 * 1024 * 1024;
   async function restoreWorkspaceJson(file?: File) {
     if (!file) return;
-    dataBusy = true;
+    if (file.size > MAX_BACKUP_BYTES) {
+      dataError = t('profile.restore_too_large');
+      dataNotice = '';
+      return;
+    }
+    dataAction = 'restore';
     dataError = '';
     dataNotice = '';
     try {
@@ -149,7 +156,7 @@
     } catch (e) {
       dataError = msg.errorText(e);
     } finally {
-      dataBusy = false;
+      dataAction = null;
     }
   }
 
@@ -163,17 +170,18 @@
   async function deleteCurrentWorkspace() {
     if (!window.confirm(t('profile.delete_workspace_confirm'))) return;
     const wsId = data.workspace?.profile?.id;
-    dataBusy = true;
+    const planIds = (data.workspace?.plans ?? []).map((plan) => plan.id);
+    dataAction = 'delete';
     dataError = '';
     dataNotice = '';
     try {
       await api('workspace', 'DELETE');
-      if (wsId) removeRememberedWorkspace(wsId);
+      if (wsId) removeWorkspaceLocalData(wsId, planIds);
       clearWorkspaceCookie();
       window.location.assign('/');
     } catch (e) {
       dataError = msg.errorText(e);
-      dataBusy = false;
+      dataAction = null;
     }
   }
 
@@ -623,7 +631,9 @@
           disabled={dataBusy}
           onclick={exportWorkspaceJson}>{t('profile.export_json')}</button
         ><label class="button file-button"
-          >{dataBusy ? t('profile.restoring') : t('profile.restore_json')}<input
+          >{dataAction === 'restore'
+            ? t('profile.restoring')
+            : t('profile.restore_json')}<input
             type="file"
             accept="application/json,.json"
             disabled={dataBusy}
@@ -643,7 +653,7 @@
           class="button subtle"
           disabled={dataBusy}
           onclick={deleteCurrentWorkspace}
-          >{dataBusy
+          >{dataAction === 'delete'
             ? t('profile.deleting')
             : t('profile.delete_workspace')}</button
         >

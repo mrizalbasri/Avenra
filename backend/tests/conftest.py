@@ -1,11 +1,11 @@
 import pytest
-from fastapi import Request
+from fastapi import HTTPException, Request
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
-from app.database import get_session
+from app.database import WORKSPACE_ID_RE, get_session
 from app.main import app
 from app.models import Base
 
@@ -15,11 +15,28 @@ def client():
     engine = create_engine(
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
+
+    @event.listens_for(engine, "connect")
+    def enable_foreign_keys(connection, _):
+        cursor = connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
     Base.metadata.create_all(engine)
 
     def session(request: Request):
+        workspace_id = request.headers.get("X-Workspace-ID", "local-demo")
+        if not WORKSPACE_ID_RE.fullmatch(workspace_id):
+            raise HTTPException(
+                400,
+                {
+                    "code": "INVALID_WORKSPACE_ID",
+                    "message": "Invalid workspace identifier.",
+                    "params": {},
+                },
+            )
         with Session(engine) as db:
-            db.info["workspace_id"] = request.headers.get("X-Workspace-ID", "local-demo")
+            db.info["workspace_id"] = workspace_id
             yield db
 
     app.dependency_overrides[get_session] = session

@@ -146,8 +146,8 @@ export const enPages = {
   'profile.restore_json': 'Restore from backup (.json)',
   'profile.restoring': 'Restoring…',
   'profile.exported': 'Workspace backup downloaded.',
-  'profile.restored': 'Backup restored into a new workspace.',
   'profile.restore_invalid': 'Choose a valid Avenra backup JSON file.',
+  'profile.restore_too_large': 'Keep backup files under 2 MB.',
   'profile.clear_browser': 'Clear browser workspace list & drafts',
   'profile.clear_browser_confirm':
     'Clear remembered workspaces, unsaved drafts, and paused timers from this browser? Database records will not be deleted.',

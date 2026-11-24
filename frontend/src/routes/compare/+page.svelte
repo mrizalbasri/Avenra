@@ -22,8 +22,17 @@
     return [...set].sort((a, b) => a - b);
   });
 
+  const courseState = (code: string, plan: Plan): string | number | null => {
+    if (
+      data.workspace?.profile?.completed.includes(code) &&
+      !plan.failed.includes(code)
+    )
+      return 'completed';
+    return plan.assignments[code] ?? null;
+  };
+
   const isCourseDifferent = (code: string, a: Plan, b: Plan) =>
-    a.assignments[code] !== b.assignments[code] ||
+    courseState(code, a) !== courseState(code, b) ||
     a.failed.includes(code) !== b.failed.includes(code);
 
   let diffCount = $derived.by(() => {
@@ -182,7 +191,10 @@
                 ><td class:load-over={b.over}>{b.text}</td><td
                   >{delta === 0
                     ? t('compare.same_load')
-                    : `${delta > 0 ? '+' : ''}${delta}`}</td
+                    : t('compare.delta_credits', {
+                        sign: delta > 0 ? '+' : '',
+                        count: delta,
+                      })}</td
                 ></tr
               >
             {/each}</tbody

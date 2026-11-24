@@ -39,6 +39,7 @@
   let goalFilter = $state('all');
   let editingId = $state<string | null>(null);
   let editTargetRef = $state('');
+  let editPreserveGoalId = $state<string | null>(null);
   let editTitle = $state('');
   let editDue = $state('');
   let editStartDate = $state('');
@@ -338,12 +339,24 @@
   }
 
   function beginEdit(task: Task) {
+    const hasGoal =
+      !!task.goal_id && goals.some((goal) => goal.id === task.goal_id);
+    const hasCourse =
+      !!task.course_code &&
+      (data.workspace?.curriculum.courses ?? []).some(
+        (c) => c.code === task.course_code,
+      );
+    const fallbackCourse = data.workspace?.curriculum.courses[0]?.code ?? '';
     editingId = task.id;
-    editTargetRef = task.course_code
+    editTargetRef = hasCourse
       ? `course:${task.course_code}`
-      : task.goal_id
+      : hasGoal
         ? `goal:${task.goal_id}`
-        : '';
+        : fallbackCourse
+          ? `course:${fallbackCourse}`
+          : '';
+    // Preserve an existing dual link (course + goal) when editing a course-targeted task.
+    editPreserveGoalId = hasCourse && hasGoal ? task.goal_id : null;
     editTitle = task.title;
     editDue = task.due_date ?? '';
     editStartDate = task.start_date ?? '';
@@ -354,6 +367,7 @@
 
   function cancelEdit() {
     editingId = null;
+    editPreserveGoalId = null;
   }
 
   async function saveEdit(task: Task) {
@@ -366,7 +380,7 @@
       await api(`study/tasks/${task.id}`, 'PATCH', {
         revision: task.revision,
         course_code: isGoal ? null : targetId,
-        goal_id: isGoal ? targetId : null,
+        goal_id: isGoal ? targetId : editPreserveGoalId,
         title: editTitle,
         due_date: editDue || null,
         start_date: editStartDate || null,
@@ -374,6 +388,7 @@
         details: parseDetailsLines(editDetailsText),
       });
       editingId = null;
+      editPreserveGoalId = null;
       await invalidateAll();
       notice = t('study.notice.updated');
     } catch (e) {
@@ -490,10 +505,10 @@
               type="button"
               class:chosen={inputMode === 'manual'}
               onclick={() => {
+                if (inputMode === 'announce') detailsText = '';
                 inputMode = 'manual';
                 reviewing = false;
                 reviewWarnings = [];
-                detailsText = '';
               }}>{t('study.mode_manual')}</button
             ><button
               type="button"

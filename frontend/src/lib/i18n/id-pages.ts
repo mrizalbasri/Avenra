@@ -146,8 +146,8 @@ export const idPages: Record<keyof typeof enPages, string> = {
   'profile.restore_json': 'Pulihkan dari cadangan (.json)',
   'profile.restoring': 'Memulihkan…',
   'profile.exported': 'Cadangan workspace telah diunduh.',
-  'profile.restored': 'Cadangan dipulihkan ke workspace baru.',
   'profile.restore_invalid': 'Pilih berkas cadangan JSON Avenra yang valid.',
+  'profile.restore_too_large': 'Ukuran berkas cadangan maksimal 2 MB.',
   'profile.clear_browser': 'Bersihkan daftar workspace & draf di browser',
   'profile.clear_browser_confirm':
     'Hapus daftar workspace tersimpan, draf belum disimpan, dan timer jeda dari browser ini? Data di database tidak dihapus.',

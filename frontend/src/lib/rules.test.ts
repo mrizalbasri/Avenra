@@ -133,5 +133,82 @@ describe('draftCourseIssues', () => {
       8,
     );
     expect(prereqConflict.has('IF201')).toBe(true);
+
+    const outOfRangePrereq = draftCourseIssues(
+      sampleCurriculum,
+      [],
+      2,
+      { IF101: 1, IF201: 2 },
+      [],
+      8,
+    );
+    expect(outOfRangePrereq.has('IF101')).toBe(true);
+    expect(outOfRangePrereq.has('IF201')).toBe(true);
+  });
+
+  it('flags min_credits_earned, any_prerequisites, and corequisites', () => {
+    const rich: Curriculum = {
+      ...curriculum,
+      courses: [
+        {
+          code: 'IF101',
+          name: 'Intro',
+          credits: 4,
+          recommended_term: 1,
+          prerequisites: [],
+          any_prerequisites: [],
+          corequisites: [],
+          min_credits_earned: 0,
+          offered_terms: [0, 1],
+          category: 'required',
+        },
+        {
+          code: 'IF102',
+          name: 'Lab',
+          credits: 2,
+          recommended_term: 1,
+          prerequisites: [],
+          any_prerequisites: [],
+          corequisites: ['IF101'],
+          min_credits_earned: 0,
+          offered_terms: [0, 1],
+          category: 'required',
+        },
+        {
+          code: 'IF301',
+          name: 'Capstone',
+          credits: 4,
+          recommended_term: 3,
+          prerequisites: [],
+          any_prerequisites: [['IF101', 'IF102']],
+          corequisites: [],
+          min_credits_earned: 6,
+          offered_terms: [0, 1],
+          category: 'required',
+        },
+      ],
+    };
+
+    const issues = draftCourseIssues(
+      rich,
+      [],
+      1,
+      { IF101: 2, IF102: 1, IF301: 2 },
+      [],
+      8,
+    );
+    // IF102 coreq IF101 is in term 2 > 1; IF301 needs 6 earned credits before term 2 (only 2 earned).
+    expect(issues.has('IF102')).toBe(true);
+    expect(issues.has('IF301')).toBe(true);
+
+    const ok = draftCourseIssues(
+      rich,
+      [],
+      1,
+      { IF101: 1, IF102: 1, IF301: 2 },
+      [],
+      8,
+    );
+    expect(ok.size).toBe(0);
   });
 });

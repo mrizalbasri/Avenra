@@ -1,6 +1,7 @@
 // Workspace identifiers scope this local demo; they are not authentication tokens.
 export const workspaceCookie = 'avenra-workspace';
 export const rememberedWorkspacesKey = 'avenra-workspaces';
+export const localDataClearedEvent = 'avenra:local-data-cleared';
 
 export function validWorkspaceId(value: unknown): value is string {
   return typeof value === 'string' && /^[a-zA-Z0-9-]{1,40}$/.test(value);
@@ -45,6 +46,21 @@ export function removeRememberedWorkspace(id: string): void {
   }
 }
 
+export function removeWorkspaceLocalData(
+  workspaceId: string,
+  planIds: string[] = [],
+): void {
+  removeRememberedWorkspace(workspaceId);
+  try {
+    localStorage.removeItem(`avenra-focus-session-v1:${workspaceId}`);
+    for (const planId of planIds) {
+      localStorage.removeItem(`avenra-plan-draft:${planId}`);
+    }
+  } catch {
+    /* Storage access is optional. */
+  }
+}
+
 export function clearLocalBrowserData(): void {
   try {
     const prefixes = [
@@ -61,5 +77,8 @@ export function clearLocalBrowserData(): void {
     }
   } catch {
     /* Storage access is optional. */
+  }
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(localDataClearedEvent));
   }
 }

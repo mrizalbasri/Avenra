@@ -159,50 +159,53 @@
     </section>{/if}
   <section>
     <h2>{t('passport.plan')}</h2>
-    <table>
-      <thead
-        ><tr
-          ><th>{t('passport.col.semester')}</th><th
-            >{t('passport.col.courses')}</th
-          ><th>{t('passport.col.credits')}</th><th>{t('passport.col.limit')}</th
-          >{#if data.profile.time_budget}<th>{t('passport.col.hours')}</th
-            >{/if}</tr
-        ></thead
-      ><tbody
-        >{#each Object.entries(validation.loads) as [term, credits]}
-          {@const hours = data.profile.time_budget
-            ? semesterHours(
-                credits,
-                data.profile.goals,
-                +term,
-                data.profile.time_budget,
-              )
-            : null}
-          <tr
-            ><td>{term}</td><td
-              >{data.curriculum.courses
-                .filter(
-                  (c) =>
-                    data.plan.assignments[c.code] === +term &&
-                    (!data.profile.completed.includes(c.code) ||
-                      data.plan.failed.includes(c.code)),
+    <div class="table-scroll">
+      <table>
+        <thead
+          ><tr
+            ><th>{t('passport.col.semester')}</th><th
+              >{t('passport.col.courses')}</th
+            ><th>{t('passport.col.credits')}</th><th
+              >{t('passport.col.limit')}</th
+            >{#if data.profile.time_budget}<th>{t('passport.col.hours')}</th
+              >{/if}</tr
+          ></thead
+        ><tbody
+          >{#each Object.entries(validation.loads) as [term, credits]}
+            {@const hours = data.profile.time_budget
+              ? semesterHours(
+                  credits,
+                  data.profile.goals,
+                  +term,
+                  data.profile.time_budget,
                 )
-                .map((c) => `${c.code} ${c.name}`)
-                .join('; ') || t('passport.no_courses')}</td
-            ><td>{credits}</td><td>{validation.caps[term]}</td>{#if hours}<td>
-                {hours.over
-                  ? t('passport.hours_over', {
-                      total: formatHours(hours.totalHours),
-                      available: formatHours(hours.availableHours),
-                    })
-                  : t('passport.hours_cell', {
-                      total: formatHours(hours.totalHours),
-                      available: formatHours(hours.availableHours),
-                    })}
-              </td>{/if}</tr
-          >{/each}</tbody
-      >
-    </table>
+              : null}
+            <tr
+              ><td>{term}</td><td
+                >{data.curriculum.courses
+                  .filter(
+                    (c) =>
+                      data.plan.assignments[c.code] === +term &&
+                      (!data.profile.completed.includes(c.code) ||
+                        data.plan.failed.includes(c.code)),
+                  )
+                  .map((c) => `${c.code} ${c.name}`)
+                  .join('; ') || t('passport.no_courses')}</td
+              ><td>{credits}</td><td>{validation.caps[term]}</td>{#if hours}<td>
+                  {hours.over
+                    ? t('passport.hours_over', {
+                        total: formatHours(hours.totalHours),
+                        available: formatHours(hours.availableHours),
+                      })
+                    : t('passport.hours_cell', {
+                        total: formatHours(hours.totalHours),
+                        available: formatHours(hours.availableHours),
+                      })}
+                </td>{/if}</tr
+            >{/each}</tbody
+        >
+      </table>
+    </div>
   </section>
   {#if data.plan.bottlenecks.length}<section>
       <h2>{t('passport.affected')}</h2>

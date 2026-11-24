@@ -518,21 +518,58 @@ def add_focus(payload: FocusCreate, db: DB):
 @router.get("/workspace/export")
 def export_workspace(db: DB):
     profile = profile_or_404(db)
-    curriculum = curriculum_for(profile).model_dump()
-    plans = db.scalars(
-        select(Plan).where(Plan.profile_id == workspace_key(db)).order_by(Plan.created_at)
-    ).all()
-    tasks = db.scalars(
-        select(StudyTask)
-        .where(StudyTask.profile_id == workspace_key(db))
-        .order_by(StudyTask.created_at)
-    ).all()
-    sessions = db.scalars(
-        select(FocusSession)
-        .where(FocusSession.profile_id == workspace_key(db))
-        .order_by(FocusSession.created_at)
-        .limit(200)
-    ).all()
+    curriculum_obj = curriculum_for(profile)
+    curriculum = curriculum_obj.model_dump()
+    codes = {course.code for course in curriculum_obj.courses}
+    goal_ids = {goal.get("id") for goal in (profile.goals or []) if goal.get("id")}
+    plans = list(
+        reversed(
+            db.scalars(
+                select(Plan)
+                .where(Plan.profile_id == workspace_key(db))
+                .order_by(Plan.created_at.desc())
+                .limit(50)
+            ).all()
+        )
+    )
+    tasks = list(
+        reversed(
+            db.scalars(
+                select(StudyTask)
+                .where(StudyTask.profile_id == workspace_key(db))
+                .order_by(StudyTask.created_at.desc())
+                .limit(200)
+            ).all()
+        )
+    )
+    sessions = list(
+        reversed(
+            db.scalars(
+                select(FocusSession)
+                .where(FocusSession.profile_id == workspace_key(db))
+                .order_by(FocusSession.created_at.desc())
+                .limit(200)
+            ).all()
+        )
+    )
+    exported_tasks = []
+    for task in tasks:
+        course_code = task.course_code if task.course_code in codes else None
+        goal_id = task.goal_id if task.goal_id in goal_ids else None
+        if not course_code and not goal_id:
+            continue
+        exported_tasks.append(
+            {
+                "course_code": course_code,
+                "goal_id": goal_id,
+                "title": task.title,
+                "due_date": task.due_date,
+                "start_date": task.start_date,
+                "first_step": task.first_step,
+                "details": task.details or [],
+                "done": task.done,
+            }
+        )
     return {
         "schema_version": 1,
         "exported_at": datetime.now(UTC).isoformat(),
@@ -559,28 +596,26 @@ def export_workspace(db: DB):
             }
             for plan in plans
         ],
-        "tasks": [
-            {
-                "course_code": task.course_code,
-                "goal_id": task.goal_id,
-                "title": task.title,
-                "due_date": task.due_date,
-                "start_date": task.start_date,
-                "first_step": task.first_step,
-                "details": task.details or [],
-                "done": task.done,
-            }
-            for task in tasks
-        ],
+        "tasks": exported_tasks,
         "sessions": [
             {
                 "course_code": session.course_code,
                 "seconds": session.seconds,
                 "note": session.note,
+                "created_at": session.created_at.isoformat() if session.created_at else None,
             }
             for session in sessions
+            if session.course_code in codes
         ],
     }
+
+
+def _matches_bundled_demo(curriculum: Curriculum) -> bool:
+    dumped = curriculum.model_dump()
+    return dumped in (
+        load_demo_curriculum(legacy=False).model_dump(),
+        load_demo_curriculum(legacy=True).model_dump(),
+    )
 
 
 @router.post("/workspace/restore", status_code=201)
@@ -589,7 +624,7 @@ def restore_workspace(payload: WorkspaceBackup, db: DB):
         fail(409, "WORKSPACE_EXISTS", "Choose a new workspace for a different curriculum.")
     profile_in = payload.profile
     curriculum = profile_in.curriculum
-    if curriculum.status != "synthetic":
+    if not _matches_bundled_demo(curriculum):
         curriculum = curriculum.model_copy(
             update={
                 "status": "user_supplied",
@@ -695,7 +730,8 @@ def restore_workspace(payload: WorkspaceBackup, db: DB):
         db.add(StudyTask(profile_id=profile.id, **values))
 
     for session_in in payload.sessions:
-        db.add(FocusSession(profile_id=profile.id, **session_in.model_dump()))
+        session_values = session_in.model_dump(exclude_none=True)
+        db.add(FocusSession(profile_id=profile.id, **session_values))
 
     db.commit()
     return workspace(db)

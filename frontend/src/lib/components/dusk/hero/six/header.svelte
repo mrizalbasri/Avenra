@@ -21,6 +21,7 @@
   <div class="header-controls">
     <LanguageSwitcher />
     <button
+      type="button"
       class="menu-toggle"
       aria-label={menuOpen
         ? t('landing.nav.close_menu')
