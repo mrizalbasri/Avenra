@@ -6,81 +6,90 @@
   import recovery from '#lib/assets/feature-recovery.png';
   import comparison from '#lib/assets/feature-compare.png';
   import study from '#lib/assets/feature-study.png';
+  import { useI18n } from '#lib/i18n/context.js';
 
-  const features = [
+  const { t } = useI18n();
+  const featureIds = [
+    'feature-canvas',
+    'feature-recovery',
+    'feature-compare',
+    'feature-study',
+  ] as const;
+  type FeatureId = (typeof featureIds)[number];
+
+  const features = $derived([
     {
-      id: 'feature-canvas',
-      label: 'Academic canvas',
-      title: 'See how it all connects.',
-      copy: 'Give every course a place in your plan. Move between a connected canvas and a semester board while keeping prerequisites and credit limits in view.',
+      id: 'feature-canvas' as const,
+      label: t('landing.features.canvas.label'),
+      title: t('landing.features.canvas.title'),
+      copy: t('landing.features.canvas.copy'),
       highlights: [
-        'Move courses across semesters',
-        'Check prerequisite and credit rules',
-        'Save independent planning scenarios',
+        t('landing.features.canvas.h1'),
+        t('landing.features.canvas.h2'),
+        t('landing.features.canvas.h3'),
       ],
       image: canvas,
-      alt: 'Avenra course canvas with prerequisite connections and a semester inspector',
+      alt: t('landing.features.canvas.alt'),
       href: '/plans',
-      action: 'Explore study plans',
+      action: t('landing.features.canvas.action'),
     },
     {
-      id: 'feature-recovery',
-      label: 'Recovery simulation',
-      title: 'A setback can have another route.',
-      copy: 'Try a failed or postponed course as a scenario. Explore earlier completion or a lighter peak load under the rules you supplied, then save an alternative separately.',
+      id: 'feature-recovery' as const,
+      label: t('landing.features.recovery.label'),
+      title: t('landing.features.recovery.title'),
+      copy: t('landing.features.recovery.copy'),
       highlights: [
-        'Model a failed or delayed course',
-        'Review generated recovery alternatives',
-        'Keep your original plan intact',
+        t('landing.features.recovery.h1'),
+        t('landing.features.recovery.h2'),
+        t('landing.features.recovery.h3'),
       ],
       image: recovery,
-      alt: 'Avenra recovery alternatives generated for a fictional academic setback',
+      alt: t('landing.features.recovery.alt'),
       href: '/methodology',
-      action: 'Read the simulation assumptions',
+      action: t('landing.features.recovery.action'),
     },
     {
-      id: 'feature-compare',
-      label: 'Compare plans',
-      title: 'Make the trade-offs visible.',
-      copy: 'Put two saved plans side by side. See what changes in course placement, semester load, and modeled completion before you discuss your options with an advisor.',
+      id: 'feature-compare' as const,
+      label: t('landing.features.compare.label'),
+      title: t('landing.features.compare.title'),
+      copy: t('landing.features.compare.copy'),
       highlights: [
-        'Compare two saved snapshots',
-        'See course-by-course differences',
-        'Review modeled load and completion',
+        t('landing.features.compare.h1'),
+        t('landing.features.compare.h2'),
+        t('landing.features.compare.h3'),
       ],
       image: comparison,
-      alt: 'Avenra comparison of a baseline and a saved recovery plan with completion and credit metrics',
+      alt: t('landing.features.compare.alt'),
       href: '/compare',
-      action: 'Open plan comparison',
+      action: t('landing.features.compare.action'),
     },
     {
-      id: 'feature-study',
-      label: 'Study & focus',
-      title: 'Give the plan a daily rhythm.',
-      copy: 'Turn your course goals into small tasks. Make time for focus and breaks, return to a paused timer, and record a reflection after each study session.',
+      id: 'feature-study' as const,
+      label: t('landing.features.study.label'),
+      title: t('landing.features.study.title'),
+      copy: t('landing.features.study.copy'),
       highlights: [
-        'Track tasks and due dates',
-        'Use focus and break sessions',
-        'Keep a record of your learning',
+        t('landing.features.study.h1'),
+        t('landing.features.study.h2'),
+        t('landing.features.study.h3'),
       ],
       image: study,
-      alt: 'Avenra study space with learning targets, a focus timer, and session history',
+      alt: t('landing.features.study.alt'),
       href: '/study',
-      action: 'Open study space',
+      action: t('landing.features.study.action'),
     },
-  ] as const;
-  type FeatureId = (typeof features)[number]['id'];
+  ]);
   let activeId = $state<FeatureId>('feature-canvas');
 
   onMount(() => {
-    const sections = features.map(({ id }) => document.getElementById(id));
+    const sections = featureIds.map((id) => document.getElementById(id));
     const observer = new IntersectionObserver(
       (entries) => {
         const visible = entries
           .filter((entry) => entry.isIntersecting)
           .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
         const nextId = visible[0]?.target.id;
-        if (nextId && features.some((feature) => feature.id === nextId))
+        if (nextId && featureIds.includes(nextId as FeatureId))
           activeId = nextId as FeatureId;
       },
       { rootMargin: '-15% 0px -45% 0px', threshold: [0, 0.2, 0.5] },
@@ -99,15 +108,15 @@
 >
   <div class="features-heading">
     <h2 id="features-title">
-      More clarity for your next move.<br /><span
-        >From a semester plan to a study session.</span
+      {t('landing.features.title_1')}<br /><span
+        >{t('landing.features.title_2')}</span
       >
     </h2>
-    <p>Four connected tools, shaped around your own curriculum.</p>
+    <p>{t('landing.features.subtitle')}</p>
   </div>
   <div class="features-layout">
-    <nav class="feature-navigation" aria-label="Avenra features">
-      <span class="navigation-label">Inside Avenra</span>
+    <nav class="feature-navigation" aria-label={t('landing.features.nav_aria')}>
+      <span class="navigation-label">{t('landing.features.inside')}</span>
       <div class="feature-links">
         {#each features as feature (feature.id)}
           <a
@@ -152,7 +161,6 @@
                 decoding="async"
               />
             </div>
-            <figcaption>Local prototype | Fictional academic data</figcaption>
           </figure>
         </article>
       {/each}
@@ -316,12 +324,6 @@
     object-fit: contain;
     object-position: top;
     border-radius: 6px;
-  }
-  figcaption {
-    font-size: 10px;
-    color: var(--text-secondary);
-    text-align: center;
-    margin: 12px 0 0;
   }
   @media (max-width: 1100px) {
     .features-layout {

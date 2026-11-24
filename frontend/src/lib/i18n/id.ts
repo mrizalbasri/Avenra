@@ -1,10 +1,12 @@
 import type { MessageKey } from './en.js';
+import { idLanding } from './id-landing.js';
 import { idPages } from './id-pages.js';
 import { idPlan } from './id-plan.js';
 import { idStart } from './id-start.js';
 
 // Typed against English keys: a missing or extra key fails `pnpm check`.
 export const id: Record<MessageKey, string> = {
+  ...idLanding,
   ...idPlan,
   ...idPages,
   ...idStart,

@@ -50,3 +50,15 @@ The FAQ section after Content Two adapts [SV Blocks FAQs One](https://sv-blocks.
 The registry utility alias now uses `#lib/utils`, avoiding duplicate `.js` extensions in generated imports. Accordion imports use explicit `.js` extensions and the shared utility exports the required `WithoutChild` type.
 
 Verified locally: all six questions, single-open behavior, collapse, ArrowDown focus movement, Space activation, methodology navigation, and 390/768 px layouts without horizontal page overflow or browser exceptions. Screenshots are `docs/screenshots/faq-desktop.png` and `faq-mobile.png`.
+
+## FAQ layout and motion refinement
+
+The FAQ now uses one centered column (760 px maximum) with a centered heading, replacing the repeated two-column layout. Active rows use a subtle neutral fill and an animated plus/minus control. The six answers and methodology link remain the same.
+
+A one-time viewport entrance uses the Web Animations API with a short vertical reveal. Accordion expansion/collapse animates the measured Bits UI content height. `prefers-reduced-motion` disables transitions and accordion animations; changing the preference also cancels an in-progress entrance. The viewport observer and media listener are cleaned up when the section unmounts. Content is visible by default when JavaScript is unavailable.
+
+Verified locally: all six items, single-open behavior, collapse, ArrowDown/Space interaction, methodology navigation, and 390/768 px layouts without page overflow or browser exceptions. Browser inspection confirms the expansion animation runs normally and becomes `none` with reduced motion. Updated FAQ and landing screenshots show the new composition.
+
+## Closing CTA, Footer, and Bilingual Landing (`en` / `id`)
+
+`frontend/src/lib/components/dusk/call-to-action/one.svelte` and `frontend/src/lib/components/dusk/footer/footer.svelte` complete the landing page with a closing call-to-action and typographic monochrome footer. All landing sections (`Header`, `Hero`, `FeaturesFive`, `ContentTwo`, `FaqsOne`, `CallToActionOne`, `Footer`) read typed translations from `frontend/src/lib/i18n/en-landing.ts` and `id-landing.ts`, and `Header` includes `LanguageSwitcher` so new visitors can switch between English and Indonesian directly from `/`.

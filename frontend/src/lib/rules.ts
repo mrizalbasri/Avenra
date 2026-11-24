@@ -82,3 +82,113 @@ export function offeringText(course: Course, t: Translate) {
       ? t('offer.odd')
       : t('offer.even');
 }
+
+/**
+ * Lightweight client-side preview of course-level issues while editing an unsaved draft.
+ * Keeps visual feedback on canvas cards before the authoritative backend validation runs.
+ */
+export function draftCourseIssues(
+  curriculum: Curriculum,
+  completed: string[],
+  currentTerm: number,
+  assignments: Record<string, number | null>,
+  failed: string[],
+  horizon: number,
+): Set<string> {
+  const flagged = new Set<string>();
+  const failedSet = new Set(failed);
+  const doneSet = new Set(completed.filter((code) => !failedSet.has(code)));
+  const maxTerm = Math.min(horizon, curriculum.max_terms);
+
+  const termOf = (code: string): number | null => {
+    if (doneSet.has(code)) return 0;
+    const assigned = assignments[code];
+    if (
+      typeof assigned !== 'number' ||
+      assigned < currentTerm ||
+      assigned > maxTerm
+    )
+      return null;
+    return assigned;
+  };
+
+  const completedCredits = curriculum.courses
+    .filter((c) => doneSet.has(c.code))
+    .reduce((sum, c) => sum + c.credits, 0);
+
+  const creditsByTerm = new Map<number, number>();
+  for (const course of curriculum.courses) {
+    if (doneSet.has(course.code)) continue;
+    const t = termOf(course.code);
+    if (t !== null) {
+      creditsByTerm.set(t, (creditsByTerm.get(t) ?? 0) + course.credits);
+    }
+  }
+
+  const earnedBefore = (term: number): number => {
+    let total = completedCredits;
+    for (const [t, cr] of creditsByTerm.entries()) {
+      if (t < term) total += cr;
+    }
+    return total;
+  };
+
+  for (const course of curriculum.courses) {
+    if (doneSet.has(course.code)) continue;
+    const term = assignments[course.code];
+    if (typeof term !== 'number') {
+      if (course.category === 'required') flagged.add(course.code);
+      continue;
+    }
+    if (term < currentTerm || term > maxTerm) {
+      flagged.add(course.code);
+      continue;
+    }
+    if (
+      failedSet.has(course.code) &&
+      !completed.includes(course.code) &&
+      term <= currentTerm
+    ) {
+      flagged.add(course.code);
+      continue;
+    }
+    if (!course.offered_terms.includes(term % 2)) {
+      flagged.add(course.code);
+      continue;
+    }
+    if (
+      course.min_credits_earned > 0 &&
+      earnedBefore(term) < course.min_credits_earned
+    ) {
+      flagged.add(course.code);
+      continue;
+    }
+    for (const prereq of course.prerequisites) {
+      const pt = termOf(prereq);
+      if (pt === null || pt >= term) {
+        flagged.add(course.code);
+        break;
+      }
+    }
+    if (flagged.has(course.code)) continue;
+    for (const group of course.any_prerequisites ?? []) {
+      const ok = group.some((opt) => {
+        const pt = termOf(opt);
+        return pt !== null && pt < term;
+      });
+      if (!ok) {
+        flagged.add(course.code);
+        break;
+      }
+    }
+    if (flagged.has(course.code)) continue;
+    for (const coreq of course.corequisites ?? []) {
+      const ct = termOf(coreq);
+      if (ct === null || ct > term) {
+        flagged.add(course.code);
+        break;
+      }
+    }
+  }
+  return flagged;
+}

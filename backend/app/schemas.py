@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -117,7 +117,21 @@ class TaskCreate(Input):
 
 class TaskEdit(Input):
     revision: int = Field(ge=1)
-    done: bool
+    done: bool | None = None
+    course_code: str | None = None
+    goal_id: str | None = Field(default=None, pattern=r"^[a-zA-Z0-9-]{1,40}$")
+    title: str | None = Field(default=None, min_length=1, max_length=250)
+    due_date: date | None = None
+    start_date: date | None = None
+    first_step: str | None = Field(default=None, max_length=250)
+    details: list[TaskDetail] | None = Field(default=None, max_length=8)
+
+    @model_validator(mode="after")
+    def check_non_nullable_fields(self):
+        for field in ("done", "title", "details"):
+            if field in self.model_fields_set and getattr(self, field) is None:
+                raise ValueError(f"{field} cannot be null")
+        return self
 
 
 class FocusCreate(Input):
@@ -158,3 +172,34 @@ class WorkspaceImport(Input):
             raise ValueError("Goal semesters must be within the maximum study period")
         check_goal_ids(self.goals)
         return self
+
+
+class BackupPlan(Input):
+    name: str = Field(min_length=1, max_length=100)
+    assignments: dict[str, int | None] = Field(default_factory=dict, max_length=100)
+    layout: dict[str, CanvasPosition] = Field(default_factory=dict, max_length=100)
+    failed: list[str] = Field(default_factory=list, max_length=100)
+    credit_cap: int = Field(ge=1, le=24)
+    horizon: int = Field(ge=1, le=MAX_TERM)
+    expected_gpa: Gpa = None
+    archived: bool = False
+
+
+class BackupTask(TaskCreate):
+    done: bool = False
+
+
+class BackupSession(Input):
+    course_code: str = Field(min_length=1, max_length=20)
+    seconds: int = Field(ge=1, le=43200)
+    note: str = Field(max_length=500, default="")
+    created_at: datetime | None = None
+
+
+class WorkspaceBackup(Input):
+    schema_version: Literal[1] = 1
+    exported_at: str | None = Field(default=None, max_length=64)
+    profile: WorkspaceImport
+    plans: list[BackupPlan] = Field(default_factory=list, max_length=50)
+    tasks: list[BackupTask] = Field(default_factory=list, max_length=200)
+    sessions: list[BackupSession] = Field(default_factory=list, max_length=200)

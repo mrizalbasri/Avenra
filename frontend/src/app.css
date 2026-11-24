@@ -1252,6 +1252,7 @@ td {
 }
 .study-task-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
@@ -1581,6 +1582,9 @@ td {
   }
   .passport thead {
     display: table-header-group;
+  }
+  .table-scroll {
+    overflow: visible;
   }
   @page {
     size: A4;
@@ -2029,5 +2033,100 @@ html {
   }
   .plan-canvas {
     height: 420px;
+  }
+}
+
+/* Task inline actions & editor */
+.task-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.task-edit-form {
+  padding-top: 4px;
+}
+.manual-details {
+  border: 1px dashed var(--border-strong);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.manual-details summary {
+  cursor: pointer;
+}
+.manual-details[open] summary {
+  margin-bottom: 10px;
+}
+
+/* Compare table controls */
+.compare-table-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* Profile grouped checklist & local data controls */
+.checklist-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 14px 0 16px;
+}
+.checklist-search {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+.semester-checklist-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.semester-checklist-group h3 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.file-button {
+  position: relative;
+  cursor: pointer;
+}
+.file-button:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.file-button:has(input:disabled) {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.file-button input[type='file'] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+.data-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+@media (max-width: 720px) {
+  .task-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .data-actions .button,
+  .checklist-toolbar .button {
+    flex: 1 1 100%;
+    white-space: normal;
+    text-align: center;
   }
 }

@@ -4,7 +4,9 @@ import { webOrigin } from './services';
 async function openDemo(page: Page) {
   await page.goto('/');
   await page
-    .getByRole('button', { name: 'Open demo workspace' })
+    .getByRole('button', {
+      name: /^(Open demo workspace|Buka workspace contoh)/,
+    })
     .first()
     .click();
   await expect(page).toHaveURL(/\/plans\/[a-zA-Z0-9-]+$/);
@@ -15,6 +17,33 @@ test('defaults to English and marks the document language', async ({
 }) => {
   await page.goto('/');
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+});
+
+test('landing page switches to Indonesian and fits 390 px without overflow', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page
+    .getByRole('group', { name: 'Language' })
+    .getByRole('button', { name: 'ID' })
+    .click();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'id');
+  await expect(
+    page.getByRole('heading', { name: /Babak kuliah berikutnya\./ }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: /Pertanyaan penting\./ }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: /Kembali ke atas/ }),
+  ).toBeVisible();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
 });
 
 test('language choice persists across reloads on desktop', async ({ page }) => {
@@ -223,7 +252,7 @@ test.describe('every page in Indonesian', () => {
 
   // A raw message key such as "plan.save" means a translation is missing.
   const rawKey =
-    /\b(nav|overview|plans?|study|profile|curriculum|method|errorpage|ws|finding|diag|suggest|solve|alt|advisor|assume|error|compare|passport|node|req|offer|common|rule|cap|status|lang)\.(?!json)[A-Za-z_]+/;
+    /\b(landing|nav|overview|plans?|study|profile|curriculum|method|errorpage|ws|finding|diag|suggest|solve|alt|advisor|assume|error|compare|passport|node|req|offer|common|rule|cap|status|lang)\.(?!json)[A-Za-z_]+/;
 
   async function expectNoRawKeys(page: Page) {
     const text = await page.locator('body').innerText();

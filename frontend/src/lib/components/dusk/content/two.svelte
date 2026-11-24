@@ -1,23 +1,26 @@
 <script lang="ts">
   import ArrowUpRight from '@lucide/svelte/icons/arrow-up-right';
-  const steps = [
+  import { useI18n } from '#lib/i18n/context.js';
+
+  const { t } = useI18n();
+  const steps = $derived([
     {
-      title: 'Bring your curriculum.',
-      copy: 'Import your courses, credits, prerequisites, and source references. Add the rules that apply to your university and program.',
+      title: t('landing.steps.s1_title'),
+      copy: t('landing.steps.s1_copy'),
     },
     {
-      title: 'Map your semesters.',
-      copy: 'Record completed courses, then arrange what comes next on the canvas or semester board. Save a baseline to return to.',
+      title: t('landing.steps.s2_title'),
+      copy: t('landing.steps.s2_copy'),
     },
     {
-      title: 'Explore a different route.',
-      copy: 'Simulate a delayed course, check the modeled rules, and compare saved alternatives before discussing a change with your advisor.',
+      title: t('landing.steps.s3_title'),
+      copy: t('landing.steps.s3_copy'),
     },
     {
-      title: 'Make time to learn.',
-      copy: 'Turn your course goals into tasks. Start a focus session, take a break, and reflect on what you learned.',
+      title: t('landing.steps.s4_title'),
+      copy: t('landing.steps.s4_copy'),
     },
-  ];
+  ]);
 </script>
 
 <section
@@ -28,10 +31,10 @@
   <div class="content-grid">
     <div class="content-heading">
       <h2 id="getting-started-title">
-        From your curriculum to a clearer next step.
+        {t('landing.steps.heading')}
       </h2>
-      <a href="/curriculum"
-        >Bring your own curriculum<ArrowUpRight
+      <a href="/start"
+        >{t('landing.steps.cta')}<ArrowUpRight
           size={16}
           aria-hidden="true"
         /></a
@@ -39,12 +42,10 @@
     </div>
     <div class="content-body">
       <p class="introduction">
-        Start with the courses you actually need, explore the choices ahead, and
-        turn a semester plan into a daily study routine. Your curriculum gives
-        the plan its context.
+        {t('landing.steps.intro')}
       </p>
       <ol>
-        {#each steps as step, index}
+        {#each steps as step, index (index)}
           <li>
             <span class="step-number" aria-hidden="true"
               >{String(index + 1).padStart(2, '0')}</span
@@ -55,9 +56,12 @@
         {/each}
       </ol>
       <p class="assumptions">
-        Your supplied rules shape the simulation. Confirm academic decisions
-        with your advisor. <a href="/methodology"
-          >Read the assumptions<ArrowUpRight size={13} aria-hidden="true" /></a
+        {t('landing.steps.assumptions')}
+        <a href="/methodology"
+          >{t('landing.steps.assumptions_link')}<ArrowUpRight
+            size={13}
+            aria-hidden="true"
+          /></a
         >
       </p>
     </div>

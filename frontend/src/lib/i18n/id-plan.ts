@@ -155,6 +155,10 @@ export const idPlan: Record<keyof typeof enPlan, string> = {
   'error.SOLVE_CONFLICT':
     'Rencana sumber atau profil berubah. Muat ulang sebelum membuat alternatif.',
   'error.TASK_CONFLICT': 'Target berubah. Muat ulang sebelum mencoba lagi.',
+  'error.TASK_NOT_FOUND': 'Target tidak ditemukan.',
+  'error.TASK_TARGET_REQUIRED': 'Pilih mata kuliah atau tujuan.',
+  'error.START_AFTER_DUE': 'Tanggal mulai tidak boleh setelah tanggal tenggat.',
+  'error.INVALID_WORKSPACE_ID': 'Pengenal workspace tidak valid.',
   'error.SESSION_NOT_FOUND': 'Sesi tidak ditemukan',
   'error.WORKSPACE_EXISTS':
     'Pilih workspace baru untuk kurikulum yang berbeda.',
@@ -253,7 +257,8 @@ export const idPlan: Record<keyof typeof enPlan, string> = {
     'Bandingkan penyelesaian lebih awal dengan beban puncak yang lebih ringan berdasarkan aturan kurikulum Anda.',
   'plan.finding_alternatives': 'Mencari alternatif…',
   'plan.generate': 'Buat alternatif',
-  'plan.save_first': 'Simpan perubahan Anda dulu.',
+  'plan.save_first': 'Draf akan disimpan otomatis sebelum mencari alternatif.',
+  'plan.shortcuts_hint': 'Pintasan: Ctrl/Cmd+S simpan | Ctrl/Cmd+Z urungkan.',
   'plan.archive': 'Arsipkan rencana ini',
   'plan.archive_hint':
     'Rencana yang diarsipkan tetap bisa dipulihkan dari Rencana studi.',
@@ -297,6 +302,17 @@ export const idPlan: Record<keyof typeof enPlan, string> = {
   'passport.lead':
     'Cuplikan rencana tersimpan untuk diskusi yang terinformasi dengan dosen wali Anda.',
   'passport.print': 'Cetak / Simpan sebagai PDF',
+  'passport.copy_summary': 'Salin ringkasan dosen wali',
+  'passport.copied':
+    'Ringkasan tersalin. Siap ditempel ke WhatsApp atau email.',
+  'passport.copy_failed':
+    'Gagal menyalin otomatis. Gunakan Cetak / Simpan sebagai PDF.',
+  'passport.mission_section': 'Misi, komitmen & waktu mingguan',
+  'passport.budget_line':
+    'Anggaran waktu mingguan: {hours} jam/minggu tersedia ({minutes} menit per SKS).',
+  'passport.col.hours': 'Jam mingguan',
+  'passport.hours_cell': '{total} / {available} jam',
+  'passport.hours_over': '{total} / {available} jam (lebih)',
   'passport.brand_synthetic': 'KURIKULUM CONTOH | KONSULTASI DOSEN WALI',
   'passport.brand_own': 'KURIKULUM ANDA | KONSULTASI DOSEN WALI',
   'passport.name': 'Paspor Keputusan Akademik',
@@ -355,6 +371,18 @@ export const idPlan: Record<keyof typeof enPlan, string> = {
   'compare.revision': 'Versi tersimpan',
   'compare.edit': 'Ubah rencana ini',
   'compare.differences': 'Perbedaan per mata kuliah',
+  'compare.workload_heading': 'Perbandingan beban per semester',
+  'compare.semester': 'Semester',
+  'compare.delta': 'Selisih',
+  'compare.delta_credits': '{sign}{count} SKS',
+  'compare.same_load': 'Sama',
+  'compare.diff_only': 'Hanya yang berbeda',
+  'compare.diff_count.one': '{count} mata kuliah berbeda',
+  'compare.diff_count.other': '{count} mata kuliah berbeda',
+  'compare.no_differences':
+    'Kedua rencana menempatkan semua mata kuliah di semester yang sama.',
+  'compare.load_cell': '{credits} / {cap} SKS',
+  'compare.hours_note': ' | {total}/{available} jam',
   'compare.course': 'Mata kuliah',
   'compare.completed': 'Selesai',
   'compare.not_chosen': 'Tidak dipilih',

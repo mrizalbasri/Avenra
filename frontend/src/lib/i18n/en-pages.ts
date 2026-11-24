@@ -133,6 +133,30 @@ export const enPages = {
     'Curriculum saved. All plans now use your updated courses and rules.',
   'profile.courses_removed_passed':
     'Uncheck these passed courses first before deleting them: {courses}.',
+  'profile.search_courses': 'Filter courses by code or name',
+  'profile.search_placeholder': 'e.g. IF2101 or Data Structures',
+  'profile.mark_earlier': 'Mark semesters 1 to {term} as passed',
+  'profile.semester_group': 'Semester {term}',
+  'profile.semester_count': '{done} / {total}',
+  'profile.no_course_match': 'No courses match "{query}".',
+  'profile.data_section': 'Workspace backup & local data',
+  'profile.data_lead':
+    'Export a full backup JSON to move devices, restore a previous backup into a new workspace, or clear browser data.',
+  'profile.export_json': 'Export workspace (.json)',
+  'profile.restore_json': 'Restore from backup (.json)',
+  'profile.restoring': 'Restoring…',
+  'profile.exported': 'Workspace backup downloaded.',
+  'profile.restore_invalid': 'Choose a valid Avenra backup JSON file.',
+  'profile.restore_too_large': 'Keep backup files under 2 MB.',
+  'profile.clear_browser': 'Clear browser workspace list & drafts',
+  'profile.clear_browser_confirm':
+    'Clear remembered workspaces, unsaved drafts, and paused timers from this browser? Database records will not be deleted.',
+  'profile.browser_cleared':
+    'Browser workspace list and local drafts cleared. Database records are unchanged.',
+  'profile.delete_workspace': 'Delete this workspace',
+  'profile.delete_workspace_confirm':
+    'Permanently delete this workspace, its plans, study targets, and focus sessions from the local database?',
+  'profile.deleting': 'Deleting…',
 
   // Goals & weekly time budget editor
   'goals.available_hours': 'Weekly hours available (optional)',
@@ -270,6 +294,18 @@ export const enPages = {
   'study.notice.saved':
     'Focus session saved. Time spent does not imply course mastery.',
   'study.notice.added': 'Study target added.',
+  'study.notice.updated': 'Study target updated.',
+  'study.notice.deleted': 'Study target deleted.',
+  'study.notice.started_goal_task':
+    'Focus sprint started for {course} (goal task): {step}',
+  'study.edit': 'Edit',
+  'study.delete': 'Delete',
+  'study.delete_confirm': 'Delete "{title}"?',
+  'study.save_edit': 'Save changes',
+  'study.cancel_edit': 'Cancel',
+  'study.manual_details_toggle': 'Add key details & checklist (optional)',
+  'study.edit_target_aria': 'Edit target {title}',
+  'study.delete_target_aria': 'Delete target {title}',
 
   // Curriculum import
   'curriculum.alias': 'Student alias',

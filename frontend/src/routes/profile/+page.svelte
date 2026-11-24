@@ -1,7 +1,12 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { invalidateAll } from '$app/navigation';
+  import { goto, invalidateAll } from '$app/navigation';
   import { api } from '#lib/api.js';
+  import {
+    clearLocalBrowserData,
+    clearWorkspaceCookie,
+    removeWorkspaceLocalData,
+  } from '#lib/workspace.js';
   import GoalsBudgetEditor from '#lib/components/GoalsBudgetEditor.svelte';
   import CourseRowsEditor from '#lib/components/start/CourseRowsEditor.svelte';
   import {
@@ -63,6 +68,122 @@
   let notice = $state('');
   let busy = $state(false);
   let error = $state('');
+  let courseQuery = $state('');
+  let dataAction = $state<'export' | 'restore' | 'delete' | null>(null);
+  let dataBusy = $derived(dataAction !== null);
+  let dataNotice = $state('');
+  let dataError = $state('');
+
+  let filteredCourses = $derived.by(() => {
+    const courses = data.workspace?.curriculum.courses ?? [];
+    const q = courseQuery.trim().toLowerCase();
+    if (!q) return courses;
+    return courses.filter(
+      (c) =>
+        c.code.toLowerCase().includes(q) || c.name.toLowerCase().includes(q),
+    );
+  });
+  let groupedSemesters = $derived.by(() => {
+    const terms = [
+      ...new Set(filteredCourses.map((c) => c.recommended_term)),
+    ].sort((a, b) => a - b);
+    return terms.map((term) => {
+      const items = filteredCourses.filter((c) => c.recommended_term === term);
+      const done = items.filter((c) => completed.includes(c.code)).length;
+      return { term, items, done };
+    });
+  });
+  let markUntil = $derived(currentTerm - 1);
+  function markEarlierSemesters() {
+    const earlier = (data.workspace?.curriculum.courses ?? [])
+      .filter((c) => c.recommended_term <= markUntil)
+      .map((c) => c.code);
+    completed = [...new Set([...completed, ...earlier])];
+  }
+
+  async function exportWorkspaceJson() {
+    dataAction = 'export';
+    dataError = '';
+    dataNotice = '';
+    try {
+      const bundle = await api<Record<string, unknown>>('workspace/export');
+      const slug =
+        (data.workspace?.profile?.alias ?? 'workspace')
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '') || 'workspace';
+      const blob = new Blob([JSON.stringify(bundle, null, 2)], {
+        type: 'application/json',
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `avenra-${slug}.json`;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      dataNotice = t('profile.exported');
+    } catch (e) {
+      dataError = msg.errorText(e);
+    } finally {
+      dataAction = null;
+    }
+  }
+
+  const MAX_BACKUP_BYTES = 2 * 1024 * 1024;
+  async function restoreWorkspaceJson(file?: File) {
+    if (!file) return;
+    if (file.size > MAX_BACKUP_BYTES) {
+      dataError = t('profile.restore_too_large');
+      dataNotice = '';
+      return;
+    }
+    dataAction = 'restore';
+    dataError = '';
+    dataNotice = '';
+    try {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(await file.text());
+      } catch {
+        throw new Error(t('profile.restore_invalid'));
+      }
+      if (!parsed || typeof parsed !== 'object') {
+        throw new Error(t('profile.restore_invalid'));
+      }
+      await api<Workspace>('workspace/restore', 'POST', parsed);
+      await invalidateAll();
+      await goto('/');
+    } catch (e) {
+      dataError = msg.errorText(e);
+    } finally {
+      dataAction = null;
+    }
+  }
+
+  function clearBrowserOnly() {
+    if (!window.confirm(t('profile.clear_browser_confirm'))) return;
+    clearLocalBrowserData();
+    dataError = '';
+    dataNotice = t('profile.browser_cleared');
+  }
+
+  async function deleteCurrentWorkspace() {
+    if (!window.confirm(t('profile.delete_workspace_confirm'))) return;
+    const wsId = data.workspace?.profile?.id;
+    const planIds = (data.workspace?.plans ?? []).map((plan) => plan.id);
+    dataAction = 'delete';
+    dataError = '';
+    dataNotice = '';
+    try {
+      await api('workspace', 'DELETE');
+      if (wsId) removeWorkspaceLocalData(wsId, planIds);
+      clearWorkspaceCookie();
+      window.location.assign('/');
+    } catch (e) {
+      dataError = msg.errorText(e);
+      dataAction = null;
+    }
+  }
 
   // Editable curriculum state (reusing the wizard's rows-table component).
   const formatGpaRules = (c?: Curriculum) =>
@@ -313,7 +434,7 @@
             })}
           </p>{/if}
       </section>
-      <section class="panel form-stack">
+      <section class="panel form-stack" id="mission-goals">
         <div>
           <h2>{t('profile.mission_section')}</h2>
           <p class="muted small">{t('profile.mission_lead')}</p>
@@ -347,28 +468,60 @@
           >
         </div>
         <p class="muted small">{t('profile.completed_hint')}</p>
-        <div class="course-checklist">
-          {#each data.workspace.curriculum.courses as course}<label
-              ><input
-                type="checkbox"
-                bind:group={completed}
-                value={course.code}
-              />
-              <div>
-                <strong>{course.name}</strong><small
-                  >{t('profile.course_line', {
-                    code: course.code,
-                    credits: course.credits,
-                    term: course.recommended_term,
-                    extra:
-                      course.category === 'elective'
-                        ? t('profile.elective_extra')
-                        : '',
-                  })}</small
-                >
-              </div></label
-            >{/each}
+        <div class="checklist-toolbar">
+          <label class="checklist-search"
+            >{t('profile.search_courses')}<input
+              type="search"
+              bind:value={courseQuery}
+              placeholder={t('profile.search_placeholder')}
+            /></label
+          >{#if markUntil >= 1}<button
+              type="button"
+              class="button"
+              onclick={markEarlierSemesters}
+              >{t('profile.mark_earlier', { term: markUntil })}</button
+            >{/if}
         </div>
+        {#if groupedSemesters.length}<div class="semester-checklist-groups">
+            {#each groupedSemesters as group (group.term)}<div
+                class="semester-checklist-group"
+              >
+                <h3>
+                  <span
+                    >{t('profile.semester_group', { term: group.term })}</span
+                  ><span class="tag"
+                    >{t('profile.semester_count', {
+                      done: group.done,
+                      total: group.items.length,
+                    })}</span
+                  >
+                </h3>
+                <div class="course-checklist">
+                  {#each group.items as course (course.code)}<label
+                      ><input
+                        type="checkbox"
+                        bind:group={completed}
+                        value={course.code}
+                      />
+                      <div>
+                        <strong>{course.name}</strong><small
+                          >{t('profile.course_line', {
+                            code: course.code,
+                            credits: course.credits,
+                            term: course.recommended_term,
+                            extra:
+                              course.category === 'elective'
+                                ? t('profile.elective_extra')
+                                : '',
+                          })}</small
+                        >
+                      </div></label
+                    >{/each}
+                </div>
+              </div>{/each}
+          </div>{:else}<p class="muted small">
+            {t('profile.no_course_match', { query: courseQuery.trim() })}
+          </p>{/if}
       </section>
       {#if error}<p class="error-banner" role="alert">
           {error}
@@ -462,6 +615,50 @@
           : t('profile.save_courses')}</button
       >
     </details>
+    <section class="panel form-stack">
+      <div>
+        <h2>{t('profile.data_section')}</h2>
+        <p class="muted small">{t('profile.data_lead')}</p>
+      </div>
+      {#if dataError}<p class="error-banner" role="alert">{dataError}</p>{/if}
+      {#if dataNotice}<p class="success-banner" role="status">
+          {dataNotice}
+        </p>{/if}
+      <div class="data-actions">
+        <button
+          type="button"
+          class="button"
+          disabled={dataBusy}
+          onclick={exportWorkspaceJson}>{t('profile.export_json')}</button
+        ><label class="button file-button"
+          >{dataAction === 'restore'
+            ? t('profile.restoring')
+            : t('profile.restore_json')}<input
+            type="file"
+            accept="application/json,.json"
+            disabled={dataBusy}
+            onchange={(e) => {
+              const file = e.currentTarget.files?.[0];
+              e.currentTarget.value = '';
+              void restoreWorkspaceJson(file);
+            }}
+          /></label
+        ><button
+          type="button"
+          class="button subtle"
+          disabled={dataBusy}
+          onclick={clearBrowserOnly}>{t('profile.clear_browser')}</button
+        ><button
+          type="button"
+          class="button subtle"
+          disabled={dataBusy}
+          onclick={deleteCurrentWorkspace}
+          >{dataAction === 'delete'
+            ? t('profile.deleting')
+            : t('profile.delete_workspace')}</button
+        >
+      </div>
+    </section>
   </div>{:else}<div class="empty-panel">
     <h2>{t('profile.none')}</h2>
     <a class="button primary" href="/">{t('profile.open_demo')}</a>

@@ -16,6 +16,7 @@
   import { api } from '#lib/api.js';
   import { formatHours, semesterHours } from '#lib/goals.js';
   import {
+    draftCourseIssues,
     nextOffered,
     offeringText,
     requirementText,
@@ -249,6 +250,18 @@
     else draft.credit_cap = value;
     notice = tx('plan.suggestion_applied');
   }
+  let previewIssues = $derived(
+    dirty
+      ? draftCourseIssues(
+          data.curriculum,
+          data.profile.completed,
+          data.profile.current_term,
+          draft.assignments,
+          draft.failed,
+          draft.horizon,
+        )
+      : new Set<string>(),
+  );
   $effect(() => {
     const columns: Node[] = terms.map((t, i) => ({
       id: `term-${t}`,
@@ -279,9 +292,9 @@
           data: {
             course: c,
             failed: draft.failed.includes(c.code),
-            hasFinding:
-              !dirty &&
-              saved.validation.findings.some((f) => f.course === c.code),
+            hasFinding: dirty
+              ? previewIssues.has(c.code)
+              : saved.validation.findings.some((f) => f.course === c.code),
           },
           selected: selected === c.code,
           style: 'width: 240px;',
@@ -345,7 +358,7 @@
       error = msg.errorText(e);
     }
   }
-  async function save() {
+  async function save(): Promise<boolean> {
     busy = true;
     error = '';
     notice = '';
@@ -363,19 +376,22 @@
       recovered = null;
       await invalidateAll();
       notice = tx('plan.saved_ok');
+      return true;
     } catch (e) {
       error = msg.errorText(e);
+      return false;
     } finally {
       busy = false;
     }
   }
   async function generate() {
     if (dirty) {
-      error = tx('plan.save_before_generate');
-      return;
+      const savedOk = await save();
+      if (!savedOk) return;
     }
     solving = true;
     error = '';
+    notice = '';
     results = null;
     try {
       results = await api<SolveResult>(`plans/${saved.id}/solve`, 'POST', {
@@ -386,6 +402,37 @@
       error = msg.errorText(e);
     } finally {
       solving = false;
+    }
+  }
+  function handleKeydown(e: KeyboardEvent) {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+    const key = e.key.toLowerCase();
+    if (key === 's') {
+      e.preventDefault();
+      if (busy || solving) return;
+      // Commit any pending numeric input change (onchange fires on blur) before saving.
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      if (dirty) void save();
+      return;
+    }
+    if (busy || solving) return;
+    const target = e.target as HTMLElement | null;
+    if (
+      target &&
+      (target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.tagName === 'SELECT' ||
+        target.isContentEditable)
+    )
+      return;
+    if (key === 'z' && !e.shiftKey) {
+      e.preventDefault();
+      undo();
+    } else if (key === 'y' || (key === 'z' && e.shiftKey)) {
+      e.preventDefault();
+      redo();
     }
   }
   async function keepAlternative(alternative: Alternative) {
@@ -408,6 +455,7 @@
   }
 </script>
 
+<svelte:window onkeydown={handleKeydown} />
 <svelte:head
   ><title>{tx('plan.title', { name: saved.name })}</title></svelte:head
 >
@@ -594,7 +642,7 @@
           </section>{/each}
       </div>{/if}
     <div class="workspace-hint">
-      {tx('plan.hint')}
+      {tx('plan.hint')} | {tx('plan.shortcuts_hint')}
     </div>
     {#if offPlan.some((c) => c.category === 'required')}<div
         class="unscheduled"
@@ -766,7 +814,7 @@
       </p>
       <button
         class="button primary full-width"
-        disabled={solving || busy || dirty}
+        disabled={solving || busy}
         onclick={generate}
         >{solving
           ? tx('plan.finding_alternatives')
@@ -811,7 +859,7 @@
           </h3>
           <div class="toolbar-actions">
             {#each results.diagnosis.suggestions as suggestion}{#if suggestion.kind === 'goal_hours'}<a
-                  href="/profile"
+                  href="/profile#mission-goals"
                   class="button">{msg.describe('suggest', suggestion)}</a
                 >{:else}<button
                   class="button"

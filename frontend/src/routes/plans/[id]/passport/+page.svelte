@@ -1,10 +1,15 @@
 <script lang="ts">
   import Icon from '#lib/components/Icon.svelte';
+  import { formatHours, semesterHours } from '#lib/goals.js';
   import { useI18n } from '#lib/i18n/context.js';
+  import { buildAdvisorSummary } from '#lib/passport.js';
+  import type { Goal } from '#lib/types.js';
   import type { PageProps } from './$types';
   let { data }: PageProps = $props();
   const { t, locale, msg } = useI18n();
   let validation = $derived(data.plan.validation);
+  let copyStatus = $state('');
+  let copyError = $state('');
   let ipsNote = $derived(
     validation.planning_gpa !== null
       ? t('passport.ips_used', {
@@ -13,6 +18,44 @@
         })
       : '',
   );
+  let generatedDisplay = $derived.by(() => {
+    const tag = locale() === 'id' ? 'id-ID' : 'en-GB';
+    return new Intl.DateTimeFormat(tag, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZoneName: 'short',
+    }).format(new Date(data.generatedAt));
+  });
+  const goalRange = (goal: Goal) =>
+    goal.start_term === goal.end_term
+      ? t('overview.mission.range_single', { term: goal.start_term })
+      : t('overview.mission.range_multi', {
+          start: goal.start_term,
+          end: goal.end_term,
+        });
+  const goalKindLabel = (kind: Goal['kind']) =>
+    t(`goals.kind_${kind}` as 'goals.kind_internship');
+
+  async function copySummary() {
+    copyStatus = '';
+    copyError = '';
+    const summary = buildAdvisorSummary(
+      data.plan,
+      data.profile,
+      data.curriculum,
+      t,
+      msg,
+    );
+    try {
+      await navigator.clipboard.writeText(summary);
+      copyStatus = t('passport.copied');
+    } catch {
+      copyError = t('passport.copy_failed');
+    }
+  }
 </script>
 
 <svelte:head
@@ -23,10 +66,19 @@
     <h1>{t('passport.heading')}</h1>
     <p>{t('passport.lead')}</p>
   </div>
-  <button class="button primary" onclick={() => window.print()}
-    ><Icon name="print" size={17} />{t('passport.print')}</button
-  >
+  <div class="toolbar-actions">
+    <button class="button" onclick={copySummary}
+      ><Icon name="copy" size={16} />{t('passport.copy_summary')}</button
+    ><button class="button primary" onclick={() => window.print()}
+      ><Icon name="print" size={17} />{t('passport.print')}</button
+    >
+  </div>
 </div>
+{#if copyStatus}<p class="success-banner no-print" role="status">
+    {copyStatus}
+  </p>{/if}{#if copyError}<p class="error-banner no-print" role="alert">
+    {copyError}
+  </p>{/if}
 <article class="passport">
   <div class="passport-header">
     <span>AVENRA</span><span
@@ -57,12 +109,7 @@
     </div>
     <div>
       <dt>{t('passport.generated')}</dt>
-      <dd>
-        {new Date(data.generatedAt).toLocaleString(
-          locale() === 'id' ? 'id-ID' : 'en-GB',
-          { timeZone: 'Asia/Jakarta' },
-        )} WIB
-      </dd>
+      <dd>{generatedDisplay}</dd>
     </div>
   </dl>
   <section>
@@ -90,32 +137,75 @@
       })}
     </p>
   </section>
+  {#if data.profile.mission || data.profile.goals.length || data.profile.time_budget}<section
+    >
+      <h2>{t('passport.mission_section')}</h2>
+      {#if data.profile.mission}<p>{data.profile.mission}</p>{/if}
+      {#if data.profile.time_budget}<p>
+          {t('passport.budget_line', {
+            hours: formatHours(data.profile.time_budget.available_hours),
+            minutes: data.profile.time_budget.minutes_per_credit,
+          })}
+        </p>{/if}
+      {#if data.profile.goals.length}<ul>
+          {#each data.profile.goals as goal (goal.id)}<li>
+              <strong>{goal.title}</strong> | {t('overview.mission.goal_meta', {
+                kind: goalKindLabel(goal.kind),
+                range: goalRange(goal),
+                hours: formatHours(goal.weekly_hours),
+              })}
+            </li>{/each}
+        </ul>{/if}
+    </section>{/if}
   <section>
     <h2>{t('passport.plan')}</h2>
-    <table>
-      <thead
-        ><tr
-          ><th>{t('passport.col.semester')}</th><th
-            >{t('passport.col.courses')}</th
-          ><th>{t('passport.col.credits')}</th><th>{t('passport.col.limit')}</th
-          ></tr
-        ></thead
-      ><tbody
-        >{#each Object.entries(validation.loads) as [term, credits]}<tr
-            ><td>{term}</td><td
-              >{data.curriculum.courses
-                .filter(
-                  (c) =>
-                    data.plan.assignments[c.code] === +term &&
-                    (!data.profile.completed.includes(c.code) ||
-                      data.plan.failed.includes(c.code)),
+    <div class="table-scroll">
+      <table>
+        <thead
+          ><tr
+            ><th>{t('passport.col.semester')}</th><th
+              >{t('passport.col.courses')}</th
+            ><th>{t('passport.col.credits')}</th><th
+              >{t('passport.col.limit')}</th
+            >{#if data.profile.time_budget}<th>{t('passport.col.hours')}</th
+              >{/if}</tr
+          ></thead
+        ><tbody
+          >{#each Object.entries(validation.loads) as [term, credits]}
+            {@const hours = data.profile.time_budget
+              ? semesterHours(
+                  credits,
+                  data.profile.goals,
+                  +term,
+                  data.profile.time_budget,
                 )
-                .map((c) => `${c.code} ${c.name}`)
-                .join('; ') || t('passport.no_courses')}</td
-            ><td>{credits}</td><td>{validation.caps[term]}</td></tr
-          >{/each}</tbody
-      >
-    </table>
+              : null}
+            <tr
+              ><td>{term}</td><td
+                >{data.curriculum.courses
+                  .filter(
+                    (c) =>
+                      data.plan.assignments[c.code] === +term &&
+                      (!data.profile.completed.includes(c.code) ||
+                        data.plan.failed.includes(c.code)),
+                  )
+                  .map((c) => `${c.code} ${c.name}`)
+                  .join('; ') || t('passport.no_courses')}</td
+              ><td>{credits}</td><td>{validation.caps[term]}</td>{#if hours}<td>
+                  {hours.over
+                    ? t('passport.hours_over', {
+                        total: formatHours(hours.totalHours),
+                        available: formatHours(hours.availableHours),
+                      })
+                    : t('passport.hours_cell', {
+                        total: formatHours(hours.totalHours),
+                        available: formatHours(hours.availableHours),
+                      })}
+                </td>{/if}</tr
+            >{/each}</tbody
+        >
+      </table>
+    </div>
   </section>
   {#if data.plan.bottlenecks.length}<section>
       <h2>{t('passport.affected')}</h2>

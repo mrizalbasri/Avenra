@@ -4,7 +4,9 @@
   import FaqsOne from '#lib/components/dusk/faqs/one.svelte';
   import ContentTwo from '#lib/components/dusk/content/two.svelte';
   import FeaturesFive from '#lib/components/dusk/features/five.svelte';
-  import logo from '#lib/assets/avenra.svg';
+  import Footer from '#lib/components/dusk/footer/footer.svelte';
+  import CallToActionOne from '#lib/components/dusk/call-to-action/one.svelte';
+  import { useI18n } from '#lib/i18n/context.js';
   import preview from '#lib/assets/planning-preview.png';
   let {
     hasProfile = false,
@@ -17,6 +19,7 @@
     disabled: boolean;
     onOpen: () => Promise<void>;
   } = $props();
+  const { t } = useI18n();
 </script>
 
 <div class="landing">
@@ -24,66 +27,50 @@
   <section class="hero-six" aria-labelledby="hero-title">
     <div class="hero-copy">
       <a class="eyebrow" href="/methodology"
-        ><span class="status-dot"></span> YOUR ACADEMIC WORKSPACE
+        ><span class="status-dot"></span>
+        {t('landing.hero.eyebrow')}
         <span aria-hidden="true">↗</span></a
       >
       <div class="intro-grid">
         <h1 id="hero-title">
-          Your next chapter.<br /><span>Yours to plan.</span>
+          {t('landing.hero.title_1')}<br /><span
+            >{t('landing.hero.title_2')}</span
+          >
         </h1>
         <div class="intro-description">
-          <p>
-            University doesn't follow a straight line. Map your courses, explore
-            another route, and build a study rhythm that works for you.
-          </p>
+          <p>{t('landing.hero.body')}</p>
           <div class="hero-actions">
             <Button size="lg" disabled={disabled || busy} onclick={onOpen}
               >{busy
-                ? 'Opening workspace…'
+                ? t('landing.hero.opening')
                 : hasProfile
-                  ? 'Open your workspace'
-                  : 'Open demo workspace'}
+                  ? t('landing.hero.open_yours')
+                  : t('landing.hero.open_demo')}
               <span aria-hidden="true">↗</span></Button
             >
-            <a href="/curriculum">Use my curriculum →</a>
+            <a href="/start">{t('landing.hero.use_curriculum')}</a>
           </div>
-          <small>No account needed | Fictional data in the demo</small>
+          <small>{t('landing.hero.no_account')}</small>
         </div>
       </div>
     </div>
     <div class="preview-stage">
-      <div class="preview-caption">
-        <span>ONE PLAN. MORE POSSIBILITIES.</span><span
-          >Canvas / Semester board / Recovery</span
-        >
-      </div>
       <div class="preview-window">
         <img
           src={preview}
-          alt="Avenra academic canvas showing course cards connected by prerequisites across semesters"
+          alt={t('landing.hero.preview_alt')}
           width="1440"
           height="1000"
           fetchpriority="high"
         />
       </div>
-      <p class="preview-note">
-        An example workspace | Your university's curriculum sets the rules.
-      </p>
     </div>
   </section>
   <FeaturesFive />
   <ContentTwo />
   <FaqsOne />
-  <footer>
-    <span class="footer-brand"
-      ><img src={logo} alt="" width="30" height="24" />avenra.</span
-    >
-    <p>
-      Planning support for students across Indonesia.<br />Discuss decisions
-      with your academic advisor.
-    </p>
-    <a href="/methodology">Read our assumptions ↗</a>
-  </footer>
+  <CallToActionOne {hasProfile} {busy} {disabled} {onOpen} />
+  <Footer />
 </div>
 
 <style>
@@ -92,18 +79,21 @@
     color: #f5f5f7;
     min-height: 100vh;
   }
+  .hero-six {
+    overflow: hidden;
+  }
   .hero-copy {
     max-width: 1280px;
     margin: auto;
-    padding: 84px 40px 60px;
+    padding: 112px 24px 64px;
   }
   .eyebrow {
     display: inline-flex;
     align-items: center;
     gap: 10px;
     color: #b4b4bd;
-    font-size: 10px;
-    letter-spacing: 1.6px;
+    font-size: 12px;
+    letter-spacing: 1px;
     text-decoration: none;
   }
   .status-dot {
@@ -115,28 +105,29 @@
   .intro-grid {
     margin-top: 32px;
     display: grid;
-    grid-template-columns: 1.2fr 1fr;
+    grid-template-columns: 1fr 1fr;
     align-items: end;
-    gap: 64px;
+    gap: 24px;
   }
   h1 {
-    font-size: clamp(48px, 5.8vw, 84px);
+    font-size: clamp(48px, 5.5vw, 76px);
     line-height: 1.06;
     font-weight: 500;
-    letter-spacing: -0.065em;
+    letter-spacing: -0.055em;
     margin: 0;
   }
   h1 span {
-    color: #a1a1aa;
+    color: inherit;
   }
   .intro-description {
     max-width: 410px;
+    margin-inline: auto;
     padding-bottom: 3px;
   }
   .intro-description p {
-    font-size: 17px;
+    font-size: 18px;
     color: #b4b4bd;
-    line-height: 1.7;
+    line-height: 1.6;
     margin: 0 0 26px;
   }
   .hero-actions {
@@ -156,87 +147,38 @@
     margin-top: 16px;
   }
   .preview-stage {
-    max-width: 1200px;
+    position: relative;
+    width: calc(100% - 32px);
+    max-width: 1280px;
+    aspect-ratio: 16 / 9;
     margin: 0 auto;
-    background: #1c1c20;
-    border-radius: 22px;
-    padding: 26px 46px 0;
+    background:
+      radial-gradient(ellipse at 12% 0%, #73737c 0%, transparent 58%),
+      linear-gradient(125deg, #44444c, #b4b4bc 58%, #72727c);
+    border-radius: 28px;
     overflow: hidden;
   }
-  .preview-caption {
-    display: flex;
-    justify-content: space-between;
-    gap: 16px;
-    font-size: 10px;
-    color: #d4d4d8;
-    letter-spacing: 1.2px;
-    padding-bottom: 26px;
-  }
-  .preview-caption span:last-child {
-    letter-spacing: 0;
-  }
   .preview-window {
+    position: absolute;
+    top: 64px;
+    left: 64px;
+    width: max(100%, 1024px);
     background: #111113;
-    border: 1px solid #51515a;
-    padding: 7px;
-    border-radius: 12px;
+    border: 1px solid #ffffff1a;
+    padding: 8px;
+    border-radius: 20px;
     box-shadow: 0 24px 70px #0006;
-    height: 470px;
     overflow: hidden;
   }
   .preview-window img {
     display: block;
     width: 100%;
     height: auto;
-    border-radius: 6px;
-  }
-  .preview-note {
-    color: #b4b4bd;
-    font-size: 11px;
-    padding: 17px 0;
-    text-align: center;
-    margin: 0;
-  }
-  footer {
-    border-top: 1px solid #2c2c30;
-    max-width: 1200px;
-    margin: auto;
-    padding: 32px 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 24px;
-    color: #a1a1aa;
-    font-size: 12px;
-  }
-  .footer-brand {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-  }
-  footer > span {
-    color: #f5f5f7;
-    font-size: 23px;
-    font-weight: 600;
-  }
-  footer p {
-    line-height: 1.7;
-    margin: 0;
-  }
-  footer a {
-    text-decoration: none;
-  }
-  @media (max-width: 1280px) {
-    .preview-stage {
-      margin: 0 24px;
-    }
-    footer {
-      margin: 0 40px;
-    }
+    border-radius: 12px;
   }
   @media (max-width: 720px) {
     .hero-copy {
-      padding: 48px 24px 36px;
+      padding: 56px 24px 40px;
     }
     .intro-grid {
       grid-template-columns: 1fr;
@@ -248,37 +190,20 @@
     }
     .intro-description {
       max-width: none;
+      margin-inline: 0;
     }
     .intro-description p {
       font-size: 16px;
     }
     .preview-stage {
-      margin: 0 12px;
-      padding: 20px 16px 0;
-      border-radius: 16px;
-    }
-    .preview-caption {
-      padding-bottom: 20px;
-      letter-spacing: 0.7px;
-    }
-    .preview-caption span:last-child {
-      display: none;
+      width: calc(100% - 16px);
+      aspect-ratio: 1;
+      border-radius: 24px;
     }
     .preview-window {
-      height: 290px;
-    }
-    .preview-window img {
-      width: 740px;
-      max-width: none;
-    }
-    .preview-note {
-      font-size: 10px;
-      line-height: 1.6;
-    }
-    footer {
-      margin: 0 24px;
-      flex-wrap: wrap;
-      padding-bottom: 32px;
+      top: 24px;
+      left: 24px;
+      width: 880px;
     }
   }
 </style>
