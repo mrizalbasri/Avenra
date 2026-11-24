@@ -1,7 +1,8 @@
+from datetime import UTC, datetime
 from typing import Annotated, NoReturn
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select, update
+from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -17,6 +18,7 @@ from app.schemas import (
     SolveRequest,
     TaskCreate,
     TaskEdit,
+    WorkspaceBackup,
     WorkspaceImport,
 )
 from app.solver import outlook, solve_plans
@@ -441,6 +443,35 @@ def add_task(payload: TaskCreate, db: DB):
 
 @router.patch("/study/tasks/{task_id}")
 def edit_task(task_id: str, payload: TaskEdit, db: DB):
+    profile = profile_or_404(db)
+    task = db.get(StudyTask, task_id)
+    if not task or task.profile_id != workspace_key(db):
+        fail(409, "TASK_CONFLICT", "Task changed. Reload before trying again.")
+    changes = payload.model_dump(exclude={"revision"}, exclude_unset=True)
+    if "course_code" in changes and changes["course_code"] == "":
+        changes["course_code"] = None
+    if "first_step" in changes and changes["first_step"] == "":
+        changes["first_step"] = None
+    if "due_date" in changes:
+        changes["due_date"] = changes["due_date"].isoformat() if changes["due_date"] else None
+    if "start_date" in changes:
+        changes["start_date"] = changes["start_date"].isoformat() if changes["start_date"] else None
+
+    next_course = changes.get("course_code", task.course_code)
+    next_goal = changes.get("goal_id", task.goal_id)
+    if not next_course and not next_goal:
+        fail(422, "TASK_TARGET_REQUIRED", "Choose a course or a goal.")
+    if "course_code" in changes and next_course:
+        known_codes(db, [next_course])
+    if "goal_id" in changes and next_goal:
+        goal_ids = {goal.get("id") for goal in (profile.goals or [])}
+        if next_goal not in goal_ids:
+            fail(422, "UNKNOWN_GOAL", "Choose a goal from this workspace.")
+    next_start = changes.get("start_date", task.start_date)
+    next_due = changes.get("due_date", task.due_date)
+    if next_start and next_due and next_start > next_due:
+        fail(422, "START_AFTER_DUE", "Start date cannot be after due date.")
+
     result = db.execute(
         update(StudyTask)
         .where(
@@ -448,13 +479,24 @@ def edit_task(task_id: str, payload: TaskEdit, db: DB):
             StudyTask.profile_id == workspace_key(db),
             StudyTask.revision == payload.revision,
         )
-        .values(done=payload.done, revision=payload.revision + 1)
+        .values(**changes, revision=payload.revision + 1)
     )
     if not result.rowcount:
         db.rollback()
         fail(409, "TASK_CONFLICT", "Task changed. Reload before trying again.")
     db.commit()
     return row(db.get(StudyTask, task_id))
+
+
+@router.delete("/study/tasks/{task_id}")
+def delete_task(task_id: str, db: DB):
+    profile_or_404(db)
+    task = db.get(StudyTask, task_id)
+    if not task or task.profile_id != workspace_key(db):
+        fail(404, "TASK_NOT_FOUND", "Task not found.")
+    db.delete(task)
+    db.commit()
+    return {"deleted": task_id}
 
 
 @router.post("/study/sessions", status_code=201)
@@ -471,6 +513,204 @@ def add_focus(payload: FocusCreate, db: DB):
     db.commit()
     db.refresh(session)
     return row(session)
+
+
+@router.get("/workspace/export")
+def export_workspace(db: DB):
+    profile = profile_or_404(db)
+    curriculum = curriculum_for(profile).model_dump()
+    plans = db.scalars(
+        select(Plan).where(Plan.profile_id == workspace_key(db)).order_by(Plan.created_at)
+    ).all()
+    tasks = db.scalars(
+        select(StudyTask)
+        .where(StudyTask.profile_id == workspace_key(db))
+        .order_by(StudyTask.created_at)
+    ).all()
+    sessions = db.scalars(
+        select(FocusSession)
+        .where(FocusSession.profile_id == workspace_key(db))
+        .order_by(FocusSession.created_at)
+        .limit(200)
+    ).all()
+    return {
+        "schema_version": 1,
+        "exported_at": datetime.now(UTC).isoformat(),
+        "profile": {
+            "alias": profile.alias,
+            "current_term": profile.current_term,
+            "completed": profile.completed,
+            "last_gpa": profile.last_gpa,
+            "mission": profile.mission,
+            "goals": profile.goals or [],
+            "time_budget": profile.time_budget,
+            "curriculum": curriculum,
+        },
+        "plans": [
+            {
+                "name": plan.name,
+                "assignments": plan.assignments,
+                "layout": plan.layout,
+                "failed": plan.failed,
+                "credit_cap": plan.credit_cap,
+                "horizon": plan.horizon,
+                "expected_gpa": plan.expected_gpa,
+                "archived": plan.archived,
+            }
+            for plan in plans
+        ],
+        "tasks": [
+            {
+                "course_code": task.course_code,
+                "goal_id": task.goal_id,
+                "title": task.title,
+                "due_date": task.due_date,
+                "start_date": task.start_date,
+                "first_step": task.first_step,
+                "details": task.details or [],
+                "done": task.done,
+            }
+            for task in tasks
+        ],
+        "sessions": [
+            {
+                "course_code": session.course_code,
+                "seconds": session.seconds,
+                "note": session.note,
+            }
+            for session in sessions
+        ],
+    }
+
+
+@router.post("/workspace/restore", status_code=201)
+def restore_workspace(payload: WorkspaceBackup, db: DB):
+    if db.get(Profile, workspace_key(db)):
+        fail(409, "WORKSPACE_EXISTS", "Choose a new workspace for a different curriculum.")
+    profile_in = payload.profile
+    curriculum = profile_in.curriculum
+    if curriculum.status != "synthetic":
+        curriculum = curriculum.model_copy(
+            update={
+                "status": "user_supplied",
+                "disclaimer": "User-supplied curriculum. Verify rules with your university.",
+            }
+        )
+    check_progress(curriculum, profile_in.completed)
+    if profile_in.current_term > curriculum.max_terms:
+        fail(
+            422,
+            "CURRENT_BEYOND_MAX",
+            f"Current semester ({profile_in.current_term}) is beyond the maximum study period of "
+            f"{curriculum.max_terms} semesters.",
+            current=profile_in.current_term,
+            max=curriculum.max_terms,
+        )
+    codes = {course.code for course in curriculum.courses}
+    goals = stored_goals(profile_in.goals)
+    goal_ids = {goal["id"] for goal in goals}
+
+    for plan_in in payload.plans:
+        for group in (list(plan_in.assignments), list(plan_in.layout), plan_in.failed):
+            if len(group) != len(set(group)) or set(group) - codes:
+                fail(
+                    422,
+                    "UNKNOWN_COURSES",
+                    "Use unique course codes from the selected curriculum.",
+                )
+        check_assignment_terms(plan_in.assignments)
+        if plan_in.horizon < profile_in.current_term:
+            fail(
+                422,
+                "HORIZON_BEFORE_CURRENT",
+                "The planning horizon cannot end before the current semester.",
+            )
+    for task_in in payload.tasks:
+        if task_in.course_code and task_in.course_code not in codes:
+            fail(
+                422,
+                "UNKNOWN_COURSES",
+                "Use unique course codes from the selected curriculum.",
+            )
+        if task_in.goal_id and task_in.goal_id not in goal_ids:
+            fail(422, "UNKNOWN_GOAL", "Choose a goal from this workspace.")
+    for session_in in payload.sessions:
+        if session_in.course_code not in codes:
+            fail(
+                422,
+                "UNKNOWN_COURSES",
+                "Use unique course codes from the selected curriculum.",
+            )
+
+    profile = Profile(
+        id=workspace_key(db),
+        alias=profile_in.alias,
+        current_term=profile_in.current_term,
+        completed=profile_in.completed,
+        last_gpa=profile_in.last_gpa,
+        curriculum=curriculum.model_dump(),
+        mission=profile_in.mission,
+        goals=goals,
+        time_budget=profile_in.time_budget.model_dump() if profile_in.time_budget else None,
+    )
+    db.add(profile)
+    try:
+        db.flush()
+    except IntegrityError:
+        db.rollback()
+        fail(409, "WORKSPACE_EXISTS", "Choose a new workspace for a different curriculum.")
+
+    if payload.plans:
+        for plan_in in payload.plans:
+            db.add(
+                Plan(
+                    profile_id=profile.id,
+                    name=plan_in.name,
+                    assignments=plan_in.assignments,
+                    layout={k: v.model_dump() for k, v in plan_in.layout.items()},
+                    failed=plan_in.failed,
+                    credit_cap=plan_in.credit_cap,
+                    horizon=min(curriculum.max_terms, plan_in.horizon),
+                    expected_gpa=plan_in.expected_gpa,
+                    archived=plan_in.archived,
+                )
+            )
+    else:
+        db.add(
+            Plan(
+                profile_id=profile.id,
+                name="My study plan",
+                credit_cap=curriculum.credit_cap,
+                horizon=min(curriculum.max_terms, max(8, profile_in.current_term)),
+                assignments=default_assignments(
+                    curriculum, profile_in.completed, profile_in.current_term
+                ),
+            )
+        )
+
+    for task_in in payload.tasks:
+        values = task_in.model_dump()
+        values["due_date"] = task_in.due_date.isoformat() if task_in.due_date else None
+        values["start_date"] = task_in.start_date.isoformat() if task_in.start_date else None
+        db.add(StudyTask(profile_id=profile.id, **values))
+
+    for session_in in payload.sessions:
+        db.add(FocusSession(profile_id=profile.id, **session_in.model_dump()))
+
+    db.commit()
+    return workspace(db)
+
+
+@router.delete("/workspace")
+def delete_workspace(db: DB):
+    profile = profile_or_404(db)
+    ws_id = profile.id
+    db.execute(delete(FocusSession).where(FocusSession.profile_id == ws_id))
+    db.execute(delete(StudyTask).where(StudyTask.profile_id == ws_id))
+    db.execute(delete(Plan).where(Plan.profile_id == ws_id))
+    db.delete(profile)
+    db.commit()
+    return {"deleted": ws_id}
 
 
 @router.post("/workspace/import", status_code=201)
