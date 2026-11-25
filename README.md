@@ -100,24 +100,29 @@ and `apps/api/.env` to `backend/.env`, rename frontend `API_BASE_URL` to
 3. On **Overview**, check the graduation outlook, active goals for this semester,
    neutral notices when a semester's weekly hours exceed what is available, due
    course/goal tasks, and critical courses.
-4. Drag cards across semester frames or use board/select controls. Each semester
-   shows credit caps and weekly course + goal hours against available hours.
+4. Drag cards across semester frames or use board/select controls, lock individual
+   courses to a semester during recovery, and see live draft rule checks before saving.
+   Each semester shows credit caps and weekly course + goal hours against available hours.
    Undo/redo edits, then **Save & validate**.
 5. Select failed/postponed courses under **Simulate a setback**. Save, then generate
-   alternatives for earlier completion and lighter peak workload. When infeasible,
-   Avenra explains blocking chains, credit shortfalls, or weekly time budget limits
-   and tests the smallest horizon extension, budget-bounded credit cap increase, or
-   goal-hour reduction that fits.
-6. Compare saved plans at /compare. Open **Passport** from a saved plan and
-   **Print / Save as PDF** for a fresh advisor consultation snapshot with all active
-   assumptions (including the weekly minutes-per-SKS assumption).
+   alternatives for earlier completion and lighter peak workload while respecting locked
+   courses. When infeasible, Avenra explains blocking chains, credit shortfalls, locked
+   courses, or weekly time budget limits and tests the smallest horizon extension,
+   budget-bounded credit cap increase, goal-hour reduction, or unlock that fits.
+6. Manage plans (including setting your primary Overview plan and deleting spare plans)
+   and compare saved plans at /compare, with **Copy comparison summary** and
+   **Print / Save as PDF** plus optional advisor notes. Open **Passport** from a saved
+   plan for a fresh advisor consultation snapshot with optional personal notes and all
+   active assumptions (including the weekly minutes-per-SKS assumption).
 7. In **Study & focus**, add manual targets or paste a class announcement (WhatsApp,
    Telegram, or LMS) to review and confirm extracted details, a planned start date,
-   and a 10-minute first step before saving. Launch any task straight into the
-   focus/break timer, filter by status or goal, and export open targets to `.ics`
-   with both 09:00 planned-start reminders and 19:00 day-before due-date reminders.
-   Reload restores the timer paused using timestamps. Study completion never changes
-   academic course completion.
+   and a 10-minute first step before saving. Launch any course or goal task straight into
+   the focus/break timer (saved to PostgreSQL/SQLite), filter by status or goal, and
+   export open targets to `.ics` with both 09:00 planned-start reminders and 19:00
+   day-before due-date reminders. Reload restores the timer paused using timestamps.
+   Study completion never changes academic course completion. Shareable curriculum
+   templates (`.json`, without personal data) can also be exported in Profile and uploaded
+   in `/start`.
 
 Table import supports 1-100 courses (required or elective), auto-detected delimiters
 (tab, comma, semicolon, or aligned spaces), English and Indonesian column aliases,

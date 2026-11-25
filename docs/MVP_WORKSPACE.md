@@ -27,35 +27,43 @@ This extends the foundation plan with operational local workflows.
 - Study tasks can be linked to a course, a workspace goal, or both, either entered
   manually or extracted offline from a pasted class announcement and confirmed by the
   student with a planned `start_date`, a 10-minute `first_step`, and extracted
-  requirement `details`. Focus sessions keep requiring a course; tasks can launch a
+  requirement `details`. Focus sessions can target a course or workspace goal; tasks can launch a
   focus sprint directly with one click. Open tasks export to `.ics` with both a 09:00
   planned start-date event and a 19:00 day-before due-date reminder.
 - The bundled S1 Informatika fixture (demo-3, 144 credits) is synthetic. Demo
   workspaces created before demo-3 keep the original 12-course fixture.
-- Plans persist assignments and presentation coordinates separately. Cross-semester
-  drag changes scheduling; same-semester drag changes presentation. Accessible select
-  controls provide the same scheduling operation. Invalid exploratory drafts can be saved.
+- Plans persist assignments, semester locks (`pinned`), primary flag (`is_primary`),
+  and presentation coordinates separately. Cross-semester drag changes scheduling;
+  same-semester drag changes presentation. Accessible select controls provide the same
+  scheduling operation. Unsaved drafts display live client-side rule checks and edges for
+  strict, any-of, and corequisite links; invalid exploratory drafts can be saved, and
+  spare plans can be deleted or switched as the Overview primary plan.
 - Optimistic revisions reject stale plan/profile/task updates. Browser draft recovery
   retains failed saves, and undo/redo handles unsaved changes.
 - A failed/postponed course overrides completion only inside a scenario. A course
   failed this semester is retaken from the next offered semester, and a scenario IPS
   can lower next semester's limit. Dependency traversal explains downstream blockers.
-  OR-Tools generates distinct options for earlier completion and lighter peak load,
-  each with a summary of how it differs. A separate checker validates each output.
-  When no plan exists, the response names the blocking chain or credit shortfall and
-  the smallest longer horizon or higher personal limit that works.
-- Comparison and the printable Decision Passport use saved snapshots. Export identifies
-  profile/plan revisions, curriculum version, source, assumptions, findings, and advisor questions.
-- Learning targets, dates, completion flags, and finished focus sessions persist in
-  PostgreSQL. Timers calculate elapsed time from timestamps and restore paused after reload.
+  OR-Tools generates distinct options for earlier completion and lighter peak load while
+  respecting locked semesters, each with a summary of how it differs. A separate checker
+  validates each output. When no plan exists, the response names the blocking chain,
+  locked courses, or credit shortfall and the smallest change that works.
+- Comparison and the printable Decision Passport use saved snapshots, support optional
+  advisor notes, and offer both WhatsApp/email copyable summaries and A4 print export.
+  Export identifies profile/plan revisions, curriculum version, source, assumptions,
+  findings, and advisor questions. Shareable curriculum templates (`.json` without
+  personal records) can be exported in Profile and imported in `/start`.
+- Learning targets, dates, completion flags, and finished course or goal focus sessions
+  persist in PostgreSQL. Timers calculate elapsed time from timestamps and restore
+  paused after reload.
 
 ## Storage and migration
 
 The existing `postgres-local` instance on port 5434 hosts database `avenra`.
-Revisions 0002–0007 add profiles/plans/tasks/sessions, personal curriculum JSON,
+Revisions 0002–0008 add profiles/plans/tasks/sessions, personal curriculum JSON,
 independent canvas coordinates, profile/scenario IPS values, profile mission,
-goals, weekly time budget, goal-linked study tasks, and task start plans (`start_date`,
-`first_step`, `details`) using `batch_alter_table` for SQLite compatibility.
+goals, weekly time budget, goal-linked study tasks, task start plans (`start_date`,
+`first_step`, `details`), plan course locks (`pinned`), `is_primary`, and goal-targeted
+focus sessions using `batch_alter_table` for SQLite compatibility.
 Existing tables in other databases are untouched.
 Apply migrations before opening the app; with PostgreSQL no schema is auto-created
 at API startup.
