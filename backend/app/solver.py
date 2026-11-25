@@ -1,4 +1,9 @@
+import copy
+import hashlib
+import json
 import math
+import threading
+from collections import OrderedDict
 from types import SimpleNamespace
 
 from ortools.sat.python import cp_model
@@ -29,7 +34,15 @@ def _suggestion(kind: str, code: str, value: int, message: str, **params) -> dic
 
 def variant(plan, **changes):
     """A plan-shaped object for what-if solves; the stored plan is never changed."""
-    fields = ("assignments", "failed", "horizon", "credit_cap", "revision", "expected_gpa")
+    fields = (
+        "assignments",
+        "failed",
+        "pinned",
+        "horizon",
+        "credit_cap",
+        "revision",
+        "expected_gpa",
+    )
     values = {field: getattr(plan, field, None) for field in fields}
     return SimpleNamespace(**(values | changes))
 
@@ -78,6 +91,8 @@ def _solve(curriculum: Curriculum, profile, plan, objective=None, exclude=(), ti
         else:
             model.add(var == 0)
 
+    pins = set(getattr(plan, "pinned", None) or [])
+    plan_assignments = getattr(plan, "assignments", None) or {}
     for course in remaining:
         options = placed(course.code, terms[-1])
         if course.category == "required":
@@ -86,6 +101,12 @@ def _solve(curriculum: Curriculum, profile, plan, objective=None, exclude=(), ti
             model.add(sum(options) == 1)
         elif options:
             model.add(sum(options) <= 1)
+        if course.code in pins:
+            pinned_term = plan_assignments.get(course.code)
+            if pinned_term is not None:
+                if (course.code, pinned_term) not in x:
+                    return cp_model.INFEASIBLE, None
+                model.add(x[course.code, pinned_term] == 1)
     for (code, term), var in x.items():
         course = courses[code]
         for prerequisite in course.prerequisites:
@@ -414,6 +435,29 @@ def diagnose(curriculum: Curriculum, profile, plan) -> dict:
                             hours=suggested_hours,
                         )
                     )
+    active_pins = [
+        c
+        for c in (getattr(plan, "pinned", None) or [])
+        if c not in completed and (getattr(plan, "assignments", None) or {}).get(c) is not None
+    ]
+    if active_pins and _feasible(curriculum, profile, variant(plan, pinned=[])):
+        reasons.append(
+            _reason(
+                "PINNED_COURSES",
+                f"Locked semester assignments ({', '.join(active_pins)}) prevent a valid "
+                "arrangement.",
+                courses=active_pins,
+            )
+        )
+        suggestions.append(
+            _suggestion(
+                "unpin",
+                "UNPIN_COURSES",
+                0,
+                f"Unlock {', '.join(active_pins)} so recovery can move them.",
+                courses=active_pins,
+            )
+        )
     if not reasons:
         reasons.append(
             _reason(
@@ -496,18 +540,16 @@ def _finish_term(curriculum, profile, plan, time_limit=2.0):
     return term, status == cp_model.OPTIMAL
 
 
-def outlook(curriculum: Curriculum, profile, plan) -> dict:
-    """When this student graduates under the saved plan, and what could delay it.
+_OUTLOOK_CACHE: OrderedDict[str, dict] = OrderedDict()
+_OUTLOOK_CACHE_SIZE = 64
+_OUTLOOK_LOCK = threading.Lock()
 
-    completion_term follows the saved plan when it passes every rule, otherwise the
-    earliest modeled finish. A course planned this semester is critical when failing
-    it pushes the earliest modeled finish later. Every number comes from the same
-    solver and checker; unproven answers are left out rather than guessed.
-    """
+
+def _compute_outlook(curriculum: Curriculum, profile, plan) -> dict:
     target = curriculum.target_terms
-    # Simulate over the full study period, so a delay is a number, not "does not fit".
+    # Simulate over the full study period without user locks so delays are exact.
     longest = curriculum.max_terms
-    earliest, proven = _finish_term(curriculum, profile, variant(plan, horizon=longest))
+    earliest, proven = _finish_term(curriculum, profile, variant(plan, pinned=[], horizon=longest))
     checked = validate_plan(curriculum, profile, plan)
     plan_term = checked["completion_term"]
     completion = plan_term if plan_term is not None else earliest
@@ -543,7 +585,9 @@ def outlook(curriculum: Curriculum, profile, plan) -> dict:
         if code in plan.failed:
             continue
         failed_finish, failed_proven = _finish_term(
-            curriculum, profile, variant(plan, failed=[*plan.failed, code], horizon=longest)
+            curriculum,
+            profile,
+            variant(plan, pinned=[], failed=[*plan.failed, code], horizon=longest),
         )
         if not failed_proven:
             # A timeout says nothing about the course; do not flag it.
@@ -564,6 +608,48 @@ def outlook(curriculum: Curriculum, profile, plan) -> dict:
     result["critical"].sort(
         key=lambda c: (c["extra_semesters"] is not None, -(c["extra_semesters"] or 0))
     )
+    return result
+
+
+def outlook(curriculum: Curriculum, profile, plan) -> dict:
+    """When this student graduates under the saved plan, and what could delay it.
+
+    completion_term follows the saved plan when it passes every rule, otherwise the
+    earliest modeled finish. A course planned this semester is critical when failing
+    it pushes the earliest modeled finish later. Every number comes from the same
+    solver and checker; unproven answers are left out rather than guessed.
+    """
+    cache_payload = {
+        "curriculum": curriculum.model_dump(),
+        "profile": {
+            "current_term": profile.current_term,
+            "completed": list(profile.completed or []),
+            "last_gpa": profile.last_gpa,
+            "time_budget": getattr(profile, "time_budget", None),
+            "goals": getattr(profile, "goals", None) or [],
+        },
+        "plan": {
+            "assignments": dict(plan.assignments or {}),
+            "failed": list(plan.failed or []),
+            "horizon": plan.horizon,
+            "credit_cap": plan.credit_cap,
+            "expected_gpa": getattr(plan, "expected_gpa", None),
+        },
+    }
+    cache_key = hashlib.sha256(
+        json.dumps(cache_payload, sort_keys=True, default=str).encode("utf-8")
+    ).hexdigest()
+    with _OUTLOOK_LOCK:
+        cached = _OUTLOOK_CACHE.get(cache_key)
+        if cached is not None:
+            _OUTLOOK_CACHE.move_to_end(cache_key)
+            return copy.deepcopy(cached)
+    result = _compute_outlook(curriculum, profile, plan)
+    if not result.get("timed_out"):
+        with _OUTLOOK_LOCK:
+            _OUTLOOK_CACHE[cache_key] = copy.deepcopy(result)
+            while len(_OUTLOOK_CACHE) > _OUTLOOK_CACHE_SIZE:
+                _OUTLOOK_CACHE.popitem(last=False)
     return result
 
 
