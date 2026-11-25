@@ -18,7 +18,15 @@
   let error = $state('');
   let workspace = $derived(data.workspace);
   let plans = $derived(workspace?.plans.filter((p) => !p.archived) ?? []);
-  let primaryPlan = $derived(plans[0]);
+  let primaryPlan = $derived(plans.find((p) => p.is_primary) ?? plans[0]);
+  let featuredPlans = $derived(
+    primaryPlan
+      ? [primaryPlan, ...plans.filter((p) => p.id !== primaryPlan.id)].slice(
+          0,
+          3,
+        )
+      : plans.slice(0, 3),
+  );
   let completed = $derived(
     workspace?.curriculum.courses
       .filter((c) => workspace?.profile?.completed.includes(c.code))
@@ -433,19 +441,24 @@
         <a href="/plans" class="text-link">{t('overview.plans.all')}</a>
       </div>
       <div class="plan-grid">
-        {#each plans.slice(0, 3) as plan}<a
+        {#each featuredPlans as plan}<a
             class="plan-tile"
             href={`/plans/${plan.id}`}
             ><div class="tile-top">
-              <Icon name="plans" /><span
-                class="tag"
-                class:warning={plan.validation.findings.length > 0}
-                >{plan.validation.findings.length
-                  ? t('overview.plans.checks', {
-                      count: plan.validation.findings.length,
-                    })
-                  : t('overview.plans.valid')}</span
-              >
+              <Icon name="plans" />
+              <div class="tile-tags">
+                {#if plan.is_primary && plans.length > 1}<span class="tag"
+                    >{t('plans.primary_tag')}</span
+                  >{/if}<span
+                  class="tag"
+                  class:warning={plan.validation.findings.length > 0}
+                  >{plan.validation.findings.length
+                    ? t('overview.plans.checks', {
+                        count: plan.validation.findings.length,
+                      })
+                    : t('overview.plans.valid')}</span
+                >
+              </div>
             </div>
             <h3>{plan.name}</h3>
             <p>

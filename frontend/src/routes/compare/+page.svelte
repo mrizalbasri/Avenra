@@ -1,17 +1,80 @@
 <script lang="ts">
-  import { untrack } from 'svelte';
+  import { onMount, untrack } from 'svelte';
+  import Icon from '#lib/components/Icon.svelte';
   import { formatHours, semesterHours } from '#lib/goals.js';
   import { useI18n } from '#lib/i18n/context.js';
+  import { buildComparisonSummary } from '#lib/passport.js';
   import type { Plan } from '#lib/types.js';
   import type { PageProps } from './$types';
   let { data }: PageProps = $props();
-  const { t } = useI18n();
+  const { t, msg } = useI18n();
   let plans = $derived(data.workspace?.plans.filter((p) => !p.archived) ?? []);
   let leftId = $state(untrack(() => plans[0]?.id ?? ''));
   let rightId = $state(untrack(() => plans[1]?.id ?? ''));
   let diffOnly = $state(false);
+  let copyStatus = $state('');
+  let copyError = $state('');
+  let studentNotes = $state('');
+  let hydrated = $state(false);
+  let loadedKey = $state('');
+  let notesKey = $derived(
+    `avenra-compare-notes:${data.workspace?.profile?.id ?? 'local'}`,
+  );
+  onMount(() => {
+    hydrated = true;
+  });
+  $effect(() => {
+    if (!plans.length) return;
+    if (!plans.some((p) => p.id === leftId)) leftId = plans[0]?.id ?? '';
+    if (!plans.some((p) => p.id === rightId)) {
+      rightId = plans.find((p) => p.id !== leftId)?.id ?? plans[0]?.id ?? '';
+    }
+  });
+  $effect(() => {
+    const targetKey = notesKey;
+    if (!hydrated || loadedKey === targetKey) return;
+    loadedKey = targetKey;
+    try {
+      const saved = localStorage.getItem(targetKey);
+      studentNotes = typeof saved === 'string' ? saved : '';
+    } catch {
+      studentNotes = '';
+    }
+  });
+  $effect(() => {
+    const value = studentNotes;
+    const targetKey = notesKey;
+    if (!hydrated || loadedKey !== targetKey) return;
+    try {
+      if (value.trim()) localStorage.setItem(targetKey, value);
+      else localStorage.removeItem(targetKey);
+    } catch {
+      /* Browser storage is optional. */
+    }
+  });
   let left = $derived(plans.find((p) => p.id === leftId));
   let right = $derived(plans.find((p) => p.id === rightId));
+
+  async function copyComparison() {
+    if (!left || !right || !data.workspace?.profile) return;
+    copyStatus = '';
+    copyError = '';
+    const summary = buildComparisonSummary(
+      left,
+      right,
+      data.workspace.profile,
+      data.workspace.curriculum,
+      t,
+      msg,
+      studentNotes,
+    );
+    try {
+      await navigator.clipboard.writeText(summary);
+      copyStatus = t('compare.copied');
+    } catch {
+      copyError = t('compare.copy_failed');
+    }
+  }
 
   let compareTerms = $derived.by(() => {
     if (!left || !right) return [];
@@ -84,17 +147,29 @@
 </script>
 
 <svelte:head><title>{t('compare.title')}</title></svelte:head>
-<div class="page-heading">
+<div class="page-heading no-print">
   <div>
     <h1>{t('compare.heading')}</h1>
     <p>{t('compare.lead')}</p>
   </div>
+  {#if left && right && left.id !== right.id}<div class="toolbar-actions">
+      <button class="button" onclick={copyComparison}
+        ><Icon name="copy" size={16} />{t('compare.copy_summary')}</button
+      ><button class="button primary" onclick={() => window.print()}
+        ><Icon name="print" size={17} />{t('compare.print')}</button
+      >
+    </div>{/if}
 </div>
+{#if copyStatus}<p class="success-banner no-print" role="status">
+    {copyStatus}
+  </p>{/if}{#if copyError}<p class="error-banner no-print" role="alert">
+    {copyError}
+  </p>{/if}
 {#if plans.length < 2}<div class="empty-panel">
     <h2>{t('compare.empty')}</h2>
     <p>{t('compare.empty_hint')}</p>
     <a href="/plans" class="button primary">{t('compare.open_plans')}</a>
-  </div>{:else}<div class="compare-selectors">
+  </div>{:else}<div class="compare-selectors no-print">
     <label
       >{t('compare.plan_a')}<select bind:value={leftId}
         >{#each plans as plan}<option value={plan.id}>{plan.name}</option
@@ -107,7 +182,32 @@
       ></label
     >
   </div>
-  {#if left && right && left.id !== right.id}<div class="comparison-summary">
+  {#if left && right && left.id !== right.id}
+    <header class="print-only compare-print-header">
+      <div class="passport-header">
+        <span>AVENRA</span><span
+          >{data.workspace?.curriculum.status === 'synthetic'
+            ? t('passport.brand_synthetic')
+            : t('passport.brand_own')}</span
+        >
+      </div>
+      <h1>{t('compare.print_heading')}</h1>
+      <p>
+        {left.name} vs {right.name} | {data.workspace?.profile?.alias} | {data
+          .workspace?.curriculum.name} ({data.workspace?.curriculum.version})
+      </p>
+    </header>
+    <section class="panel form-stack no-print compare-notes-editor">
+      <label
+        >{t('passport.notes_label')}<textarea
+          bind:value={studentNotes}
+          rows="2"
+          maxlength="1000"
+          placeholder={t('passport.notes_placeholder')}
+        ></textarea></label
+      >
+    </section>
+    <div class="comparison-summary">
       {#each [left, right] as plan}<section class="panel">
           <h2>{plan.name}</h2>
           <p class="tag" class:warning={!!plan.validation.findings.length}>
@@ -248,6 +348,10 @@
           >
         </table>{:else}<p class="muted">{t('compare.no_differences')}</p>{/if}
     </section>
+    {#if studentNotes.trim()}<section class="panel compare-notes-panel">
+        <h2>{t('passport.student_notes')}</h2>
+        <p class="student-notes-body">{studentNotes.trim()}</p>
+      </section>{/if}
     <p class="footnote">{t('compare.footnote')}</p>{:else}<p
       class="warning-banner"
     >

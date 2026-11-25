@@ -87,11 +87,13 @@ export type Plan = {
   assignments: Record<string, number | null>;
   layout: Record<string, { x: number; y: number; term: number }>;
   failed: string[];
+  pinned: string[];
   credit_cap: number;
   horizon: number;
   expected_gpa: number | null;
   revision: number;
   archived: boolean;
+  is_primary: boolean;
   created_at: string;
   validation: Validation;
   bottlenecks: { root: string; course: string; path: string[] }[];
@@ -116,7 +118,8 @@ export type Task = {
 };
 export type FocusSession = {
   id: string;
-  course_code: string;
+  course_code: string | null;
+  goal_id: string | null;
   seconds: number;
   note: string;
   created_at: string;
@@ -140,7 +143,7 @@ export type Alternative = {
 export type Diagnosis = {
   reasons: (CodedMessage & { rule: string })[];
   suggestions: (CodedMessage & {
-    kind: 'horizon' | 'credit_cap' | 'goal_hours';
+    kind: 'horizon' | 'credit_cap' | 'goal_hours' | 'unpin';
     value: number;
   })[];
 };

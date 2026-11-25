@@ -10,6 +10,7 @@
   import GoalsBudgetEditor from '#lib/components/GoalsBudgetEditor.svelte';
   import CourseRowsEditor from '#lib/components/start/CourseRowsEditor.svelte';
   import {
+    buildCurriculumTemplate,
     checkCourseRows,
     checkPassed,
     courseToRow,
@@ -101,32 +102,56 @@
     completed = [...new Set([...completed, ...earlier])];
   }
 
+  function workspaceSlug(fallback: string) {
+    return (
+      (data.workspace?.profile?.alias ?? fallback)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '') || fallback
+    );
+  }
+
+  function downloadJson(filename: string, payload: unknown) {
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
   async function exportWorkspaceJson() {
     dataAction = 'export';
     dataError = '';
     dataNotice = '';
     try {
       const bundle = await api<Record<string, unknown>>('workspace/export');
-      const slug =
-        (data.workspace?.profile?.alias ?? 'workspace')
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-|-$/g, '') || 'workspace';
-      const blob = new Blob([JSON.stringify(bundle, null, 2)], {
-        type: 'application/json',
-      });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `avenra-${slug}.json`;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      downloadJson(`avenra-${workspaceSlug('workspace')}.json`, bundle);
       dataNotice = t('profile.exported');
     } catch (e) {
       dataError = msg.errorText(e);
     } finally {
       dataAction = null;
     }
+  }
+
+  function exportCurriculumJson() {
+    if (!data.workspace?.curriculum) return;
+    dataError = '';
+    dataNotice = '';
+    const slug =
+      data.workspace.curriculum.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '') || 'curriculum';
+    downloadJson(
+      `avenra-curriculum-${slug}.json`,
+      buildCurriculumTemplate(data.workspace.curriculum),
+    );
+    dataNotice = t('profile.curriculum_exported');
   }
 
   const MAX_BACKUP_BYTES = 2 * 1024 * 1024;
@@ -630,6 +655,12 @@
           class="button"
           disabled={dataBusy}
           onclick={exportWorkspaceJson}>{t('profile.export_json')}</button
+        ><button
+          type="button"
+          class="button"
+          disabled={dataBusy}
+          onclick={exportCurriculumJson}
+          >{t('profile.export_curriculum')}</button
         ><label class="button file-button"
           >{dataAction === 'restore'
             ? t('profile.restoring')

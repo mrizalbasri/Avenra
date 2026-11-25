@@ -30,6 +30,8 @@ export const enStart = {
     'Example curriculum (synthetic). Replace it with your own courses when you can.',
   'start.use_table': 'Use this table',
   'start.use_table_hint': 'This replaces the courses below.',
+  'start.template_loaded':
+    'Curriculum template loaded. Review the courses and rules below.',
   'start.rows_heading': 'Courses',
   'start.rows_hint':
     'Check each course. Write prerequisites as course codes separated by ";", and A|B when either course is enough. Prerequisites and IPS rules can be completed later.',

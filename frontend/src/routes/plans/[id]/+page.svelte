@@ -16,7 +16,8 @@
   import { api } from '#lib/api.js';
   import { formatHours, semesterHours } from '#lib/goals.js';
   import {
-    draftCourseIssues,
+    buildCanvasEdges,
+    draftFindings,
     nextOffered,
     offeringText,
     requirementText,
@@ -31,6 +32,7 @@
     assignments: Record<string, number | null>;
     layout: Plan['layout'];
     failed: string[];
+    pinned: string[];
     credit_cap: number;
     horizon: number;
     expected_gpa: number | null;
@@ -41,6 +43,7 @@
     assignments: { ...p.assignments },
     layout: { ...p.layout },
     failed: [...p.failed],
+    pinned: [...(p.pinned ?? [])],
     credit_cap: p.credit_cap,
     horizon: p.horizon,
     expected_gpa: p.expected_gpa ?? null,
@@ -48,6 +51,24 @@
   });
   let saved = $state<Plan>(untrack(() => data.plan));
   let draft = $state<Draft>(untrack(() => snapshot(data.plan)));
+  $effect(() => {
+    const nextPlan = data.plan;
+    if (nextPlan.id !== untrack(() => saved.id)) {
+      saved = nextPlan;
+      draft = snapshot(nextPlan);
+      history = [];
+      future = [];
+      results = null;
+      selected = '';
+      error = '';
+      notice = '';
+      try {
+        recovered = localStorage.getItem(`avenra-plan-draft:${nextPlan.id}`);
+      } catch {
+        recovered = null;
+      }
+    }
+  });
   let view = $state<'canvas' | 'board'>('canvas');
   let selected = $state('');
   let busy = $state(false);
@@ -154,19 +175,7 @@
       over: h.over,
     };
   });
-  let edges = $derived<Edge[]>(
-    remaining.flatMap((c) =>
-      c.prerequisites
-        .filter((p) => remaining.some((r) => r.code === p))
-        .map((p) => ({
-          id: `${p}-${c.code}`,
-          source: p,
-          target: c.code,
-          hidden: !!selected && selected !== c.code && selected !== p,
-          style: 'stroke: var(--edge); stroke-width: 1.5;',
-        })),
-    ),
-  );
+  let edges = $derived<Edge[]>(buildCanvasEdges(remaining, selected));
   const nodeTypes = { course: CourseNode, semester: SemesterNode };
   const draftKey = () => `avenra-plan-draft:${data.plan.id}`;
   function clone<T>(value: T): T {
@@ -181,6 +190,9 @@
   function move(code: string, term: number | null) {
     remember();
     draft.assignments = { ...draft.assignments, [code]: term };
+    if (term === null) {
+      draft.pinned = draft.pinned.filter((c) => c !== code);
+    }
     const layout = { ...draft.layout };
     delete layout[code];
     draft.layout = layout;
@@ -230,37 +242,48 @@
     const failedCourse = data.curriculum.courses.find((c) => c.code === code);
     // A retake goes to the next semester that offers the course. A course failed
     // this semester cannot return before next semester.
-    if (draft.failed.includes(code) && failedCourse)
-      draft.assignments = {
-        ...draft.assignments,
-        [code]: nextOffered(
-          failedCourse,
-          data.profile.current_term +
-            (data.profile.completed.includes(code) ? 0 : 1),
-        ),
-      };
+    if (draft.failed.includes(code)) {
+      draft.pinned = draft.pinned.filter((c) => c !== code);
+      if (failedCourse)
+        draft.assignments = {
+          ...draft.assignments,
+          [code]: nextOffered(
+            failedCourse,
+            data.profile.current_term +
+              (data.profile.completed.includes(code) ? 0 : 1),
+          ),
+        };
+    }
+  }
+  function togglePin(code: string) {
+    remember();
+    draft.pinned = draft.pinned.includes(code)
+      ? draft.pinned.filter((c) => c !== code)
+      : [...draft.pinned, code];
   }
   function applySuggestion(
-    kind: 'horizon' | 'credit_cap' | 'goal_hours',
+    kind: 'horizon' | 'credit_cap' | 'goal_hours' | 'unpin',
     value: number,
   ) {
     if (kind === 'goal_hours') return;
     remember();
     if (kind === 'horizon') draft.horizon = value;
+    else if (kind === 'unpin') draft.pinned = [];
     else draft.credit_cap = value;
     notice = tx('plan.suggestion_applied');
   }
+  let liveCheck = $derived(
+    dirty ? draftFindings(data.curriculum, data.profile, draft) : null,
+  );
+  let activeFindings = $derived(
+    liveCheck ? liveCheck.findings : saved.validation.findings,
+  );
   let previewIssues = $derived(
-    dirty
-      ? draftCourseIssues(
-          data.curriculum,
-          data.profile.completed,
-          data.profile.current_term,
-          draft.assignments,
-          draft.failed,
-          draft.horizon,
-        )
-      : new Set<string>(),
+    new Set(
+      (liveCheck?.findings ?? [])
+        .map((f) => f.course)
+        .filter((code): code is string => code !== null),
+    ),
   );
   $effect(() => {
     const columns: Node[] = terms.map((t, i) => ({
@@ -292,6 +315,7 @@
           data: {
             course: c,
             failed: draft.failed.includes(c.code),
+            pinned: draft.pinned.includes(c.code),
             hasFinding: dirty
               ? previewIssues.has(c.code)
               : saved.validation.findings.some((f) => f.course === c.code),
@@ -342,6 +366,11 @@
         !parsed.draft ||
         typeof parsed.draft.name !== 'string' ||
         !Array.isArray(parsed.draft.failed) ||
+        (parsed.draft.pinned !== undefined &&
+          (!Array.isArray(parsed.draft.pinned) ||
+            !parsed.draft.pinned.every(
+              (c: unknown) => typeof c === 'string',
+            ))) ||
         typeof parsed.draft.assignments !== 'object' ||
         !Number.isInteger(parsed.draft.horizon) ||
         parsed.draft.horizon < data.profile.current_term ||
@@ -351,6 +380,7 @@
       remember();
       draft = {
         ...parsed.draft,
+        pinned: parsed.draft.pinned ?? [],
         expected_gpa: parsed.draft.expected_gpa ?? null,
       };
       recovered = null;
@@ -444,6 +474,7 @@
         name: `${saved.name} | ${msg.altName(alternative)}`.slice(0, 100),
         copy_from: saved.id,
         assignments: alternative.assignments,
+        pinned: [...draft.pinned],
       });
       await invalidateAll();
       await goto(`/plans/${created.id}`);
@@ -507,21 +538,23 @@
     >
   </div>{/if}
 <div class="plan-summary">
-  <span class="tag" class:warning={dirty || !!saved.validation.findings.length}
-    >{dirty
-      ? tx('plan.needs_check')
-      : saved.validation.findings.length
-        ? tx('plan.findings', { count: saved.validation.findings.length })
-        : tx('plan.valid')}</span
+  <span class="tag" class:warning={!!activeFindings.length}
+    >{activeFindings.length
+      ? tx('plan.findings', { count: activeFindings.length })
+      : tx('plan.valid')}</span
   ><span
     >{tx('plan.credits_planned', {
       done: completedCredits + plannedCredits,
       total: graduationCredits,
     })}</span
   ><span
-    >{saved.validation.completion_term && !dirty
-      ? tx('plan.completion', { term: saved.validation.completion_term })
-      : tx('plan.explore')}</span
+    >{dirty
+      ? liveCheck?.completion_term
+        ? tx('plan.completion', { term: liveCheck.completion_term })
+        : tx('plan.explore')
+      : saved.validation.completion_term
+        ? tx('plan.completion', { term: saved.validation.completion_term })
+        : tx('plan.explore')}</span
   >
 </div>
 <div class="editor-layout" inert={busy || solving} aria-busy={busy || solving}>
@@ -621,7 +654,11 @@
                       credits: c.credits,
                     })}</small
                   ><strong>{c.name}</strong></button
-                ><label class="sr-only" for={`move-${c.code}`}
+                >{#if draft.pinned.includes(c.code)}<span class="tag pinned-tag"
+                    ><Icon name="lock" size={11} />{tx(
+                      'plan.locked_badge',
+                    )}</span
+                  >{/if}<label class="sr-only" for={`move-${c.code}`}
                   >{tx('plan.move_label', { code: c.code })}</label
                 ><select
                   id={`move-${c.code}`}
@@ -642,7 +679,7 @@
           </section>{/each}
       </div>{/if}
     <div class="workspace-hint">
-      {tx('plan.hint')} | {tx('plan.shortcuts_hint')}
+      {tx('plan.hint')} | {tx('plan.edge_legend')} | {tx('plan.shortcuts_hint')}
     </div>
     {#if offPlan.some((c) => c.category === 'required')}<div
         class="unscheduled"
@@ -751,7 +788,19 @@
                 >{tx('common.semester', { term: t })}</option
               >{/each}</select
           ></label
-        ><a href={`/study?course=${course.code}`} class="text-link"
+        >{#if typeof draft.assignments[course.code] === 'number'}
+          {@const assignedTerm = draft.assignments[course.code]!}
+          <label class="checkbox-label lock-course-toggle"
+            ><input
+              type="checkbox"
+              checked={draft.pinned.includes(course.code)}
+              onchange={() => togglePin(course.code)}
+            /><span>{tx('plan.lock_semester', { term: assignedTerm })}</span
+            ></label
+          >
+          <p class="muted small">
+            {tx('plan.lock_hint', { term: assignedTerm })}
+          </p>{/if}<a href={`/study?course=${course.code}`} class="text-link"
           >{tx('plan.study_goal')}</a
         >{:else}<p class="muted small">
           {tx('plan.select_hint')}
@@ -915,21 +964,21 @@
 <section class="panel">
   <div class="section-heading">
     <h2>{tx('plan.checks')}</h2>
-    <span class="tag"
+    <span class="tag" class:warning={dirty}
       >{dirty
-        ? tx('plan.awaiting')
+        ? tx('plan.draft_preview')
         : tx('plan.revision', { revision: saved.revision })}</span
     >
   </div>
-  {#if dirty}<p class="muted">
-      {tx('plan.dirty_note')}
-    </p>{/if}{#if saved.validation.findings.length}<ul class="finding-list">
-      {#each saved.validation.findings as finding}<li>
+  {#if dirty}<p class="muted small">
+      {tx('plan.draft_note')}
+    </p>{/if}{#if activeFindings.length}<ul class="finding-list">
+      {#each activeFindings as finding}<li>
           <span class="tag warning">{msg.ruleLabel(finding.rule)}</span>
           <p>{msg.describe('finding', finding)}</p>
         </li>{/each}
     </ul>{:else}<p class="success-text">
-      {tx('plan.all_pass')}
+      {dirty ? tx('plan.draft_all_pass') : tx('plan.all_pass')}
     </p>{/if}{#if saved.bottlenecks.length}<h3>{tx('plan.downstream')}</h3>
     <ul>
       {#each saved.bottlenecks as blocker}<li>

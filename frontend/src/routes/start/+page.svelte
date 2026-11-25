@@ -22,6 +22,7 @@
     courseToRow,
     emptyRow,
     parseCurriculumTable,
+    parseCurriculumTemplateJson,
     parseGpaRules,
     rowsToCourses,
     type CourseRow,
@@ -88,6 +89,7 @@
   let busy = $state(false);
   let loadingExample = $state(false);
   let error = $state('');
+  let templateNotice = $state('');
 
   const ROW_KEYS = Object.keys(emptyRow()) as (keyof CourseRow)[];
   // A stored draft is user-controlled data: accept it only when its shape is right.
@@ -188,6 +190,7 @@
     d = fresh();
     restored = false;
     error = '';
+    templateNotice = '';
     localStorage.removeItem(draftKey);
   }
 
@@ -221,6 +224,7 @@
   function setPaste(text: string) {
     if (headerOf(text) !== headerOf(d.paste)) d.columnFields = {};
     d.paste = text;
+    templateNotice = '';
   }
   const separatorKey = {
     ',': 'import.sep.comma',
@@ -234,10 +238,12 @@
     d.rows = parsed.rows.map((row) => ({ ...row }));
     d.fromExample = false;
     d.completed = [];
+    templateNotice = '';
   }
   async function useExample() {
     loadingExample = true;
     error = '';
+    templateNotice = '';
     try {
       const example = await api<Curriculum>('curriculum/example');
       d.rows = example.courses.map(courseToRow);
@@ -260,12 +266,51 @@
   }
   async function readFile(file?: File) {
     if (!file) return;
+    error = '';
+    templateNotice = '';
+    if (file.size > 200000) {
+      const looksJson =
+        file.name.toLowerCase().endsWith('.json') ||
+        file.type === 'application/json';
+      error = looksJson
+        ? t('error.INVALID_CURRICULUM_JSON')
+        : t('error.CSV_TOO_LARGE');
+      return;
+    }
+    const content = await file.text();
+    const isJson =
+      file.name.toLowerCase().endsWith('.json') ||
+      file.type === 'application/json' ||
+      content.trimStart().startsWith('{');
+    if (isJson) {
+      try {
+        const tmpl = parseCurriculumTemplateJson(content);
+        d.rows = tmpl.courses.map(courseToRow);
+        d.university = tmpl.university;
+        d.program = tmpl.program;
+        d.version = tmpl.version;
+        d.source = tmpl.source;
+        d.cap = tmpl.credit_cap;
+        d.graduationCredits = tmpl.graduation_credits;
+        d.targetTerms = tmpl.target_terms;
+        d.maxTerms = tmpl.max_terms;
+        d.gpaRules = tmpl.gpa_credit_rules
+          .map((rule) => `${rule.min_gpa.toFixed(2)} = ${rule.max_credits}`)
+          .join('\n');
+        d.completed = [];
+        d.fromExample = false;
+        d.paste = '';
+        templateNotice = t('start.template_loaded');
+      } catch (e) {
+        error = msg.errorText(e);
+      }
+      return;
+    }
     if (file.size > 60000) {
       error = t('error.CSV_TOO_LARGE');
       return;
     }
-    setPaste(await file.text());
-    error = '';
+    setPaste(content);
   }
 
   // Step 2: the edited rows and program rules
@@ -525,13 +570,20 @@
         <label class="file-label"
           >{t('curriculum.choose_file')}<input
             type="file"
-            accept=".csv,.tsv,.txt,text/csv"
-            onchange={(e) => readFile(e.currentTarget.files?.[0])}
+            accept=".csv,.tsv,.txt,.json,text/csv,application/json"
+            onchange={(e) => {
+              const file = e.currentTarget.files?.[0];
+              e.currentTarget.value = '';
+              void readFile(file);
+            }}
           /></label
         ><a href="/curriculum-template.csv" download class="text-link"
           >{t('curriculum.template')}</a
         >
       </div>
+      {#if templateNotice}<p class="success-banner small" role="status">
+          {templateNotice}
+        </p>{/if}
       {#if parsed}
         <p class="muted small">
           {t('import.separator', { name: t(separatorKey[parsed.delimiter]) })}

@@ -28,6 +28,7 @@ export const enPlan = {
   'rule.CAPACITY': 'CAPACITY',
   'rule.GPA_CREDIT_LIMIT': 'GPA CREDIT LIMIT',
   'rule.TIME_BUDGET': 'TIME BUDGET',
+  'rule.PINNED_COURSES': 'LOCKED COURSES',
   'rule.COMBINED': 'COMBINED',
 
   // Findings
@@ -66,6 +67,8 @@ export const enPlan = {
     'The IPS {gpa} limit of {cap} credits in semester {term} is part of the conflict.',
   'diag.TIME_BUDGET':
     'Your weekly time budget limits semester {term} to {cap} credits ({hours} h left for courses).',
+  'diag.PINNED_COURSES':
+    'Locked semester assignments ({courses}) prevent a valid arrangement.',
   'diag.COMBINED':
     'The modeled rules conflict only in combination, for example corequisites, earned-credit thresholds, and credit limits together.',
   'suggest.HORIZON': 'Extend the plan to semester {term}.',
@@ -74,6 +77,7 @@ export const enPlan = {
     'Reduce {goal} hours in semester {term} to {hours} h/week.',
   'suggest.GOAL_HOURS_RANGE':
     'Reduce {goal} hours in semesters {start_term}-{end_term} to {hours} h/week.',
+  'suggest.UNPIN_COURSES': 'Unlock {courses} so recovery can move them.',
 
   // Solve outcomes and alternatives
   'solve.COMPLETE': 'All modeled requirements are already complete.',
@@ -170,6 +174,8 @@ export const enPlan = {
     'Uncheck these passed courses in your profile before removing them from the curriculum: {courses}.',
   'error.CURRENT_BEYOND_MAX':
     'Current semester ({current}) is beyond the maximum study period of {max} semesters.',
+  'error.PRIMARY_ARCHIVED':
+    'Restore this plan before setting it as your primary plan.',
 
   // Course requirement text (lib/rules.ts)
   'req.prerequisites': 'Prerequisites: {list}',
@@ -188,6 +194,7 @@ export const enPlan = {
   'node.credits_short': '{count} cr',
   'node.retake': 'Retake in this scenario',
   'node.review': 'Review rule checks',
+  'node.locked': 'Locked in semester',
   'node.planned': 'Planned course',
   'node.semester_credits': '{credits} / {cap} credits',
   'node.semester_hours': '{total} / {available} h',
@@ -241,6 +248,10 @@ export const enPlan = {
   'plan.course_details': 'Course details',
   'plan.course_line': '{code} | {credits} credits | {category} | {offering}',
   'plan.assigned': 'Assigned semester',
+  'plan.lock_semester': 'Lock in semester {term} during recovery',
+  'plan.lock_hint':
+    'Keeps this course in semester {term} when generating recovery alternatives.',
+  'plan.locked_badge': 'Locked',
   'plan.study_goal': 'Create a study goal',
   'plan.select_hint':
     'Select a card on the canvas or board to inspect its prerequisites and move it.',
@@ -281,9 +292,15 @@ export const enPlan = {
   'plan.keep': 'Save as a separate plan',
   'plan.checks': 'Rule checks & explanation',
   'plan.awaiting': 'Awaiting save',
+  'plan.draft_preview': 'Live draft check',
   'plan.revision': 'Saved version {revision}',
   'plan.dirty_note':
     'Save to check this draft. Issues below belong to the last saved version.',
+  'plan.draft_note':
+    'Live preview of your unsaved draft. Save & validate to confirm on the server.',
+  'plan.draft_all_pass': 'All listed rules pass in this draft preview.',
+  'plan.edge_legend':
+    'Lines: solid = prerequisite | dashed = one-of | dotted = corequisite.',
   'plan.all_pass': 'All listed rules pass for the saved plan.',
   'plan.downstream': 'Downstream impact',
   'plan.source_note': '{assumptions} Source: {version}.',
@@ -307,6 +324,10 @@ export const enPlan = {
   'passport.copied': 'Summary copied. Ready to paste into WhatsApp or email.',
   'passport.copy_failed':
     'Could not copy automatically. Use Print / Save as PDF instead.',
+  'passport.notes_label': 'Your notes or questions for your advisor (optional)',
+  'passport.notes_placeholder':
+    'e.g. Confirm whether IF3204 can stay in semester 6 during internship.',
+  'passport.student_notes': 'Student notes for advisor',
   'passport.mission_section': 'Mission, commitments & weekly time',
   'passport.budget_line':
     'Weekly time budget: {hours} h/week available ({minutes} min per SKS).',
@@ -390,4 +411,11 @@ export const enPlan = {
   'compare.footnote':
     'Highlighted rows differ. Estimated finish depends on the listed curriculum rules, not a graduation guarantee.',
   'compare.choose_two': 'Choose two different plans.',
+  'compare.copy_summary': 'Copy comparison summary',
+  'compare.print': 'Print / Save as PDF',
+  'compare.copied':
+    'Comparison summary copied. Ready to paste into WhatsApp or email.',
+  'compare.copy_failed':
+    'Could not copy automatically. Use Print / Save as PDF instead.',
+  'compare.print_heading': 'Academic Plan Comparison',
 } as const;

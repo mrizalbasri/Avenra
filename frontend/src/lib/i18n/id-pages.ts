@@ -6,6 +6,8 @@ export const idPages: Record<keyof typeof enPages, string> = {
     'Aturan IPS {index} harus berbentuk "3.00 = 24" (IPS 0 sampai 4, SKS 1 sampai 24).',
   'error.IPS_TOO_MANY': 'Gunakan paling banyak 10 aturan IPS.',
   'error.CSV_TOO_LARGE': 'Jaga CSV di bawah 60 KB dan 100 mata kuliah.',
+  'error.INVALID_CURRICULUM_JSON':
+    'Pilih berkas templat kurikulum Avenra (.json) yang valid.',
 
   // Pasted table import
   'import.field.code': 'Kode mata kuliah',
@@ -95,6 +97,12 @@ export const idPages: Record<keyof typeof enPages, string> = {
     'Rencana yang Anda arsipkan tetap tersedia di sini.',
   'plans.empty_active_hint':
     'Beri nama rencana Anda di atas untuk mulai menjelajah.',
+  'plans.primary_tag': 'Utama',
+  'plans.set_primary': 'Jadikan utama',
+  'plans.delete_aria': 'Hapus {name}',
+  'plans.delete_confirm': 'Hapus permanen rencana "{name}"?',
+  'plans.deleted': 'Rencana dihapus.',
+  'plans.primary_updated': '"{name}" kini menjadi rencana utama di Ringkasan.',
 
   'profile.title': 'Avenra | Profil akademik',
   'profile.heading': 'Titik awal Anda.',
@@ -143,6 +151,9 @@ export const idPages: Record<keyof typeof enPages, string> = {
   'profile.data_lead':
     'Ekspor cadangan JSON lengkap untuk berpindah perangkat, pulihkan cadangan ke workspace baru, atau bersihkan data browser.',
   'profile.export_json': 'Ekspor workspace (.json)',
+  'profile.export_curriculum': 'Ekspor templat kurikulum (.json)',
+  'profile.curriculum_exported':
+    'Templat kurikulum siap bagi telah diunduh (tanpa nilai atau data pribadi).',
   'profile.restore_json': 'Pulihkan dari cadangan (.json)',
   'profile.restoring': 'Memulihkan…',
   'profile.exported': 'Cadangan workspace telah diunduh.',
@@ -244,6 +255,7 @@ export const idPages: Record<keyof typeof enPages, string> = {
   'study.filter_goal_all': 'Semua mata kuliah & tujuan',
   'study.filter_goal_courses': 'Hanya mata kuliah',
   'study.focus_course': 'Mata kuliah fokus',
+  'study.focus_target': 'Target fokus',
   'study.target': 'Target spesifik',
   'study.target_placeholder': 'mis. Kerjakan 5 latihan linked list',
   'study.target_date': 'Tanggal target (opsional)',
@@ -339,7 +351,7 @@ export const idPages: Record<keyof typeof enPages, string> = {
     'Ekspor daftar mata kuliah dari pedoman kurikulum Anda ke templat. Gunakan kode mata kuliah untuk prasyarat, dipisahkan titik koma; tulis ',
   'curriculum.csv_hint_b':
     ' bila salah satu mata kuliah sudah cukup. Penawaran: odd, even, atau both. Kategori: required atau elective. Korequisit boleh diambil di semester yang sama. min_credits adalah SKS yang dibutuhkan sebelum mengambil mata kuliah, misalnya magang atau skripsi.',
-  'curriculum.choose_file': 'Pilih berkas CSV',
+  'curriculum.choose_file': 'Atau unggah berkas (.csv / .json)',
   'curriculum.paste': 'Atau tempel isi CSV',
   'curriculum.warning':
     'Aturan berasal dari pengguna sampai diverifikasi secara independen. Avenra memeriksa prasyarat (termasuk "salah satu dari A atau B"), korequisit, ambang SKS terkumpul, mata kuliah pilihan terhadap total kelulusan, penawaran ganjil/genap, dan batas SKS berdasarkan IPS untuk semester berikutnya. Pengecualian, mata kuliah setara, dan transfer SKS tetap perlu ditinjau dosen wali.',

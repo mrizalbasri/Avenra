@@ -9,6 +9,7 @@ export function buildAdvisorSummary(
   curriculum: Curriculum,
   t: Translate,
   msg: Messages,
+  studentNotes = '',
 ): string {
   const v = plan.validation;
   const lines: string[] = [];
@@ -135,12 +136,135 @@ export function buildAdvisorSummary(
     }
   }
 
+  if (studentNotes.trim()) {
+    lines.push('');
+    lines.push(`${t('passport.student_notes')}:`);
+    lines.push(studentNotes.trim());
+  }
+
   if (v.advisor_items.length) {
     lines.push('');
     lines.push(`${t('passport.questions')}:`);
     v.advisor_items.forEach((item, index) => {
       lines.push(`${index + 1}. ${msg.describe('advisor', item)}`);
     });
+  }
+
+  lines.push('');
+  lines.push(msg.disclaimer(curriculum));
+  return lines.join('\n');
+}
+
+export function buildComparisonSummary(
+  left: Plan,
+  right: Plan,
+  profile: Profile,
+  curriculum: Curriculum,
+  t: Translate,
+  msg: Messages,
+  studentNotes = '',
+): string {
+  const lines: string[] = [];
+  lines.push(`${t('compare.print_heading')} | ${left.name} vs ${right.name}`);
+  lines.push(
+    `${t('passport.alias')}: ${profile.alias} | ${t('passport.curriculum')}: ${curriculum.name} (${curriculum.version})`,
+  );
+  lines.push('');
+
+  for (const plan of [left, right]) {
+    const v = plan.validation;
+    const finish = v.completion_term
+      ? t('common.semester', { term: v.completion_term })
+      : t('compare.unresolved');
+    const peak = t('compare.credits_n', { count: v.peak_credits });
+    const status = v.findings.length
+      ? t('compare.findings', { count: v.findings.length })
+      : t('plan.valid');
+    lines.push(
+      `- ${plan.name}: ${finish} | ${t('compare.peak')}: ${peak} | ${status}`,
+    );
+  }
+
+  const terms = [
+    ...new Set([
+      ...Object.keys(left.validation.loads).map(Number),
+      ...Object.keys(right.validation.loads).map(Number),
+    ]),
+  ].sort((a, b) => a - b);
+
+  if (terms.length) {
+    lines.push('');
+    lines.push(`${t('compare.workload_heading')}:`);
+    for (const term of terms) {
+      const key = String(term);
+      const aLoad = left.validation.loads[key] ?? 0;
+      const bLoad = right.validation.loads[key] ?? 0;
+      const aCap = left.validation.caps[key];
+      const bCap = right.validation.caps[key];
+      const aText =
+        aCap !== undefined
+          ? t('compare.load_cell', { credits: aLoad, cap: aCap })
+          : t('compare.credits_n', { count: aLoad });
+      const bText =
+        bCap !== undefined
+          ? t('compare.load_cell', { credits: bLoad, cap: bCap })
+          : t('compare.credits_n', { count: bLoad });
+      const delta = bLoad - aLoad;
+      const deltaText =
+        delta === 0
+          ? t('compare.same_load')
+          : t('compare.delta_credits', {
+              sign: delta > 0 ? '+' : '',
+              count: delta,
+            });
+      lines.push(
+        `- ${t('common.semester', { term })}: ${aText} vs ${bText} (${deltaText})`,
+      );
+    }
+  }
+
+  const stateLabel = (code: string, plan: Plan, category: string) => {
+    if (profile.completed.includes(code) && !plan.failed.includes(code)) {
+      return t('compare.completed');
+    }
+    const term = plan.assignments[code];
+    if (term) return t('common.semester', { term });
+    return category === 'elective'
+      ? t('compare.not_chosen')
+      : t('compare.unscheduled');
+  };
+
+  const diffs = curriculum.courses.filter((course) => {
+    const aDone =
+      profile.completed.includes(course.code) &&
+      !left.failed.includes(course.code);
+    const bDone =
+      profile.completed.includes(course.code) &&
+      !right.failed.includes(course.code);
+    const aTerm = aDone ? 'completed' : (left.assignments[course.code] ?? null);
+    const bTerm = bDone
+      ? 'completed'
+      : (right.assignments[course.code] ?? null);
+    return (
+      aTerm !== bTerm ||
+      left.failed.includes(course.code) !== right.failed.includes(course.code)
+    );
+  });
+
+  if (diffs.length) {
+    lines.push('');
+    lines.push(`${t('compare.differences')}:`);
+    for (const course of diffs) {
+      lines.push(
+        `- ${course.code} ${course.name}: ${stateLabel(course.code, left, course.category)} | ${stateLabel(course.code, right, course.category)}`,
+      );
+    }
+  }
+
+  if (studentNotes.trim()) {
+    lines.push('');
+    lines.push(`${t('passport.student_notes')}:`);
+    lines.push(studentNotes.trim());
   }
 
   lines.push('');
