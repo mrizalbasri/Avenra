@@ -25,7 +25,7 @@
       '',
   );
   let targetRef = $state(initialCourse ? `course:${initialCourse}` : '');
-  let focusCourse = $state(initialCourse);
+  let focusTargetRef = $state(initialCourse ? `course:${initialCourse}` : '');
   let title = $state('');
   let due = $state('');
   let startDate = $state('');
@@ -59,6 +59,7 @@
   let duration = $state(25 * 60);
   let sessionId = $state('');
   let sessionCourse = $state('');
+  let sessionGoalId = $state('');
   let restored = $state(false);
   let hydrated = $state(false);
   let sessionNote = $state('');
@@ -91,6 +92,24 @@
     if (task.goal_id) parts.push(goalNames[task.goal_id] ?? task.goal_id);
     return parts.join(' | ');
   };
+  const targetParts = (ref: string) =>
+    ref.startsWith('goal:')
+      ? { course: '', goal: ref.slice('goal:'.length) }
+      : ref.startsWith('course:')
+        ? { course: ref.slice('course:'.length), goal: '' }
+        : { course: '', goal: '' };
+  const focusTargetLabel = (courseCode: string, goalId: string) =>
+    goalId ? (goalNames[goalId] ?? goalId) : courseCode;
+  const sessionLabel = (session: {
+    course_code: string | null;
+    goal_id: string | null;
+  }) =>
+    [
+      session.course_code,
+      session.goal_id ? (goalNames[session.goal_id] ?? session.goal_id) : null,
+    ]
+      .filter(Boolean)
+      .join(' | ');
   let focusTotal = $derived(
     data.study.sessions.reduce((sum, session) => sum + session.seconds, 0),
   );
@@ -113,6 +132,7 @@
           duration,
           sessionId,
           sessionCourse,
+          sessionGoalId,
           sessionNote,
         }),
       );
@@ -123,6 +143,16 @@
   onMount(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(key) ?? 'null');
+      const courseCodes = new Set(
+        data.workspace?.curriculum?.courses.map((c) => c.code) ?? [],
+      );
+      const goalIds = new Set(goals.map((g) => g.id));
+      const hasCourse =
+        typeof saved?.sessionCourse === 'string' &&
+        courseCodes.has(saved.sessionCourse);
+      const hasGoal =
+        typeof saved?.sessionGoalId === 'string' &&
+        goalIds.has(saved.sessionGoalId);
       if (
         saved &&
         saved.sessionId &&
@@ -132,7 +162,7 @@
         saved.duration <= 43200 &&
         Number.isFinite(saved.accumulated) &&
         typeof saved.sessionId === 'string' &&
-        typeof saved.sessionCourse === 'string'
+        (hasCourse || hasGoal)
       ) {
         mode = saved.mode;
         duration = saved.duration;
@@ -147,13 +177,19 @@
           ),
         );
         sessionId = saved.sessionId;
-        sessionCourse = saved.sessionCourse;
+        sessionCourse = hasCourse ? saved.sessionCourse : '';
+        sessionGoalId = hasGoal ? saved.sessionGoalId : '';
+        focusTargetRef = sessionGoalId
+          ? `goal:${sessionGoalId}`
+          : `course:${sessionCourse}`;
         sessionNote =
           typeof saved.sessionNote === 'string'
             ? saved.sessionNote.slice(0, 500)
             : '';
         running = false;
         restored = true;
+      } else if (saved && typeof saved.sessionId === 'string') {
+        localStorage.removeItem(key);
       }
     } catch {
       notice = t('study.notice.no_restore');
@@ -186,6 +222,7 @@
       accumulated,
       sessionId,
       sessionCourse,
+      sessionGoalId,
       sessionNote,
       mode,
       duration,
@@ -194,8 +231,11 @@
   });
   function start() {
     if (!sessionId) {
+      const target = targetParts(focusTargetRef);
+      if (!target.course && !target.goal) return;
       sessionId = crypto.randomUUID();
-      sessionCourse = focusCourse;
+      sessionCourse = target.course;
+      sessionGoalId = target.goal;
       duration = Math.min(120, Math.max(1, minutes || 25)) * 60;
     }
     if (remaining === 0) return;
@@ -205,7 +245,14 @@
     restored = false;
   }
   function pause() {
-    accumulated = elapsed;
+    if (running) {
+      const now = Date.now();
+      tick = now;
+      accumulated = Math.min(
+        duration,
+        accumulated + Math.max(0, Math.floor((now - startedAt) / 1000)),
+      );
+    }
     running = false;
   }
   function reset(nextMode: 'focus' | 'break') {
@@ -215,6 +262,7 @@
       !window.confirm(t('study.discard'))
     )
       return;
+    const target = targetParts(focusTargetRef);
     running = false;
     accumulated = 0;
     mode = nextMode;
@@ -224,7 +272,8 @@
         Math.max(1, nextMode === 'focus' ? minutes || 25 : breakMinutes || 5),
       ) * 60;
     sessionId = nextMode === 'break' ? crypto.randomUUID() : '';
-    sessionCourse = focusCourse;
+    sessionCourse = target.course;
+    sessionGoalId = target.goal;
     sessionNote = '';
     restored = false;
     localStorage.removeItem(key);
@@ -237,12 +286,16 @@
     try {
       await api('study/sessions', 'POST', {
         id: sessionId,
-        course_code: sessionCourse,
+        course_code: sessionCourse || null,
+        goal_id: sessionGoalId || null,
         seconds: elapsed,
         note: sessionNote,
       });
+      const nextTarget = targetParts(focusTargetRef);
       accumulated = 0;
       sessionId = '';
+      sessionCourse = nextTarget.course;
+      sessionGoalId = '';
       restored = false;
       sessionNote = '';
       duration = (minutes || 25) * 60;
@@ -266,9 +319,10 @@
     );
     if (parsed.course_code) {
       targetRef = `course:${parsed.course_code}`;
-      focusCourse = parsed.course_code;
+      if (!sessionId) focusTargetRef = targetRef;
     } else if (parsed.goal_id) {
       targetRef = `goal:${parsed.goal_id}`;
+      if (!sessionId) focusTargetRef = targetRef;
     }
     title = parsed.title;
     due = parsed.due_date ?? '';
@@ -312,9 +366,16 @@
       focusPanel?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       return;
     }
-    const isGoalOnly = !task.course_code;
     if (task.course_code) {
-      focusCourse = task.course_code;
+      focusTargetRef = `course:${task.course_code}`;
+      sessionCourse = task.course_code;
+      sessionGoalId = '';
+    } else if (task.goal_id) {
+      focusTargetRef = `goal:${task.goal_id}`;
+      sessionCourse = '';
+      sessionGoalId = task.goal_id;
+    } else {
+      return;
     }
     const step = task.first_step || task.title;
     const baseMinutes = Math.min(120, Math.max(1, minutes || 25));
@@ -326,15 +387,12 @@
     accumulated = 0;
     restored = false;
     sessionId = crypto.randomUUID();
-    sessionCourse = focusCourse;
     sessionNote = step;
     duration = sprintMinutes * 60;
     startedAt = Date.now();
     tick = Date.now();
     running = true;
-    notice = isGoalOnly
-      ? t('study.notice.started_goal_task', { course: focusCourse, step })
-      : t('study.notice.started_task', { step });
+    notice = t('study.notice.started_task', { step });
     focusPanel?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
@@ -465,7 +523,13 @@
   }
 </script>
 
-<svelte:head><title>{t('study.title')}</title></svelte:head>
+<svelte:head
+  ><title
+    >{running
+      ? `${clock} | ${mode === 'focus' ? t('study.mode.focus') : t('study.mode.break')} | Avenra`
+      : t('study.title')}</title
+  ></svelte:head
+>
 <div class="page-heading">
   <div>
     <h1>{t('study.heading')}</h1>
@@ -559,8 +623,8 @@
               value={targetRef}
               onchange={(e) => {
                 targetRef = e.currentTarget.value;
-                if (targetRef.startsWith('course:')) {
-                  focusCourse = targetRef.slice('course:'.length);
+                if (targetRef && !sessionId) {
+                  focusTargetRef = targetRef;
                 }
               }}
               >{#if goals.length}<optgroup label={t('study.group_courses')}
@@ -837,7 +901,7 @@
             class="session-row"
           >
             <div>
-              <strong>{session.course_code}</strong>
+              <strong>{sessionLabel(session)}</strong>
               <p>{session.note || t('study.default_note')}</p>
             </div>
             <span
@@ -873,17 +937,31 @@
         {clock}
       </div>
       <p class="timer-caption">
-        {sessionId ? sessionCourse : focusCourse} | {mode === 'focus'
+        {(sessionId
+          ? focusTargetLabel(sessionCourse, sessionGoalId)
+          : focusTargetLabel(
+              targetParts(focusTargetRef).course,
+              targetParts(focusTargetRef).goal,
+            )) || ''} | {mode === 'focus'
           ? t('study.caption.focus')
           : t('study.caption.break')}
       </p>
-      {#if goals.length}<label class="focus-course-picker"
-          >{t('study.focus_course')}<select
-            bind:value={focusCourse}
+      {#if goals.length || data.workspace.curriculum.courses.length}<label
+          class="focus-course-picker"
+          >{t('study.focus_target')}<select
+            bind:value={focusTargetRef}
             disabled={running || !!sessionId}
-            >{#each data.workspace.curriculum.courses as c}<option
-                value={c.code}>{c.code} | {c.name}</option
-              >{/each}</select
+            >{#if goals.length}<optgroup label={t('study.group_courses')}
+                >{#each data.workspace.curriculum.courses as c}<option
+                    value={`course:${c.code}`}>{c.code} | {c.name}</option
+                  >{/each}</optgroup
+              ><optgroup label={t('study.group_goals')}
+                >{#each goals as g}<option value={`goal:${g.id}`}
+                    >{g.title}</option
+                  >{/each}</optgroup
+              >{:else}{#each data.workspace.curriculum.courses as c}<option
+                  value={`course:${c.code}`}>{c.code} | {c.name}</option
+                >{/each}{/if}</select
           ></label
         >{/if}
       {#if restored}<p class="warning-banner small">

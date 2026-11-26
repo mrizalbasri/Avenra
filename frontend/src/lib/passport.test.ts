@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { translate } from './i18n/index.js';
 import { createMessages } from './i18n/messages.js';
-import { buildAdvisorSummary } from './passport.js';
+import { buildAdvisorSummary, buildComparisonSummary } from './passport.js';
 import type { Curriculum, Plan, Profile } from './types.js';
 
 const curriculum: Curriculum = {
@@ -73,11 +73,13 @@ const plan: Plan = {
   assignments: { IF201: 2 },
   layout: {},
   failed: [],
+  pinned: [],
   credit_cap: 20,
   horizon: 8,
   expected_gpa: null,
   revision: 3,
   archived: false,
+  is_primary: true,
   created_at: '2026-11-24T00:00:00Z',
   bottlenecks: [],
   validation: {
@@ -161,5 +163,85 @@ describe('buildAdvisorSummary', () => {
     expect(summary).toContain('3 / 11 SKS | 16.5 / 10 jam (lebih)');
     expect(summary).toContain('Mata kuliah yang terdampak kemunduran:');
     expect(summary).toContain('- IF101 → IF201');
+  });
+
+  it('includes student advisor notes when provided and omits when blank', () => {
+    const t = (
+      key: Parameters<typeof translate>[1],
+      params?: Parameters<typeof translate>[2],
+    ) => translate('en', key, params);
+    const msg = createMessages(() => 'en');
+
+    const plain = buildAdvisorSummary(plan, profile, curriculum, t, msg, '   ');
+    expect(plain).not.toContain('Student notes for advisor:');
+
+    const noted = buildAdvisorSummary(
+      plan,
+      profile,
+      curriculum,
+      t,
+      msg,
+      'Can I take an internship conversion in semester 6?',
+    );
+    expect(noted).toContain('Student notes for advisor:');
+    expect(noted).toContain(
+      'Can I take an internship conversion in semester 6?',
+    );
+  });
+});
+
+describe('buildComparisonSummary', () => {
+  it('formats a side-by-side plan comparison summary in English and Indonesian', () => {
+    const rightPlan: Plan = {
+      ...plan,
+      id: 'plan-2',
+      name: 'Lighter load',
+      is_primary: false,
+      assignments: { IF201: 3 },
+      validation: {
+        ...plan.validation,
+        loads: { '2': 0, '3': 3 },
+        caps: { '2': 11, '3': 11 },
+        completion_term: 3,
+      },
+    };
+
+    const tEn = (
+      key: Parameters<typeof translate>[1],
+      params?: Parameters<typeof translate>[2],
+    ) => translate('en', key, params);
+    const msgEn = createMessages(() => 'en');
+    const enSummary = buildComparisonSummary(
+      plan,
+      rightPlan,
+      profile,
+      curriculum,
+      tEn,
+      msgEn,
+      'Prefer lighter semester 2 for BEM onboarding.',
+    );
+    expect(enSummary).toContain('Academic Plan Comparison');
+    expect(enSummary).toContain('Recovery plan vs Lighter load');
+    expect(enSummary).toContain('Semester 2: 3 / 11 cr');
+    expect(enSummary).toContain('IF201 Algorithms: Semester 2 | Semester 3');
+    expect(enSummary).toContain(
+      'Prefer lighter semester 2 for BEM onboarding.',
+    );
+
+    const tId = (
+      key: Parameters<typeof translate>[1],
+      params?: Parameters<typeof translate>[2],
+    ) => translate('id', key, params);
+    const msgId = createMessages(() => 'id');
+    const idSummary = buildComparisonSummary(
+      plan,
+      rightPlan,
+      profile,
+      curriculum,
+      tId,
+      msgId,
+    );
+    expect(idSummary).toContain('Perbandingan Rencana Akademik');
+    expect(idSummary).toContain('IF201 Algorithms: Semester 2 | Semester 3');
   });
 });

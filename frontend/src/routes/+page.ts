@@ -6,7 +6,8 @@ import type { PageLoad } from './$types';
 // the overview render first and fill the outlook in when it arrives.
 export const load: PageLoad = async ({ fetch, parent }) => {
   const { workspace, workspaceId } = await parent();
-  const plan = workspace?.plans.find((p) => !p.archived);
+  const activePlans = workspace?.plans.filter((p) => !p.archived) ?? [];
+  const plan = activePlans.find((p) => p.is_primary) ?? activePlans[0];
   if (!workspace?.profile || !plan)
     return { outlook: Promise.resolve(null), study: null };
   const outlook = requestApi<Outlook>(

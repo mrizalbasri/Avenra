@@ -71,6 +71,33 @@ def known_codes(db, codes):
         fail(422, "UNKNOWN_COURSES", "Use unique course codes from the selected curriculum.")
 
 
+def check_goal_id(profile, goal_id: str) -> None:
+    goal_ids = {goal.get("id") for goal in (profile.goals or []) if goal.get("id")}
+    if goal_id not in goal_ids:
+        fail(422, "UNKNOWN_GOAL", "Choose a goal from this workspace.")
+
+
+def ensure_primary_plan(db) -> bool:
+    ws_id = workspace_key(db)
+    has_primary = db.scalar(
+        select(Plan.id)
+        .where(Plan.profile_id == ws_id, Plan.archived.is_(False), Plan.is_primary.is_(True))
+        .limit(1)
+    )
+    if has_primary:
+        return False
+    fallback = db.scalar(
+        select(Plan)
+        .where(Plan.profile_id == ws_id, Plan.archived.is_(False))
+        .order_by(Plan.created_at)
+        .limit(1)
+    )
+    if fallback:
+        fallback.is_primary = True
+        return True
+    return False
+
+
 def plan_response(plan, profile):
     curriculum = curriculum_for(profile)
     return {
@@ -206,12 +233,15 @@ def bootstrap(db: DB):
                 failed=[],
                 credit_cap=curriculum.credit_cap,
                 horizon=min(curriculum.max_terms, max(8, profile.current_term)),
+                is_primary=True,
             )
         )
         try:
             db.commit()
         except IntegrityError:
             db.rollback()
+    elif ensure_primary_plan(db):
+        db.commit()
     return workspace(db)
 
 
@@ -294,10 +324,17 @@ def edit_curriculum(payload: CurriculumEdit, db: DB):
         assignments = {k: v for k, v in plan.assignments.items() if k in codes}
         layout = {k: v for k, v in plan.layout.items() if k in codes}
         failed = [c for c in plan.failed if c in codes]
-        if assignments != plan.assignments or layout != plan.layout or failed != plan.failed:
+        pinned = [c for c in (plan.pinned or []) if c in codes and assignments.get(c) is not None]
+        if (
+            assignments != plan.assignments
+            or layout != plan.layout
+            or failed != plan.failed
+            or pinned != (plan.pinned or [])
+        ):
             plan.assignments = assignments
             plan.layout = layout
             plan.failed = failed
+            plan.pinned = pinned
     db.commit()
     return workspace(db)
 
@@ -310,13 +347,22 @@ def create_plan(payload: PlanCreate, db: DB):
         source = plan_or_404(db, payload.copy_from)
         values = {
             key: getattr(source, key)
-            for key in ("assignments", "layout", "failed", "credit_cap", "horizon", "expected_gpa")
+            for key in (
+                "assignments",
+                "layout",
+                "failed",
+                "pinned",
+                "credit_cap",
+                "horizon",
+                "expected_gpa",
+            )
         }
     else:
         values = {
             "credit_cap": curriculum.credit_cap,
             "horizon": min(curriculum.max_terms, max(8, profile.current_term)),
             "assignments": default_assignments(curriculum, profile.completed, profile.current_term),
+            "pinned": [],
         }
     if payload.assignments is not None:
         known_codes(db, list(payload.assignments))
@@ -324,6 +370,23 @@ def create_plan(payload: PlanCreate, db: DB):
         values["assignments"] = payload.assignments
         # Saved positions belong to the old arrangement.
         values["layout"] = {}
+    if payload.pinned is not None:
+        known_codes(db, payload.pinned)
+        values["pinned"] = list(dict.fromkeys(payload.pinned))
+    values["pinned"] = [
+        code for code in (values.get("pinned") or []) if values["assignments"].get(code) is not None
+    ]
+    values["is_primary"] = not bool(
+        db.scalar(
+            select(Plan.id)
+            .where(
+                Plan.profile_id == profile.id,
+                Plan.archived.is_(False),
+                Plan.is_primary.is_(True),
+            )
+            .limit(1)
+        )
+    )
     plan = Plan(profile_id=profile.id, name=payload.name, **values)
     db.add(plan)
     db.commit()
@@ -342,7 +405,7 @@ def get_plan(plan_id: str, db: DB):
 
 @router.patch("/plans/{plan_id}")
 def edit_plan(plan_id: str, payload: PlanEdit, db: DB):
-    plan_or_404(db, plan_id)
+    plan = plan_or_404(db, plan_id)
     profile = profile_or_404(db)
     if profile.revision != payload.profile_revision:
         fail(
@@ -351,6 +414,8 @@ def edit_plan(plan_id: str, payload: PlanEdit, db: DB):
     known_codes(db, list(payload.assignments))
     known_codes(db, list(payload.layout))
     known_codes(db, payload.failed)
+    if payload.pinned is not None:
+        known_codes(db, payload.pinned)
     check_assignment_terms(payload.assignments)
     if payload.horizon < profile.current_term:
         fail(
@@ -358,6 +423,22 @@ def edit_plan(plan_id: str, payload: PlanEdit, db: DB):
             "HORIZON_BEFORE_CURRENT",
             "The planning horizon cannot end before the current semester.",
         )
+    changes = payload.model_dump(exclude={"revision", "profile_revision", "pinned", "is_primary"})
+    source_pinned = plan.pinned if payload.pinned is None else payload.pinned
+    changes["pinned"] = [
+        code
+        for code in dict.fromkeys(source_pinned or [])
+        if payload.assignments.get(code) is not None
+    ]
+    if payload.archived:
+        changes["is_primary"] = False
+    elif payload.is_primary is True:
+        db.execute(
+            update(Plan).where(Plan.profile_id == workspace_key(db)).values(is_primary=False)
+        )
+        changes["is_primary"] = True
+    elif payload.is_primary is False:
+        changes["is_primary"] = False
     result = db.execute(
         update(Plan)
         .where(
@@ -365,10 +446,7 @@ def edit_plan(plan_id: str, payload: PlanEdit, db: DB):
             Plan.profile_id == workspace_key(db),
             Plan.revision == payload.revision,
         )
-        .values(
-            **payload.model_dump(exclude={"revision", "profile_revision"}),
-            revision=payload.revision + 1,
-        )
+        .values(**changes, revision=payload.revision + 1)
     )
     if not result.rowcount:
         db.rollback()
@@ -377,8 +455,42 @@ def edit_plan(plan_id: str, payload: PlanEdit, db: DB):
             "PLAN_CONFLICT",
             "This plan changed in another tab. Reload before saving your draft.",
         )
+    db.expire_all()
+    ensure_primary_plan(db)
     db.commit()
+    return plan_response(plan_or_404(db, plan_id), profile_or_404(db))
+
+
+@router.post("/plans/{plan_id}/primary")
+def set_primary_plan(plan_id: str, db: DB):
+    profile = profile_or_404(db)
+    plan = plan_or_404(db, plan_id)
+    if plan.archived:
+        fail(
+            422,
+            "PRIMARY_ARCHIVED",
+            "Restore this plan before setting it as your primary plan.",
+        )
+    db.execute(update(Plan).where(Plan.profile_id == workspace_key(db)).values(is_primary=False))
+    db.execute(
+        update(Plan)
+        .where(Plan.id == plan_id, Plan.profile_id == workspace_key(db))
+        .values(is_primary=True)
+    )
+    db.commit()
+    db.expire_all()
     return plan_response(plan_or_404(db, plan_id), profile)
+
+
+@router.delete("/plans/{plan_id}")
+def delete_plan(plan_id: str, db: DB):
+    profile_or_404(db)
+    plan = plan_or_404(db, plan_id)
+    db.delete(plan)
+    db.flush()
+    ensure_primary_plan(db)
+    db.commit()
+    return {"deleted": plan_id}
 
 
 @router.get("/plans/{plan_id}/outlook")
@@ -428,9 +540,7 @@ def add_task(payload: TaskCreate, db: DB):
     if payload.course_code:
         known_codes(db, [payload.course_code])
     if payload.goal_id:
-        goal_ids = {goal.get("id") for goal in (profile.goals or [])}
-        if payload.goal_id not in goal_ids:
-            fail(422, "UNKNOWN_GOAL", "Choose a goal from this workspace.")
+        check_goal_id(profile, payload.goal_id)
     values = payload.model_dump()
     values["due_date"] = payload.due_date.isoformat() if payload.due_date else None
     values["start_date"] = payload.start_date.isoformat() if payload.start_date else None
@@ -464,9 +574,7 @@ def edit_task(task_id: str, payload: TaskEdit, db: DB):
     if "course_code" in changes and next_course:
         known_codes(db, [next_course])
     if "goal_id" in changes and next_goal:
-        goal_ids = {goal.get("id") for goal in (profile.goals or [])}
-        if next_goal not in goal_ids:
-            fail(422, "UNKNOWN_GOAL", "Choose a goal from this workspace.")
+        check_goal_id(profile, next_goal)
     next_start = changes.get("start_date", task.start_date)
     next_due = changes.get("due_date", task.due_date)
     if next_start and next_due and next_start > next_due:
@@ -501,8 +609,11 @@ def delete_task(task_id: str, db: DB):
 
 @router.post("/study/sessions", status_code=201)
 def add_focus(payload: FocusCreate, db: DB):
-    profile_or_404(db)
-    known_codes(db, [payload.course_code])
+    profile = profile_or_404(db)
+    if payload.course_code:
+        known_codes(db, [payload.course_code])
+    if payload.goal_id:
+        check_goal_id(profile, payload.goal_id)
     existing = db.get(FocusSession, payload.id)
     if existing:
         if existing.profile_id != workspace_key(db):
@@ -570,6 +681,21 @@ def export_workspace(db: DB):
                 "done": task.done,
             }
         )
+    exported_sessions = []
+    for session in sessions:
+        course_code = session.course_code if session.course_code in codes else None
+        goal_id = session.goal_id if session.goal_id in goal_ids else None
+        if not course_code and not goal_id:
+            continue
+        exported_sessions.append(
+            {
+                "course_code": course_code,
+                "goal_id": goal_id,
+                "seconds": session.seconds,
+                "note": session.note,
+                "created_at": session.created_at.isoformat() if session.created_at else None,
+            }
+        )
     return {
         "schema_version": 1,
         "exported_at": datetime.now(UTC).isoformat(),
@@ -589,24 +715,17 @@ def export_workspace(db: DB):
                 "assignments": plan.assignments,
                 "layout": plan.layout,
                 "failed": plan.failed,
+                "pinned": plan.pinned or [],
                 "credit_cap": plan.credit_cap,
                 "horizon": plan.horizon,
                 "expected_gpa": plan.expected_gpa,
                 "archived": plan.archived,
+                "is_primary": bool(plan.is_primary),
             }
             for plan in plans
         ],
         "tasks": exported_tasks,
-        "sessions": [
-            {
-                "course_code": session.course_code,
-                "seconds": session.seconds,
-                "note": session.note,
-                "created_at": session.created_at.isoformat() if session.created_at else None,
-            }
-            for session in sessions
-            if session.course_code in codes
-        ],
+        "sessions": exported_sessions,
     }
 
 
@@ -646,7 +765,12 @@ def restore_workspace(payload: WorkspaceBackup, db: DB):
     goal_ids = {goal["id"] for goal in goals}
 
     for plan_in in payload.plans:
-        for group in (list(plan_in.assignments), list(plan_in.layout), plan_in.failed):
+        for group in (
+            list(plan_in.assignments),
+            list(plan_in.layout),
+            plan_in.failed,
+            plan_in.pinned,
+        ):
             if len(group) != len(set(group)) or set(group) - codes:
                 fail(
                     422,
@@ -670,12 +794,14 @@ def restore_workspace(payload: WorkspaceBackup, db: DB):
         if task_in.goal_id and task_in.goal_id not in goal_ids:
             fail(422, "UNKNOWN_GOAL", "Choose a goal from this workspace.")
     for session_in in payload.sessions:
-        if session_in.course_code not in codes:
+        if session_in.course_code and session_in.course_code not in codes:
             fail(
                 422,
                 "UNKNOWN_COURSES",
                 "Use unique course codes from the selected curriculum.",
             )
+        if session_in.goal_id and session_in.goal_id not in goal_ids:
+            fail(422, "UNKNOWN_GOAL", "Choose a goal from this workspace.")
 
     profile = Profile(
         id=workspace_key(db),
@@ -696,7 +822,11 @@ def restore_workspace(payload: WorkspaceBackup, db: DB):
         fail(409, "WORKSPACE_EXISTS", "Choose a new workspace for a different curriculum.")
 
     if payload.plans:
+        seen_primary = False
         for plan_in in payload.plans:
+            is_primary = bool(plan_in.is_primary and not plan_in.archived and not seen_primary)
+            if is_primary:
+                seen_primary = True
             db.add(
                 Plan(
                     profile_id=profile.id,
@@ -704,10 +834,16 @@ def restore_workspace(payload: WorkspaceBackup, db: DB):
                     assignments=plan_in.assignments,
                     layout={k: v.model_dump() for k, v in plan_in.layout.items()},
                     failed=plan_in.failed,
+                    pinned=[
+                        c
+                        for c in dict.fromkeys(plan_in.pinned)
+                        if plan_in.assignments.get(c) is not None
+                    ],
                     credit_cap=plan_in.credit_cap,
                     horizon=min(curriculum.max_terms, plan_in.horizon),
                     expected_gpa=plan_in.expected_gpa,
                     archived=plan_in.archived,
+                    is_primary=is_primary,
                 )
             )
     else:
@@ -720,6 +856,7 @@ def restore_workspace(payload: WorkspaceBackup, db: DB):
                 assignments=default_assignments(
                     curriculum, profile_in.completed, profile_in.current_term
                 ),
+                is_primary=True,
             )
         )
 
@@ -733,6 +870,8 @@ def restore_workspace(payload: WorkspaceBackup, db: DB):
         session_values = session_in.model_dump(exclude_none=True)
         db.add(FocusSession(profile_id=profile.id, **session_values))
 
+    db.flush()
+    ensure_primary_plan(db)
     db.commit()
     return workspace(db)
 
@@ -784,6 +923,7 @@ def import_workspace(payload: WorkspaceImport, db: DB):
         credit_cap=curriculum.credit_cap,
         horizon=min(curriculum.max_terms, max(8, payload.current_term)),
         assignments=default_assignments(curriculum, payload.completed, payload.current_term),
+        is_primary=True,
     )
     db.add(plan)
     db.commit()

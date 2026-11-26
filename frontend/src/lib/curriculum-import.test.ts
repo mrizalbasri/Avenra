@@ -1,6 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { parseCurriculumTable } from './curriculum-import.js';
+import {
+  buildCurriculumTemplate,
+  parseCurriculumTable,
+  parseCurriculumTemplateJson,
+} from './curriculum-import.js';
+import type { Curriculum } from './types.js';
 
 const tsv = (rows: string[][]) => rows.map((r) => r.join('\t')).join('\n');
 const HEAD = ['code', 'name', 'credits', 'recommended_term', 'prerequisites'];
@@ -248,5 +253,88 @@ describe('parseCurriculumTable', () => {
       name: 'Dasar Pemrograman',
       credits: 3,
     });
+  });
+});
+
+describe('shareable curriculum templates', () => {
+  const sample: Curriculum = {
+    id: 'curr-1',
+    name: 'Univ Nusantara | Informatika',
+    version: '2026',
+    status: 'user_supplied',
+    disclaimer: 'User-supplied curriculum.',
+    source: 'Buku Pedoman 2026',
+    credit_cap: 24,
+    graduation_credits: 144,
+    max_terms: 14,
+    target_terms: 8,
+    gpa_credit_rules: [
+      { min_gpa: 3.0, max_credits: 24 },
+      { min_gpa: 2.0, max_credits: 18 },
+    ],
+    courses: [
+      {
+        code: 'IF101',
+        name: 'Dasar Pemrograman',
+        credits: 4,
+        recommended_term: 1,
+        category: 'required',
+        prerequisites: [],
+        any_prerequisites: [],
+        corequisites: [],
+        min_credits_earned: 0,
+        offered_terms: [1],
+      },
+      {
+        code: 'IF102',
+        name: 'Struktur Data',
+        credits: 4,
+        recommended_term: 2,
+        category: 'required',
+        prerequisites: ['IF101'],
+        any_prerequisites: [],
+        corequisites: [],
+        min_credits_earned: 0,
+        offered_terms: [0],
+      },
+    ],
+  };
+
+  it('exports a curriculum-only template without personal data and imports it cleanly', () => {
+    const exported = buildCurriculumTemplate(sample);
+    expect(exported.schema_version).toBe(1);
+    expect(exported.kind).toBe('avenra_curriculum');
+    expect('profile' in exported).toBe(false);
+    expect('plans' in exported).toBe(false);
+
+    const parsed = parseCurriculumTemplateJson(JSON.stringify(exported));
+    expect(parsed.university).toBe('Univ Nusantara');
+    expect(parsed.program).toBe('Informatika');
+    expect(parsed.version).toBe('2026');
+    expect(parsed.source).toBe('Buku Pedoman 2026');
+    expect(parsed.credit_cap).toBe(24);
+    expect(parsed.graduation_credits).toBe(144);
+    expect(parsed.gpa_credit_rules).toHaveLength(2);
+    expect(parsed.courses).toHaveLength(2);
+  });
+
+  it('accepts raw curriculum JSON without a pipe separator and rejects invalid JSON', () => {
+    const rawCurriculum = parseCurriculumTemplateJson(
+      JSON.stringify({ ...sample, name: 'S1 Teknik Informatika' }),
+    );
+    expect(rawCurriculum.university).toBe('S1 Teknik Informatika');
+    expect(rawCurriculum.program).toBe('S1 Teknik Informatika');
+
+    expect(() => parseCurriculumTemplateJson('{broken')).toThrowError(
+      /Curriculum template JSON/,
+    );
+    expect(() =>
+      parseCurriculumTemplateJson(JSON.stringify({ courses: [] })),
+    ).toThrowError(/Curriculum template JSON/);
+    expect(() =>
+      parseCurriculumTemplateJson(
+        JSON.stringify({ ...sample, credit_cap: 99 }),
+      ),
+    ).toThrowError(/Curriculum template JSON/);
   });
 });

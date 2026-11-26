@@ -1052,8 +1052,35 @@ td {
 .course-node.failed {
   border-color: #a1a1aa;
 }
+.course-node.pinned {
+  border-color: var(--accent);
+}
 .course-node.failed small {
   color: #e4e4e7;
+}
+.pinned-tag {
+  margin-top: 8px;
+}
+.lock-course-toggle {
+  margin-top: 12px;
+  color: var(--text-primary);
+}
+.tile-tags {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.passport-notes-editor,
+.compare-notes-editor {
+  margin-bottom: 20px;
+}
+.student-notes-body {
+  white-space: pre-wrap;
+  margin: 0;
+}
+.print-only {
+  display: none;
 }
 .svelte-flow__node.selected .course-node {
   border-color: var(--accent);
@@ -1573,6 +1600,41 @@ td {
     max-width: none;
     padding: 0;
     border-radius: 0;
+  }
+  .print-only {
+    display: block;
+  }
+  .compare-print-header {
+    color: #161616;
+    margin-bottom: 20px;
+  }
+  .compare-print-header p {
+    color: #444;
+    font-size: 12px;
+  }
+  .comparison-summary,
+  .comparison-summary .panel,
+  .compare-notes-panel,
+  .table-scroll {
+    background: #fff;
+    color: #161616;
+    border-color: #ccc;
+  }
+  .comparison-summary h2,
+  .comparison-summary dt,
+  .comparison-summary dd,
+  .compare-notes-panel h2,
+  .compare-notes-panel .student-notes-body,
+  .table-scroll h2,
+  .table-scroll th,
+  .table-scroll td {
+    color: #161616;
+    border-color: #ccc;
+  }
+  .comparison-summary .muted,
+  .table-scroll .muted,
+  .footnote {
+    color: #444;
   }
   .passport section {
     break-inside: avoid;

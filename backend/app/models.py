@@ -40,11 +40,13 @@ class Plan(Base):
     assignments: Mapped[dict] = mapped_column(JSON, default=dict)
     layout: Mapped[dict] = mapped_column(JSON, default=dict)
     failed: Mapped[list] = mapped_column(JSON, default=list)
+    pinned: Mapped[list] = mapped_column(JSON, default=list)
     credit_cap: Mapped[int] = mapped_column(Integer, default=12)
     horizon: Mapped[int] = mapped_column(Integer, default=8)
     expected_gpa: Mapped[float | None] = mapped_column(Float, nullable=True)
     revision: Mapped[int] = mapped_column(Integer, default=1)
     archived: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_primary: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
@@ -69,7 +71,8 @@ class FocusSession(Base):
     __tablename__ = "focus_sessions"
     id: Mapped[str] = mapped_column(String(40), primary_key=True, default=new_id)
     profile_id: Mapped[str] = mapped_column(ForeignKey("profiles.id"), index=True)
-    course_code: Mapped[str] = mapped_column(String(20))
+    course_code: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    goal_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
     seconds: Mapped[int] = mapped_column(Integer)
     note: Mapped[str] = mapped_column(String(500), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)

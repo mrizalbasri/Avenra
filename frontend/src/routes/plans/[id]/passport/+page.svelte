@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount, untrack } from 'svelte';
   import Icon from '#lib/components/Icon.svelte';
   import { formatHours, semesterHours } from '#lib/goals.js';
   import { useI18n } from '#lib/i18n/context.js';
@@ -10,6 +11,35 @@
   let validation = $derived(data.plan.validation);
   let copyStatus = $state('');
   let copyError = $state('');
+  let studentNotes = $state('');
+  let hydrated = $state(false);
+  let loadedKey = $state('');
+  let notesKey = $derived(`avenra-passport-notes:${data.plan.id}`);
+  onMount(() => {
+    hydrated = true;
+  });
+  $effect(() => {
+    const targetKey = notesKey;
+    if (!hydrated || loadedKey === targetKey) return;
+    loadedKey = targetKey;
+    try {
+      const saved = localStorage.getItem(targetKey);
+      studentNotes = typeof saved === 'string' ? saved : '';
+    } catch {
+      studentNotes = '';
+    }
+  });
+  $effect(() => {
+    const value = studentNotes;
+    const targetKey = notesKey;
+    if (!hydrated || loadedKey !== targetKey) return;
+    try {
+      if (value.trim()) localStorage.setItem(targetKey, value);
+      else localStorage.removeItem(targetKey);
+    } catch {
+      /* Browser storage is optional. */
+    }
+  });
   let ipsNote = $derived(
     validation.planning_gpa !== null
       ? t('passport.ips_used', {
@@ -48,6 +78,7 @@
       data.curriculum,
       t,
       msg,
+      studentNotes,
     );
     try {
       await navigator.clipboard.writeText(summary);
@@ -79,6 +110,16 @@
   </p>{/if}{#if copyError}<p class="error-banner no-print" role="alert">
     {copyError}
   </p>{/if}
+<section class="panel form-stack no-print passport-notes-editor">
+  <label
+    >{t('passport.notes_label')}<textarea
+      bind:value={studentNotes}
+      rows="3"
+      maxlength="1000"
+      placeholder={t('passport.notes_placeholder')}
+    ></textarea></label
+  >
+</section>
 <article class="passport">
   <div class="passport-header">
     <span>AVENRA</span><span
@@ -224,6 +265,10 @@
           </li>{/each}
       </ul>{:else}<p>{t('passport.no_violations')}</p>{/if}
   </section>
+  {#if studentNotes.trim()}<section>
+      <h2>{t('passport.student_notes')}</h2>
+      <p class="student-notes-body">{studentNotes.trim()}</p>
+    </section>{/if}
   <section>
     <h2>{t('passport.questions')}</h2>
     <ol>

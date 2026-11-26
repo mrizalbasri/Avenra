@@ -11,6 +11,7 @@
   class="course-node"
   class:has-finding={!!data.hasFinding}
   class:failed={!!data.failed}
+  class:pinned={!!data.pinned}
 >
   <Handle type="target" position={Position.Left} isConnectable={false} />
   <div class="course-node-meta">
@@ -27,7 +28,9 @@
       ? t('node.retake')
       : data.hasFinding
         ? t('node.review')
-        : t('node.planned')}</small
+        : data.pinned
+          ? t('node.locked')
+          : t('node.planned')}</small
   >
   <Handle type="source" position={Position.Right} isConnectable={false} />
 </div>

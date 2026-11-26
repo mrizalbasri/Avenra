@@ -27,6 +27,7 @@ export const idPlan: Record<keyof typeof enPlan, string> = {
   'rule.CAPACITY': 'KAPASITAS',
   'rule.GPA_CREDIT_LIMIT': 'BATAS SKS DARI IPS',
   'rule.TIME_BUDGET': 'ANGGARAN WAKTU',
+  'rule.PINNED_COURSES': 'MATA KULIAH DIKUNCI',
   'rule.COMBINED': 'GABUNGAN',
 
   'finding.UNSCHEDULED': '{course} {name} belum dijadwalkan.',
@@ -66,6 +67,8 @@ export const idPlan: Record<keyof typeof enPlan, string> = {
     'Batas IPS {gpa} sebesar {cap} SKS di semester {term} ikut menjadi bagian dari konflik.',
   'diag.TIME_BUDGET':
     'Anggaran waktu mingguan Anda membatasi semester {term} menjadi {cap} SKS (tersisa {hours} jam untuk kuliah).',
+  'diag.PINNED_COURSES':
+    'Penempatan semester yang dikunci ({courses}) menghalangi susunan yang valid.',
   'diag.COMBINED':
     'Aturan dalam model bentrok hanya bila digabungkan, misalnya korequisit, ambang SKS terkumpul, dan batas SKS sekaligus.',
   'suggest.HORIZON': 'Perpanjang rencana sampai semester {term}.',
@@ -74,6 +77,8 @@ export const idPlan: Record<keyof typeof enPlan, string> = {
     'Kurangi jam {goal} di semester {term} menjadi {hours} jam/minggu.',
   'suggest.GOAL_HOURS_RANGE':
     'Kurangi jam {goal} di semester {start_term}-{end_term} menjadi {hours} jam/minggu.',
+  'suggest.UNPIN_COURSES':
+    'Buka kunci {courses} agar pemulihan dapat memindahkannya.',
 
   'solve.COMPLETE': 'Semua persyaratan dalam model sudah selesai.',
   'solve.PLAN_ENDS_EARLY':
@@ -169,6 +174,8 @@ export const idPlan: Record<keyof typeof enPlan, string> = {
     'Hapus centang mata kuliah lulus berikut di profil Anda sebelum menghapusnya dari kurikulum: {courses}.',
   'error.CURRENT_BEYOND_MAX':
     'Semester saat ini ({current}) melewati masa studi maksimum {max} semester.',
+  'error.PRIMARY_ARCHIVED':
+    'Pulihkan rencana ini sebelum menjadikannya rencana utama.',
 
   'req.prerequisites': 'Prasyarat: {list}',
   'req.any_of': 'Salah satu: {list}',
@@ -185,6 +192,7 @@ export const idPlan: Record<keyof typeof enPlan, string> = {
   'node.credits_short': '{count} SKS',
   'node.retake': 'Diulang pada skenario ini',
   'node.review': 'Tinjau pemeriksaan aturan',
+  'node.locked': 'Dikunci di semester',
   'node.planned': 'Mata kuliah terencana',
   'node.semester_credits': '{credits} / {cap} SKS',
   'node.semester_hours': '{total} / {available} jam',
@@ -239,6 +247,10 @@ export const idPlan: Record<keyof typeof enPlan, string> = {
   'plan.course_details': 'Detail mata kuliah',
   'plan.course_line': '{code} | {credits} SKS | {category} | {offering}',
   'plan.assigned': 'Semester penempatan',
+  'plan.lock_semester': 'Kunci di semester {term} saat pemulihan',
+  'plan.lock_hint':
+    'Mempertahankan mata kuliah ini di semester {term} saat mencari alternatif pemulihan.',
+  'plan.locked_badge': 'Dikunci',
   'plan.study_goal': 'Buat target belajar',
   'plan.select_hint':
     'Pilih kartu di kanvas atau papan untuk melihat prasyaratnya dan memindahkannya.',
@@ -280,9 +292,16 @@ export const idPlan: Record<keyof typeof enPlan, string> = {
   'plan.keep': 'Simpan sebagai rencana terpisah',
   'plan.checks': 'Pemeriksaan aturan & penjelasan',
   'plan.awaiting': 'Menunggu disimpan',
+  'plan.draft_preview': 'Pemeriksaan draf langsung',
   'plan.revision': 'Versi tersimpan {revision}',
   'plan.dirty_note':
     'Simpan untuk memeriksa draf ini. Masalah di bawah milik versi tersimpan terakhir.',
+  'plan.draft_note':
+    'Pratinjau langsung dari draf Anda. Simpan & validasi untuk memastikan di server.',
+  'plan.draft_all_pass':
+    'Semua aturan yang dicantumkan terpenuhi pada pratinjau draf ini.',
+  'plan.edge_legend':
+    'Garis: utuh = prasyarat | putus = salah satu | titik = korequisit.',
   'plan.all_pass':
     'Semua aturan yang dicantumkan terpenuhi untuk rencana tersimpan.',
   'plan.downstream': 'Dampak turunan',
@@ -307,6 +326,11 @@ export const idPlan: Record<keyof typeof enPlan, string> = {
     'Ringkasan tersalin. Siap ditempel ke WhatsApp atau email.',
   'passport.copy_failed':
     'Gagal menyalin otomatis. Gunakan Cetak / Simpan sebagai PDF.',
+  'passport.notes_label':
+    'Catatan atau pertanyaan Anda untuk dosen wali (opsional)',
+  'passport.notes_placeholder':
+    'mis. Konfirmasi apakah IF3204 dapat tetap di semester 6 saat magang.',
+  'passport.student_notes': 'Catatan mahasiswa untuk dosen wali',
   'passport.mission_section': 'Misi, komitmen & waktu mingguan',
   'passport.budget_line':
     'Anggaran waktu mingguan: {hours} jam/minggu tersedia ({minutes} menit per SKS).',
@@ -390,4 +414,11 @@ export const idPlan: Record<keyof typeof enPlan, string> = {
   'compare.footnote':
     'Baris yang disorot berbeda. Perkiraan selesai bergantung pada aturan kurikulum yang dicantumkan, bukan jaminan kelulusan.',
   'compare.choose_two': 'Pilih dua rencana yang berbeda.',
+  'compare.copy_summary': 'Salin ringkasan perbandingan',
+  'compare.print': 'Cetak / Simpan sebagai PDF',
+  'compare.copied':
+    'Ringkasan perbandingan tersalin. Siap ditempel ke WhatsApp atau email.',
+  'compare.copy_failed':
+    'Gagal menyalin otomatis. Gunakan Cetak / Simpan sebagai PDF.',
+  'compare.print_heading': 'Perbandingan Rencana Akademik',
 };

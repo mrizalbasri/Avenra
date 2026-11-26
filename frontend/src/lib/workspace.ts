@@ -53,8 +53,10 @@ export function removeWorkspaceLocalData(
   removeRememberedWorkspace(workspaceId);
   try {
     localStorage.removeItem(`avenra-focus-session-v1:${workspaceId}`);
+    localStorage.removeItem(`avenra-compare-notes:${workspaceId}`);
     for (const planId of planIds) {
       localStorage.removeItem(`avenra-plan-draft:${planId}`);
+      localStorage.removeItem(`avenra-passport-notes:${planId}`);
     }
   } catch {
     /* Storage access is optional. */
@@ -66,6 +68,8 @@ export function clearLocalBrowserData(): void {
     const prefixes = [
       rememberedWorkspacesKey,
       'avenra-plan-draft:',
+      'avenra-passport-notes:',
+      'avenra-compare-notes:',
       'avenra-focus-session-v1:',
       'avenra-start-draft-v1',
     ];

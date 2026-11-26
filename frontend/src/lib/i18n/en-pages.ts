@@ -6,6 +6,8 @@ export const enPages = {
     'IPS rule {index} must look like "3.00 = 24" (IPS 0 to 4, credits 1 to 24).',
   'error.IPS_TOO_MANY': 'Use at most 10 IPS rules.',
   'error.CSV_TOO_LARGE': 'Keep the CSV under 60 KB and 100 courses.',
+  'error.INVALID_CURRICULUM_JSON':
+    'Choose a valid Avenra curriculum template (.json).',
 
   // Pasted table import
   'import.field.code': 'Course code',
@@ -95,6 +97,12 @@ export const enPages = {
   'plans.empty_active': 'Your next plan starts here.',
   'plans.empty_archived_hint': 'Plans you archive remain available here.',
   'plans.empty_active_hint': 'Give your plan a name above to start exploring.',
+  'plans.primary_tag': 'Primary',
+  'plans.set_primary': 'Set as primary',
+  'plans.delete_aria': 'Delete {name}',
+  'plans.delete_confirm': 'Delete plan "{name}" permanently?',
+  'plans.deleted': 'Plan deleted.',
+  'plans.primary_updated': '"{name}" is now your primary plan on Overview.',
 
   // Profile
   'profile.title': 'Avenra | Academic profile',
@@ -143,6 +151,9 @@ export const enPages = {
   'profile.data_lead':
     'Export a full backup JSON to move devices, restore a previous backup into a new workspace, or clear browser data.',
   'profile.export_json': 'Export workspace (.json)',
+  'profile.export_curriculum': 'Export curriculum template (.json)',
+  'profile.curriculum_exported':
+    'Shareable curriculum template downloaded (no grades or personal data).',
   'profile.restore_json': 'Restore from backup (.json)',
   'profile.restoring': 'Restoring…',
   'profile.exported': 'Workspace backup downloaded.',
@@ -243,6 +254,7 @@ export const enPages = {
   'study.filter_goal_all': 'All courses & goals',
   'study.filter_goal_courses': 'Courses only',
   'study.focus_course': 'Focus course',
+  'study.focus_target': 'Focus target',
   'study.target': 'Specific target',
   'study.target_placeholder': 'e.g. Solve 5 linked-list exercises',
   'study.target_date': 'Target date (optional)',
@@ -336,7 +348,7 @@ export const enPages = {
     'Export a course list from your curriculum handbook into the template. Use course codes for prerequisites, separated by semicolons; write ',
   'curriculum.csv_hint_b':
     ' when either course is enough. Offering: odd, even, or both. Category: required or elective. Corequisites may be taken in the same semester. min_credits is the credits needed before taking the course, for example an internship or thesis.',
-  'curriculum.choose_file': 'Choose a CSV file',
+  'curriculum.choose_file': 'Or upload a file (.csv / .json)',
   'curriculum.paste': 'Or paste CSV content',
   'curriculum.warning':
     'Rules are user-supplied until independently verified. Avenra checks prerequisites (including "either A or B"), corequisites, earned-credit thresholds, electives toward a graduation total, odd/even offerings, and an IPS-based credit limit for next semester. Exceptions, equivalent courses, and credit transfer still need advisor review.',

@@ -69,6 +69,7 @@ class PlanCreate(Input):
     copy_from: str | None = None
     # Lets a solver alternative become its own plan in one request.
     assignments: dict[str, int | None] | None = Field(default=None, max_length=100)
+    pinned: list[str] | None = Field(default=None, max_length=100)
 
 
 class CanvasPosition(Input):
@@ -84,10 +85,12 @@ class PlanEdit(Input):
     assignments: dict[str, int | None] = Field(max_length=100)
     layout: dict[str, CanvasPosition] = Field(default_factory=dict, max_length=100)
     failed: list[str] = Field(max_length=100)
+    pinned: list[str] | None = Field(default=None, max_length=100)
     credit_cap: int = Field(ge=1, le=24)
     horizon: int = Field(ge=1, le=MAX_TERM)
     expected_gpa: Gpa = None
     archived: bool = False
+    is_primary: bool | None = None
 
 
 TaskDetail = Annotated[str, Field(min_length=1, max_length=160)]
@@ -136,9 +139,18 @@ class TaskEdit(Input):
 
 class FocusCreate(Input):
     id: str = Field(pattern=r"^[a-zA-Z0-9-]{8,40}$")
-    course_code: str
+    course_code: str | None = None
+    goal_id: str | None = Field(default=None, pattern=r"^[a-zA-Z0-9-]{1,40}$")
     seconds: int = Field(ge=1, le=43200)
     note: str = Field(max_length=500, default="")
+
+    @model_validator(mode="after")
+    def check_target(self):
+        if self.course_code == "":
+            self.course_code = None
+        if not self.course_code and not self.goal_id:
+            raise ValueError("Choose a course or a goal")
+        return self
 
 
 class SolveRequest(Input):
@@ -179,10 +191,12 @@ class BackupPlan(Input):
     assignments: dict[str, int | None] = Field(default_factory=dict, max_length=100)
     layout: dict[str, CanvasPosition] = Field(default_factory=dict, max_length=100)
     failed: list[str] = Field(default_factory=list, max_length=100)
+    pinned: list[str] = Field(default_factory=list, max_length=100)
     credit_cap: int = Field(ge=1, le=24)
     horizon: int = Field(ge=1, le=MAX_TERM)
     expected_gpa: Gpa = None
     archived: bool = False
+    is_primary: bool = False
 
 
 class BackupTask(TaskCreate):
@@ -190,10 +204,19 @@ class BackupTask(TaskCreate):
 
 
 class BackupSession(Input):
-    course_code: str = Field(min_length=1, max_length=20)
+    course_code: str | None = Field(default=None, max_length=20)
+    goal_id: str | None = Field(default=None, pattern=r"^[a-zA-Z0-9-]{1,40}$")
     seconds: int = Field(ge=1, le=43200)
     note: str = Field(max_length=500, default="")
     created_at: datetime | None = None
+
+    @model_validator(mode="after")
+    def check_target(self):
+        if self.course_code == "":
+            self.course_code = None
+        if not self.course_code and not self.goal_id:
+            raise ValueError("Choose a course or a goal")
+        return self
 
 
 class WorkspaceBackup(Input):

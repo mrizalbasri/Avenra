@@ -31,6 +31,8 @@ export const idStart: Record<keyof typeof enStart, string> = {
     'Kurikulum contoh (sintetis). Ganti dengan mata kuliah Anda sendiri bila sudah bisa.',
   'start.use_table': 'Gunakan tabel ini',
   'start.use_table_hint': 'Ini mengganti daftar mata kuliah di bawah.',
+  'start.template_loaded':
+    'Templat kurikulum dimuat. Periksa daftar mata kuliah dan aturan di bawah.',
   'start.rows_heading': 'Mata kuliah',
   'start.rows_hint':
     'Periksa setiap mata kuliah. Tulis prasyarat berupa kode mata kuliah dipisahkan ";", dan A|B bila salah satu sudah cukup. Prasyarat dan aturan IPS bisa dilengkapi nanti.',

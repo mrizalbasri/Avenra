@@ -10,6 +10,7 @@
   let name = $state('');
   let busy = $state(false);
   let error = $state('');
+  let notice = $state('');
   let archived = $state(false);
   let plans = $derived(
     data.workspace?.plans.filter((p) => p.archived === archived) ?? [],
@@ -18,6 +19,7 @@
     if (!copy && !name.trim()) return;
     busy = true;
     error = '';
+    notice = '';
     try {
       const plan = await api<Plan>('plans', 'POST', {
         name: copy ? t('plans.copy_name', { name: copy.name }) : name,
@@ -25,6 +27,41 @@
       });
       await invalidateAll();
       await goto(`/plans/${plan.id}`);
+    } catch (e) {
+      error = msg.errorText(e);
+    } finally {
+      busy = false;
+    }
+  }
+  async function makePrimary(plan: Plan) {
+    busy = true;
+    error = '';
+    notice = '';
+    try {
+      await api<Plan>(`plans/${plan.id}/primary`, 'POST', {});
+      await invalidateAll();
+      notice = t('plans.primary_updated', { name: plan.name });
+    } catch (e) {
+      error = msg.errorText(e);
+    } finally {
+      busy = false;
+    }
+  }
+  async function removePlan(plan: Plan) {
+    if (!window.confirm(t('plans.delete_confirm', { name: plan.name }))) return;
+    busy = true;
+    error = '';
+    notice = '';
+    try {
+      await api(`plans/${plan.id}`, 'DELETE');
+      try {
+        localStorage.removeItem(`avenra-plan-draft:${plan.id}`);
+        localStorage.removeItem(`avenra-passport-notes:${plan.id}`);
+      } catch {
+        /* Storage access is optional. */
+      }
+      await invalidateAll();
+      notice = t('plans.deleted');
     } catch (e) {
       error = msg.errorText(e);
     } finally {
@@ -63,6 +100,7 @@
     >
   </form>
   {#if error}<p class="error-banner" role="alert">{error}</p>{/if}
+  {#if notice}<p class="success-banner" role="status">{notice}</p>{/if}
   <div class="section-heading">
     <div class="segmented">
       <button class:chosen={!archived} onclick={() => (archived = false)}
@@ -76,13 +114,18 @@
   <div class="plan-grid">
     {#each plans as plan}<article class="plan-tile">
         <div class="tile-top">
-          <Icon name="plans" /><span
-            class="tag"
-            class:warning={!!plan.validation.findings.length}
-            >{plan.validation.findings.length
-              ? t('plans.needs_review')
-              : t('overview.plans.valid')}</span
-          >
+          <Icon name="plans" />
+          <div class="tile-tags">
+            {#if plan.is_primary && !archived}<span class="tag"
+                >{t('plans.primary_tag')}</span
+              >{/if}<span
+              class="tag"
+              class:warning={!!plan.validation.findings.length}
+              >{plan.validation.findings.length
+                ? t('plans.needs_review')
+                : t('overview.plans.valid')}</span
+            >
+          </div>
         </div>
         <h2><a href={`/plans/${plan.id}`}>{plan.name}</a></h2>
         <p>
@@ -103,11 +146,22 @@
             >{archived
               ? t('plans.view_restore')
               : t('overview.plans.open')}<Icon name="arrow" size={15} /></a
-          ><button
+          >{#if !archived && !plan.is_primary}<button
+              class="button subtle"
+              disabled={busy}
+              onclick={() => makePrimary(plan)}
+              ><Icon name="star" size={15} />{t('plans.set_primary')}</button
+            >{/if}<button
             class="button icon-button"
             aria-label={t('plans.duplicate', { name: plan.name })}
             disabled={busy}
             onclick={() => create(plan)}><Icon name="copy" size={17} /></button
+          ><button
+            class="button icon-button subtle"
+            aria-label={t('plans.delete_aria', { name: plan.name })}
+            disabled={busy}
+            onclick={() => removePlan(plan)}
+            ><Icon name="trash" size={16} /></button
           >
         </div>
       </article>{/each}

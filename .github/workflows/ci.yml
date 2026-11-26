@@ -39,6 +39,7 @@ jobs:
       - run: uv --directory backend run alembic upgrade head
       - run: pnpm format:check
       - run: pnpm check
+      - run: pnpm test:unit
       - run: pnpm build
       - run: pnpm --filter @avenra/web exec playwright install --with-deps chromium
       - run: pnpm test:e2e

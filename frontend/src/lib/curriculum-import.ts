@@ -1,4 +1,5 @@
 import { ApiError } from '#lib/errors.js';
+import type { Curriculum, GpaCreditRule } from '#lib/types.js';
 
 // Fields a curriculum table can carry. The first four are required.
 export const FIELDS = [
@@ -611,4 +612,254 @@ export function parseGpaRules(text: string) {
   if (rules.length > 10)
     throw new ApiError('Use at most 10 IPS rules.', 'IPS_TOO_MANY');
   return rules;
+}
+
+export type CurriculumTemplateBundle = {
+  schema_version: 1;
+  kind: 'avenra_curriculum';
+  curriculum: {
+    name: string;
+    version: string;
+    source: string;
+    credit_cap: number;
+    graduation_credits: number | null;
+    target_terms: number;
+    max_terms: number;
+    gpa_credit_rules: GpaCreditRule[];
+    courses: ParsedCourse[];
+  };
+};
+
+export type ParsedCurriculumTemplate = {
+  university: string;
+  program: string;
+  version: string;
+  source: string;
+  credit_cap: number;
+  graduation_credits: number | null;
+  target_terms: number;
+  max_terms: number;
+  gpa_credit_rules: GpaCreditRule[];
+  courses: ParsedCourse[];
+};
+
+/** Strips workspace-specific profile/plan data so curricula can be shared safely. */
+export function buildCurriculumTemplate(
+  curriculum: Curriculum,
+): CurriculumTemplateBundle {
+  return {
+    schema_version: 1,
+    kind: 'avenra_curriculum',
+    curriculum: {
+      name: curriculum.name,
+      version: curriculum.version,
+      source: curriculum.source,
+      credit_cap: curriculum.credit_cap,
+      graduation_credits: curriculum.graduation_credits,
+      target_terms: curriculum.target_terms,
+      max_terms: curriculum.max_terms,
+      gpa_credit_rules: curriculum.gpa_credit_rules.map((r) => ({
+        min_gpa: r.min_gpa,
+        max_credits: r.max_credits,
+      })),
+      courses: curriculum.courses.map((c) => ({
+        code: c.code,
+        name: c.name,
+        credits: c.credits,
+        recommended_term: c.recommended_term,
+        category: c.category,
+        prerequisites: [...c.prerequisites],
+        any_prerequisites: (c.any_prerequisites ?? []).map((g) => [...g]),
+        corequisites: [...(c.corequisites ?? [])],
+        min_credits_earned: c.min_credits_earned ?? 0,
+        offered_terms: [...c.offered_terms],
+      })),
+    },
+  };
+}
+
+function failInvalidTemplate(): never {
+  throw new ApiError(
+    'Curriculum template JSON is not valid.',
+    'INVALID_CURRICULUM_JSON',
+  );
+}
+
+export function parseCurriculumTemplateJson(
+  raw: string,
+): ParsedCurriculumTemplate {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    failInvalidTemplate();
+  }
+  if (!parsed || typeof parsed !== 'object') failInvalidTemplate();
+  const root = parsed as Record<string, unknown>;
+  if ('schema_version' in root && root.schema_version !== 1) {
+    failInvalidTemplate();
+  }
+  if ('kind' in root && root.kind !== 'avenra_curriculum') {
+    failInvalidTemplate();
+  }
+  const sourceCurr =
+    'curriculum' in root &&
+    root.curriculum &&
+    typeof root.curriculum === 'object'
+      ? (root.curriculum as Record<string, unknown>)
+      : root;
+
+  const rawName =
+    typeof sourceCurr.name === 'string' ? sourceCurr.name.trim() : '';
+  const rawVersion =
+    typeof sourceCurr.version === 'string' ? sourceCurr.version.trim() : '';
+  const rawSource =
+    typeof sourceCurr.source === 'string'
+      ? sourceCurr.source.trim()
+      : 'Shared curriculum template';
+  const creditCap = sourceCurr.credit_cap;
+  const maxTerms =
+    sourceCurr.max_terms === undefined ? 14 : sourceCurr.max_terms;
+  const targetTerms =
+    sourceCurr.target_terms === undefined ? 8 : sourceCurr.target_terms;
+  const graduationCredits =
+    sourceCurr.graduation_credits === undefined
+      ? null
+      : sourceCurr.graduation_credits;
+  const rawCourses = sourceCurr.courses;
+  const rawGpa =
+    sourceCurr.gpa_credit_rules === undefined
+      ? []
+      : sourceCurr.gpa_credit_rules;
+
+  if (
+    !rawName ||
+    !rawVersion ||
+    !Number.isInteger(creditCap) ||
+    (creditCap as number) < 1 ||
+    (creditCap as number) > 24 ||
+    !Number.isInteger(maxTerms) ||
+    (maxTerms as number) < 1 ||
+    (maxTerms as number) > 14 ||
+    !Number.isInteger(targetTerms) ||
+    (targetTerms as number) < 1 ||
+    (targetTerms as number) > (maxTerms as number) ||
+    (graduationCredits !== null &&
+      (!Number.isInteger(graduationCredits) ||
+        (graduationCredits as number) < 1 ||
+        (graduationCredits as number) > 300)) ||
+    !Array.isArray(rawCourses) ||
+    rawCourses.length < 1 ||
+    rawCourses.length > 100 ||
+    !Array.isArray(rawGpa) ||
+    rawGpa.length > 10
+  ) {
+    failInvalidTemplate();
+  }
+
+  const gpaRules: GpaCreditRule[] = rawGpa.map((entry) => {
+    if (!entry || typeof entry !== 'object') failInvalidTemplate();
+    const rule = entry as Record<string, unknown>;
+    if (
+      typeof rule.min_gpa !== 'number' ||
+      !Number.isFinite(rule.min_gpa) ||
+      rule.min_gpa < 0 ||
+      rule.min_gpa > 4 ||
+      !Number.isInteger(rule.max_credits) ||
+      (rule.max_credits as number) < 1 ||
+      (rule.max_credits as number) > 24
+    ) {
+      failInvalidTemplate();
+    }
+    return { min_gpa: rule.min_gpa, max_credits: rule.max_credits as number };
+  });
+
+  const strList = (v: unknown) => {
+    if (v === undefined) return [];
+    if (!Array.isArray(v) || !v.every((item) => typeof item === 'string')) {
+      failInvalidTemplate();
+    }
+    return v.map((s) => s.trim()).filter(Boolean);
+  };
+
+  const courses: ParsedCourse[] = rawCourses.map((entry) => {
+    if (!entry || typeof entry !== 'object') failInvalidTemplate();
+    const c = entry as Record<string, unknown>;
+    const code = typeof c.code === 'string' ? c.code.trim() : '';
+    const name = typeof c.name === 'string' ? c.name.trim() : '';
+    const credits = c.credits;
+    const term = c.recommended_term;
+    const category = c.category ?? 'required';
+    const minCredits = c.min_credits_earned ?? 0;
+    const offered = c.offered_terms ?? [0, 1];
+    const anyGroups = c.any_prerequisites ?? [];
+
+    if (
+      !code ||
+      code.length > 20 ||
+      !name ||
+      name.length > 150 ||
+      !Number.isInteger(credits) ||
+      (credits as number) < 1 ||
+      (credits as number) > 24 ||
+      !Number.isInteger(term) ||
+      (term as number) < 1 ||
+      (term as number) > (maxTerms as number) ||
+      (category !== 'required' && category !== 'elective') ||
+      !Number.isInteger(minCredits) ||
+      (minCredits as number) < 0 ||
+      (minCredits as number) > 300 ||
+      !Array.isArray(offered) ||
+      offered.length < 1 ||
+      offered.length > 2 ||
+      !offered.every((o) => o === 0 || o === 1) ||
+      !Array.isArray(anyGroups) ||
+      !anyGroups.every(
+        (g) =>
+          Array.isArray(g) &&
+          g.length >= 2 &&
+          g.every((item) => typeof item === 'string' && item.trim().length > 0),
+      )
+    ) {
+      failInvalidTemplate();
+    }
+
+    return {
+      code,
+      name,
+      credits: credits as number,
+      recommended_term: term as number,
+      category,
+      prerequisites: strList(c.prerequisites),
+      any_prerequisites: anyGroups.map((g: string[]) =>
+        g.map((item) => item.trim()),
+      ),
+      corequisites: strList(c.corequisites),
+      min_credits_earned: minCredits as number,
+      offered_terms: [...new Set(offered as number[])],
+    };
+  });
+
+  if (checkCourseRows(courses.map(courseToRow)).length > 0) {
+    failInvalidTemplate();
+  }
+
+  const pipeIdx = rawName.indexOf('|');
+  const university =
+    pipeIdx >= 0 ? rawName.slice(0, pipeIdx).trim() || rawName : rawName;
+  const program =
+    pipeIdx >= 0 ? rawName.slice(pipeIdx + 1).trim() || university : rawName;
+
+  return {
+    university,
+    program,
+    version: rawVersion,
+    source: rawSource || 'Shared curriculum template',
+    credit_cap: creditCap as number,
+    graduation_credits: graduationCredits as number | null,
+    target_terms: targetTerms as number,
+    max_terms: maxTerms as number,
+    gpa_credit_rules: gpaRules,
+    courses,
+  };
 }
